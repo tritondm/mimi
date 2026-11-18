@@ -1,0 +1,504 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rampe</title>
+<style>
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;
+  --accent: #1f5fbf; --accent-text: #ffffff; --ok: #1d7a3e; --ok-bg: #e6f4ea;
+  --err: #b3261e; --err-bg: #fce8e6; --warn: #8a5a00; --warn-bg: #fff4d6; --info: #3c4a5c; --info-bg: #eef1f5;
+  --focus: #ffb300;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b; --card: #1d2127; --text: #e8eaed; --muted: #a2abb6; --line: #343a42;
+    --accent: #7fb0ff; --accent-text: #0d1b33; --ok: #7ed69b; --ok-bg: #173323;
+    --err: #ff9d94; --err-bg: #3d1a17; --warn: #ffd27a; --warn-bg: #3a2d0e; --info: #c3cdd9; --info-bg: #262c34;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+header { background: var(--card); border-bottom: 1px solid var(--line); padding: 16px; }
+header h1 { margin: 0; font-size: 1.3rem; }
+header p { margin: 4px 0 0; color: var(--muted); }
+header .bar { max-width: 1100px; margin: 0 auto; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+#userbox { display: flex; gap: 10px; align-items: center; }
+#login form { max-width: 360px; display: grid; gap: 12px; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px 16px 120px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+h2 { font-size: 1.15rem; margin: 0 0 12px; }
+h3 { font-size: 1rem; margin: 0 0 6px; }
+button, .btn { font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text); border-radius: 6px; padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-block; }
+button.secondary, .btn.secondary { background: transparent; color: var(--accent); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+input[type=text], textarea, select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+textarea { min-height: 70px; resize: vertical; }
+label { font-weight: 600; display: block; margin-bottom: 4px; }
+label.inline { display: inline-flex; gap: 6px; align-items: center; font-weight: normal; }
+.muted { color: var(--muted); font-size: .92rem; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .82rem; font-weight: 600; }
+.b-err { background: var(--err-bg); color: var(--err); }
+.b-warn { background: var(--warn-bg); color: var(--warn); }
+.b-ok { background: var(--ok-bg); color: var(--ok); }
+.b-info { background: var(--info-bg); color: var(--info); }
+.summary { display: flex; gap: 12px; flex-wrap: wrap; }
+.summary .tile { flex: 1 1 150px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.tile .num { font-size: 1.6rem; font-weight: 700; display: block; }
+nav.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+nav.tabs button { background: transparent; color: var(--text); border-color: var(--line); }
+nav.tabs button[aria-selected=true] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.img-card { display: grid; grid-template-columns: 220px 1fr; gap: 16px; border-top: 1px solid var(--line); padding: 16px 0; }
+.img-card:first-of-type { border-top: 0; }
+@media (max-width: 700px) { .img-card { grid-template-columns: 1fr; } }
+.preview { width: 100%; max-height: 200px; object-fit: contain; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0/16px 16px; border-radius: 6px; border: 1px solid var(--line); }
+.noprev { height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px dashed var(--line); border-radius: 6px; color: var(--muted); padding: 8px; }
+table.list { width: 100%; border-collapse: collapse; }
+table.list th, table.list td { text-align: left; padding: 8px; border-top: 1px solid var(--line); vertical-align: top; }
+table.list th { border-top: 0; color: var(--muted); font-weight: 600; font-size: .9rem; }
+ul.hints { list-style: none; padding: 0; margin: 0; }
+ul.hints li { padding: 8px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+ul.hints li:first-child { border-top: 0; }
+.outline { margin: 0; padding: 0; list-style: none; max-height: 420px; overflow: auto; }
+.outline li { padding: 2px 0; }
+.actions { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 16px; }
+.actions .inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.status { margin-left: auto; }
+.spinner { display: inline-block; width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.drop { border: 2px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; }
+.drop.over { border-color: var(--accent); }
+.hidden { display: none !important; }
+.error-box { background: var(--err-bg); color: var(--err); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div>
+      <h1>Rampe – Barrierefrei-Prüfung für Berichte</h1>
+      <p>Word-Datei hochladen → Probleme beheben → barrierefreies PDF (PDF/UA) erzeugen und prüfen</p>
+    </div>
+    <div id="userbox" class="hidden"><span class="muted">Angemeldet als <strong id="username"></strong></span><a class="btn secondary hidden" id="adminlink" href="/admin">Benutzerverwaltung</a><button class="secondary" id="logout">Abmelden</button></div>
+  </div>
+</header>
+<main>
+  <div id="error" class="error-box hidden" role="alert"></div>
+
+  <section id="login" class="card hidden" aria-labelledby="h-login">
+    <h2 id="h-login">Anmelden</h2>
+    <form id="loginform">
+      <div><label for="l-user">Benutzername</label><input id="l-user" type="text" autocomplete="username" required></div>
+      <div><label for="l-pw">Passwort</label><input id="l-pw" type="password" autocomplete="current-password" required></div>
+      <div><button type="submit" id="l-btn">Anmelden</button></div>
+    </form>
+  </section>
+
+  <section id="upload" class="card hidden" aria-labelledby="h-upload">
+    <h2 id="h-upload">1. Word-Datei hochladen</h2>
+    <div id="drop" class="drop">
+      <p><label for="file" style="display:inline">Datei auswählen (.docx)</label> oder hierher ziehen</p>
+      <input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+      <p class="muted">Die Datei bleibt auf diesem Rechner bzw. Server und wird nicht an Dritte weitergegeben.</p>
+    </div>
+  </section>
+
+  <div id="workspace" class="hidden">
+    <section class="card" aria-labelledby="h-sum">
+      <h2 id="h-sum">Übersicht: <span id="docname"></span></h2>
+      <div class="summary" id="summary"></div>
+    </section>
+
+    <nav class="tabs" role="tablist" aria-label="Bereiche">
+      <button role="tab" id="t-doc" aria-controls="p-doc" aria-selected="true">Dokument</button>
+      <button role="tab" id="t-img" aria-controls="p-img" aria-selected="false">Bilder <span id="c-img"></span></button>
+      <button role="tab" id="t-tbl" aria-controls="p-tbl" aria-selected="false">Tabellen <span id="c-tbl"></span></button>
+      <button role="tab" id="t-str" aria-controls="p-str" aria-selected="false">Struktur &amp; Hinweise <span id="c-str"></span></button>
+      <button role="tab" id="t-exp" aria-controls="p-exp" aria-selected="false">PDF &amp; Download</button>
+    </nav>
+
+    <section id="p-doc" role="tabpanel" aria-labelledby="t-doc" class="card">
+      <h2>Dokumenteigenschaften</h2>
+      <div class="grid2">
+        <div>
+          <label for="title">Dokumenttitel</label>
+          <input id="title" type="text">
+          <p class="muted">Wird im PDF-Fenster statt des Dateinamens angezeigt und von Screenreadern vorgelesen.</p>
+        </div>
+        <div>
+          <label for="lang">Hauptsprache</label>
+          <select id="lang">
+            <option value="de-AT">Deutsch (Österreich) – de-AT</option>
+            <option value="de-DE">Deutsch (Deutschland) – de-DE</option>
+            <option value="en-GB">Englisch (UK) – en-GB</option>
+            <option value="en-US">Englisch (USA) – en-US</option>
+          </select>
+          <p class="muted">Bestimmt die Aussprache im Screenreader. Fremdsprachige Passagen bitte in Word eigens markieren.</p>
+        </div>
+      </div>
+      <h3 style="margin-top:12px">Links</h3>
+      <p id="linkinfo"></p>
+      <label class="inline" id="linkopt"><input type="checkbox" id="links"> Fehlende Linkbeschreibungen automatisch aus dem Linktext ergänzen (betrifft vor allem Inhalts-, Abbildungs- und Tabellenverzeichnis)</label>
+    </section>
+
+    <section id="p-img" role="tabpanel" aria-labelledby="t-img" class="card hidden">
+      <h2>Bilder und Grafiken</h2>
+      <p class="muted">Jedes Bild braucht einen Alternativtext, der den Inhalt kurz beschreibt – oder es wird als „dekorativ“ markiert (z.&nbsp;B. Zierlinien). Logos bekommen einen Text wie „Logo der …“.</p>
+      <div class="row" style="margin-bottom:8px">
+        <label class="inline"><input type="checkbox" id="onlyopen" checked> nur offene Punkte zeigen</label>
+        <button class="secondary" id="fillcaps">Alle leeren Alternativtexte aus der Bildunterschrift füllen</button>
+      </div>
+      <div id="images"></div>
+    </section>
+
+    <section id="p-tbl" role="tabpanel" aria-labelledby="t-tbl" class="card hidden">
+      <h2>Tabellen</h2>
+      <p class="muted">Die erste Zeile mit den Spaltenüberschriften muss als Kopfzeile markiert sein (in Word: Tabelleneigenschaften → Zeile → „Gleiche Kopfzeile auf jeder Seite wiederholen“). Nur so erkennt PAC Tabellenköpfe.</p>
+      <table class="list">
+        <thead><tr><th scope="col">Nr.</th><th scope="col">Erste Zeile</th><th scope="col">Zeilen</th><th scope="col">Kopfzeile</th></tr></thead>
+        <tbody id="tables"></tbody>
+      </table>
+    </section>
+
+    <section id="p-str" role="tabpanel" aria-labelledby="t-str" class="card hidden">
+      <div class="grid2">
+        <div>
+          <h2>Hinweise</h2>
+          <p class="muted">Diese Punkte bitte in Word korrigieren – das Tool kann sie nicht automatisch beheben.</p>
+          <ul class="hints" id="hints"></ul>
+        </div>
+        <div>
+          <h2>Gliederung (Überschriften)</h2>
+          <ol class="outline" id="outline"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="p-exp" role="tabpanel" aria-labelledby="t-exp" class="card hidden">
+      <h2>PDF erzeugen und prüfen</h2>
+      <p class="muted">Das PDF wird mit LibreOffice im Format PDF/UA erzeugt und anschließend geprüft. Die Prüfung ersetzt nicht den abschließenden Test mit PAC, sollte ihn aber zur Formsache machen.</p>
+      <p><button id="export2">PDF erzeugen und prüfen</button></p>
+      <div id="report" aria-live="polite"></div>
+      <div id="downloads" class="row hidden" style="margin-top:12px">
+        <a class="btn" id="dl-pdf">PDF herunterladen</a>
+        <a class="btn secondary" id="dl-docx">Korrigierte Word-Datei (.docx)</a>
+        <a class="btn secondary" id="dl-odt">OpenDocument (.odt)</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="actions hidden" id="actions">
+  <div class="inner">
+    <button id="save" class="secondary" disabled>Änderungen speichern</button>
+    <button id="export">PDF erzeugen und prüfen</button>
+    <button id="new" class="secondary">Andere Datei</button>
+    <span class="status muted" id="status" aria-live="polite"></span>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let job = null;         // {id, name, analysis}
+let edits = {};         // {title, language, images:{i:{alt,decorative}}, tables:{i:bool}}
+const PREVIEWABLE = /\.(png|jpe?g|gif|svg|bmp)$/i;
+const GENERIC = /^(bild|grafik|abbildung|abb\.?|diagramm|picture|image|foto|grafik\s*\d+|logo)\s*\d*$/i;
+
+function showError(msg) { const e = $('#error'); e.textContent = msg; e.classList.toggle('hidden', !msg); if (msg) e.scrollIntoView({behavior:'smooth'}); }
+function status(html) { $('#status').innerHTML = html; }
+
+async function api(url, opts = {}) {
+  const r = await fetch(url, {credentials: 'same-origin', ...opts});
+  if (r.status === 401 && !url.endsWith('/api/login')) { showLogin(); throw new Error('Sitzung abgelaufen – bitte neu anmelden.'); }
+  const ct = r.headers.get('content-type') || '';
+  const body = ct.includes('json') ? await r.json() : await r.text();
+  if (!r.ok) throw new Error(body.error || body || r.statusText);
+  return body;
+}
+
+function imgState(img) {
+  const e = edits.images[img.index] || {};
+  const alt = e.alt ?? img.alt;
+  const dec = e.decorative ?? img.decorative;
+  if (dec) return {alt, dec, st: 'dekorativ', cls: 'b-info', open: false};
+  if (!alt.trim()) return {alt, dec, st: 'Alternativtext fehlt', cls: 'b-err', open: true};
+  if (GENERIC.test(alt.trim()) || alt.trim() === img.name) return {alt, dec, st: 'nichtssagend', cls: 'b-warn', open: true};
+  return {alt, dec, st: 'ok', cls: 'b-ok', open: false};
+}
+function tblHeader(t) { return edits.tables[t.index] ?? t.header; }
+function dirty() {
+  const a = job.analysis;
+  if (edits.title !== undefined && edits.title !== a.title) return true;
+  if (edits.language !== undefined && edits.language !== a.language) return true;
+  for (const img of a.images) { const s = imgState(img); if (s.alt !== img.alt || s.dec !== img.decorative) return true; }
+  for (const t of a.tables) if (tblHeader(t) !== t.header) return true;
+  if (edits.links && a.links_missing) return true;
+  return false;
+}
+function captionText(c) { return (c || '').replace(/^(Abbildung|Abb\.|Figure|Fig\.|Grafik|Tabelle)\s*\d+[.:]?\s*/i, '').trim(); }
+
+function counts() {
+  const a = job.analysis;
+  const title = edits.title ?? a.title, lang = edits.language ?? a.language;
+  const imgOpen = a.images.filter(i => imgState(i).open).length;
+  const tblOpen = a.tables.filter(t => !tblHeader(t) && t.rows > 1).length;
+  const docOpen = (title.trim() ? 0 : 1) + (lang ? 0 : 1) + (a.links_missing && !edits.links ? 1 : 0);
+  const hintsErr = a.hints.filter(h => h.severity === 'fehler' && !['titel','sprache'].includes(h.kind)).length;
+  const hintsWarn = a.hints.filter(h => h.severity === 'warnung').length;
+  return {imgOpen, tblOpen, docOpen, hintsErr, hintsWarn};
+}
+
+function renderSummary() {
+  const a = job.analysis, c = counts();
+  const tile = (n, label, cls) => `<div class="tile"><span class="num">${n}</span><span class="badge ${n ? cls : 'b-ok'}">${label}</span></div>`;
+  $('#summary').innerHTML =
+    tile(c.imgOpen, `Bilder offen (von ${a.images.length})`, 'b-err') +
+    tile(c.tblOpen, `Tabellen ohne Kopfzeile (von ${a.tables.length})`, 'b-err') +
+    tile(c.docOpen, 'Titel/Sprache/Links offen', 'b-err') +
+    tile(c.hintsErr + c.hintsWarn, 'Hinweise zur Struktur', 'b-warn');
+  $('#c-img').innerHTML = c.imgOpen ? `<span class="badge b-err">${c.imgOpen}</span>` : '';
+  $('#c-tbl').innerHTML = c.tblOpen ? `<span class="badge b-err">${c.tblOpen}</span>` : '';
+  const hs = c.hintsErr + c.hintsWarn;
+  $('#c-str').innerHTML = hs ? `<span class="badge b-warn">${hs}</span>` : '';
+  $('#save').disabled = !dirty();
+  if (dirty()) status('Ungespeicherte Änderungen'); else if (!$('#status').textContent.startsWith('PDF')) status('');
+}
+
+function renderDoc() {
+  const a = job.analysis;
+  $('#title').value = edits.title ?? a.title;
+  const lang = edits.language ?? a.language;
+  const sel = $('#lang');
+  if (lang && ![...sel.options].some(o => o.value === lang)) sel.add(new Option(lang, lang));
+  sel.value = lang || 'de-AT';
+  if (!lang) edits.language = 'de-AT';
+  $('#linkinfo').innerHTML = a.links_missing
+    ? `<span class="badge b-err">${a.links_missing} von ${a.links_total} Links</span> ohne Beschreibung. PAC bemängelt Links ohne Beschreibung im PDF.`
+    : `<span class="badge b-ok">OK</span> ${a.links_total ? `Alle ${a.links_total} Links haben eine Beschreibung.` : 'Keine Links im Dokument.'}`;
+  $('#linkopt').classList.toggle('hidden', !a.links_missing);
+  $('#links').checked = !!edits.links;
+}
+
+function renderImages() {
+  const only = $('#onlyopen').checked;
+  const list = job.analysis.images.filter(i => !only || imgState(i).open);
+  if (!list.length) { $('#images').innerHTML = `<p><span class="badge b-ok">Alles erledigt</span> ${only ? 'Keine offenen Bilder.' : 'Keine Bilder im Dokument.'}</p>`; return; }
+  $('#images').innerHTML = list.map(img => {
+    const s = imgState(img);
+    const prev = img.media && PREVIEWABLE.test(img.media)
+      ? `<img class="preview" loading="lazy" alt="" src="/api/job/${job.id}/media/${encodeURI(img.media)}">`
+      : `<div class="noprev">${img.kind === 'diagramm' ? 'Diagramm (Word-Diagramm)' : img.kind === 'form' ? 'Form / Textfeld' : 'Keine Vorschau (' + esc((img.media || '').split('.').pop()) + ')'}</div>`;
+    return `<div class="img-card" data-i="${img.index}">
+      <div>${prev}</div>
+      <div>
+        <h3>${esc(img.caption || img.name || 'Bild')} <span class="badge ${s.cls}">${s.st}</span></h3>
+        <p class="muted">Abschnitt: ${esc(img.section || '– (vor der ersten Überschrift, z. B. Titelseite)')} · Word-Name: ${esc(img.name)}</p>
+        <label for="alt-${img.index}">Alternativtext</label>
+        <textarea id="alt-${img.index}" data-alt="${img.index}" ${s.dec ? 'disabled' : ''}>${esc(s.alt)}</textarea>
+        <div class="row" style="margin-top:6px">
+          <label class="inline"><input type="checkbox" data-dec="${img.index}" ${s.dec ? 'checked' : ''}> dekorativ (Screenreader überspringt das Bild)</label>
+          ${img.caption ? `<button class="secondary" data-cap="${img.index}">Bildunterschrift übernehmen</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTables() {
+  const a = job.analysis;
+  $('#tables').innerHTML = a.tables.length ? a.tables.map(t => {
+    const h = tblHeader(t);
+    return `<tr>
+      <td>${t.index + 1}${t.nested ? ' <span class="badge b-info">verschachtelt</span>' : ''}</td>
+      <td>${esc(t.first_row) || '<span class="muted">(leer)</span>'}<div class="muted">${esc(t.section)}</div></td>
+      <td>${t.rows}</td>
+      <td><label class="inline"><input type="checkbox" data-tbl="${t.index}" ${h ? 'checked' : ''}> erste Zeile ist Kopfzeile</label>
+        ${h ? '' : (t.rows > 1 ? ' <span class="badge b-err">fehlt</span>' : ' <span class="badge b-info">1 Zeile</span>')}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="4">Keine Tabellen im Dokument.</td></tr>';
+}
+
+function renderStructure() {
+  const a = job.analysis;
+  const sev = {fehler: ['b-err','Fehler'], warnung: ['b-warn','Warnung'], hinweis: ['b-info','Hinweis']};
+  const hints = a.hints.filter(h => !['titel','sprache'].includes(h.kind));
+  $('#hints').innerHTML = hints.length ? hints.map(h => `<li><span class="badge ${sev[h.severity][0]}">${sev[h.severity][1]}</span><div>${esc(h.text)}${h.section ? `<div class="muted">Abschnitt: ${esc(h.section)}</div>` : ''}</div></li>`).join('')
+    : '<li><span class="badge b-ok">OK</span> Keine Hinweise.</li>';
+  $('#outline').innerHTML = a.headings.map(h => `<li style="padding-left:${(h.level - 1) * 18}px"><span class="badge b-info">H${h.level}</span> ${esc(h.text)}</li>`).join('') || '<li>Keine Überschriften gefunden.</li>';
+}
+
+function renderAll() { renderDoc(); renderImages(); renderTables(); renderStructure(); renderSummary(); }
+
+function newEdits() { return {images: {}, tables: {}, links: !!(job && job.analysis.links_missing)}; }
+function loadJob(j) {
+  job = j; edits = newEdits();
+  $('#docname').textContent = j.name;
+  $('#upload').classList.add('hidden');
+  $('#workspace').classList.remove('hidden');
+  $('#actions').classList.remove('hidden');
+  $('#report').innerHTML = ''; $('#downloads').classList.add('hidden');
+  renderAll();
+  try { localStorage.setItem('bf-job', j.id); } catch (e) {}
+}
+
+async function upload(file) {
+  showError('');
+  if (!file) return;
+  const fd = new FormData(); fd.append('file', file);
+  $('#drop').innerHTML = `<p><span class="spinner"></span> „${esc(file.name)}“ wird hochgeladen und analysiert …</p>`;
+  try { loadJob(await api('/api/upload', {method: 'POST', body: fd})); }
+  catch (e) { showError(e.message); setTimeout(() => location.reload(), 4000); }
+}
+
+async function save() {
+  if (!dirty()) return true;
+  const a = job.analysis;
+  const body = {images: [], tables: []};
+  if (edits.title !== undefined && edits.title !== a.title) body.title = edits.title;
+  if (edits.language !== undefined && edits.language !== a.language) body.language = edits.language;
+  for (const img of a.images) { const s = imgState(img); if (s.alt !== img.alt || s.dec !== img.decorative) body.images.push({index: img.index, alt: s.alt.trim(), decorative: s.dec}); }
+  for (const t of a.tables) if (tblHeader(t) !== t.header) body.tables.push({index: t.index, header: tblHeader(t)});
+  if (edits.links && a.links_missing) body.link_descriptions = true;
+  status('<span class="spinner"></span> Speichere …');
+  try {
+    const j = await api(`/api/job/${job.id}/apply`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
+    job = j; edits = newEdits(); renderAll(); status('Gespeichert ✓'); return true;
+  } catch (e) { showError(e.message); status(''); return false; }
+}
+
+async function exportPdf() {
+  showError('');
+  if (!(await save())) return;
+  selectTab('t-exp');
+  ['#export', '#export2'].forEach(s => $(s).disabled = true);
+  $('#downloads').classList.add('hidden');
+  $('#report').innerHTML = '<p><span class="spinner"></span> LibreOffice erzeugt das PDF und prüft es – das kann bei großen Berichten 1–2 Minuten dauern …</p>';
+  status('<span class="spinner"></span> PDF wird erzeugt …');
+  try {
+    const r = await api(`/api/job/${job.id}/export`, {method: 'POST'});
+    const fails = r.checks.filter(c => !c.ok);
+    let html = `<h3>Basisprüfung (${r.pages} Seiten) ${fails.length ? `<span class="badge b-err">${fails.length} Problem(e)</span>` : '<span class="badge b-ok">bestanden</span>'}</h3><ul class="hints">`;
+    html += r.checks.map(c => `<li><span class="badge ${c.ok ? 'b-ok' : (c.severity === 'fehler' ? 'b-err' : 'b-warn')}">${c.ok ? '✓' : '✗'}</span><div><strong>${esc(c.title)}</strong><div class="muted">${esc(c.detail)}</div></div></li>`).join('');
+    html += '</ul>';
+    const v = r.verapdf;
+    html += '<h3 style="margin-top:16px">veraPDF (PDF/UA-1, Grundlage wie PAC)</h3>';
+    if (!v.available || v.compliant === null) html += `<p class="muted">${esc(v.message)}</p>`;
+    else if (v.compliant) html += '<p><span class="badge b-ok">konform</span> veraPDF findet keine Verstöße.</p>';
+    else html += `<p><span class="badge b-err">${v.failed_rules.length} Regel(n) verletzt</span></p><ul class="hints">` +
+      v.failed_rules.map(f => `<li><span class="badge b-err">${esc(f.clause)}-${esc(f.test)}</span><div>${esc(f.description)} <span class="muted">(${esc(f.failed_checks)}×)</span></div></li>`).join('') + '</ul>';
+    html += '<p class="muted" style="margin-top:12px">Abschließend das PDF mit PAC öffnen und das Prüfergebnis gemeinsam mit dem Bericht übermitteln.</p>';
+    $('#report').innerHTML = html;
+    $('#dl-pdf').href = `/api/job/${job.id}/download/pdf`;
+    $('#dl-docx').href = `/api/job/${job.id}/download/docx`;
+    $('#dl-odt').href = `/api/job/${job.id}/download/odt`;
+    $('#downloads').classList.remove('hidden');
+    status(fails.length ? 'PDF erzeugt – mit Problemen' : 'PDF erzeugt ✓');
+  } catch (e) { $('#report').innerHTML = ''; showError(e.message); status(''); }
+  finally { ['#export', '#export2'].forEach(s => $(s).disabled = false); }
+}
+
+function selectTab(id) {
+  document.querySelectorAll('[role=tab]').forEach(t => {
+    const on = t.id === id;
+    t.setAttribute('aria-selected', on);
+    document.getElementById(t.getAttribute('aria-controls')).classList.toggle('hidden', !on);
+  });
+}
+
+// --- Ereignisse ---
+document.querySelectorAll('[role=tab]').forEach(t => t.addEventListener('click', () => selectTab(t.id)));
+$('#file').addEventListener('change', e => upload(e.target.files[0]));
+const drop = $('#drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); upload(e.dataTransfer.files[0]); });
+$('#title').addEventListener('input', e => { edits.title = e.target.value; renderSummary(); });
+$('#lang').addEventListener('change', e => { edits.language = e.target.value; renderSummary(); });
+$('#onlyopen').addEventListener('change', renderImages);
+$('#links').addEventListener('change', e => { edits.links = e.target.checked; renderSummary(); });
+$('#images').addEventListener('input', e => {
+  const i = e.target.dataset.alt; if (i === undefined) return;
+  edits.images[i] = {...(edits.images[i] || {}), alt: e.target.value};
+  renderSummary();
+});
+$('#images').addEventListener('change', e => {
+  const i = e.target.dataset.dec; if (i === undefined) return;
+  edits.images[i] = {...(edits.images[i] || {}), decorative: e.target.checked};
+  const ta = document.getElementById('alt-' + i); if (ta) ta.disabled = e.target.checked;
+  renderSummary();
+});
+$('#images').addEventListener('click', e => {
+  const i = e.target.dataset.cap; if (i === undefined) return;
+  const img = job.analysis.images[i];
+  edits.images[i] = {...(edits.images[i] || {}), alt: captionText(img.caption)};
+  document.getElementById('alt-' + i).value = edits.images[i].alt;
+  renderSummary();
+});
+$('#fillcaps').addEventListener('click', () => {
+  let n = 0;
+  for (const img of job.analysis.images) {
+    const s = imgState(img);
+    if (!s.dec && !s.alt.trim() && img.caption) { edits.images[img.index] = {...(edits.images[img.index] || {}), alt: captionText(img.caption)}; n++; }
+  }
+  $('#onlyopen').checked = false; renderImages(); renderSummary();
+  status(`${n} Alternativtext(e) aus Bildunterschriften übernommen – bitte kurz kontrollieren und speichern.`);
+});
+$('#tables').addEventListener('change', e => {
+  const i = e.target.dataset.tbl; if (i === undefined) return;
+  edits.tables[i] = e.target.checked; renderTables(); renderSummary();
+});
+$('#save').addEventListener('click', save);
+$('#export').addEventListener('click', exportPdf);
+$('#export2').addEventListener('click', exportPdf);
+$('#new').addEventListener('click', () => { if (!dirty() || confirm('Ungespeicherte Änderungen verwerfen?')) { try { localStorage.removeItem('bf-job'); } catch (e) {} location.reload(); } });
+window.addEventListener('beforeunload', e => { if (job && dirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+// --- Anmeldung ---
+function showLogin() {
+  job = null;
+  ['#upload', '#workspace', '#actions', '#userbox'].forEach(s => $(s).classList.add('hidden'));
+  $('#login').classList.remove('hidden');
+  $('#l-user').focus();
+}
+async function afterLogin() {
+  let info = {user: '', admin: false};
+  try { info = await api('/api/me'); } catch (e) { return; }
+  $('#username').textContent = info.user;
+  $('#adminlink').classList.toggle('hidden', !info.admin);
+  $('#userbox').classList.remove('hidden');
+  $('#login').classList.add('hidden');
+  $('#upload').classList.remove('hidden');
+  // zuletzt bearbeiteten Bericht wieder öffnen
+  let id = null; try { id = localStorage.getItem('bf-job'); } catch (e) {}
+  if (id) { try { loadJob(await api('/api/job/' + id)); } catch (e) { try { localStorage.removeItem('bf-job'); } catch (_) {} showError(''); } }
+}
+$('#loginform').addEventListener('submit', async e => {
+  e.preventDefault(); showError('');
+  $('#l-btn').disabled = true;
+  try {
+    const r = await api('/api/login', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({user: $('#l-user').value, password: $('#l-pw').value})});
+    $('#l-pw').value = '';
+    await afterLogin();
+  } catch (err) { showError(err.message); }
+  finally { $('#l-btn').disabled = false; }
+});
+$('#logout').addEventListener('click', async () => {
+  if (job && dirty() && !confirm('Ungespeicherte Änderungen verwerfen?')) return;
+  try { await api('/api/logout', {method: 'POST'}); } catch (e) {}
+  try { localStorage.removeItem('bf-job'); } catch (e) {}
+  location.reload();
+});
+(async () => {
+  try { const r = await fetch('/api/me', {credentials: 'same-origin'}); if (r.ok) { afterLogin(); return; } } catch (e) {}
+  showLogin();
+})();
+</script>
+</body>
+</html>

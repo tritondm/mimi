@@ -1,0 +1,149 @@
+# Verwendete Bibliotheken und ihre Lizenzen
+
+Rampe steht unter der EUPL-1.2 (siehe `LICENSE`).
+Es verwendet die folgenden Open-Source-Bibliotheken; deren Lizenztexte liegen den jeweiligen Paketen bei (https://crates.io).
+
+## Rust-Bibliotheken
+
+| Paket | Version | Lizenz |
+|---|---|---|
+| adler2 | 2.0.1 | 0BSD OR MIT OR Apache-2.0 |
+| aes | 0.9.4 | MIT OR Apache-2.0 |
+| alloc-no-stdlib | 2.0.4 | BSD-3-Clause |
+| alloc-stdlib | 0.2.4 | BSD-3-Clause |
+| android_system_properties | 0.1.6 | MIT OR Apache-2.0 |
+| anyhow | 1.0.104 | MIT OR Apache-2.0 |
+| arbitrary | 1.5.0 | MIT OR Apache-2.0 |
+| atomic-waker | 1.1.2 | Apache-2.0 OR MIT |
+| autocfg | 1.5.1 | Apache-2.0 OR MIT |
+| axum | 0.8.9 | MIT |
+| axum-core | 0.5.6 | MIT |
+| bitflags | 2.13.2 | MIT OR Apache-2.0 |
+| block-buffer | 0.12.1 | MIT OR Apache-2.0 |
+| block-padding | 0.4.2 | MIT OR Apache-2.0 |
+| brotli-decompressor | 5.0.3 | BSD-3-Clause/MIT |
+| bumpalo | 3.20.4 | MIT OR Apache-2.0 |
+| bytes | 1.12.2 | MIT |
+| cbc | 0.2.1 | MIT OR Apache-2.0 |
+| cc | 1.11.2 | MIT OR Apache-2.0 |
+| cfg-if | 1.0.5 | MIT OR Apache-2.0 |
+| chacha20 | 0.10.2 | MIT OR Apache-2.0 |
+| chrono | 0.4.45 | MIT OR Apache-2.0 |
+| cipher | 0.5.2 | MIT OR Apache-2.0 |
+| const-oid | 0.10.3 | Apache-2.0 OR MIT |
+| core-foundation-sys | 0.8.7 | MIT OR Apache-2.0 |
+| core_detect | 1.0.0 | MIT/Apache-2.0 |
+| cpubits | 0.1.1 | MIT OR Apache-2.0 |
+| cpufeatures | 0.3.1 | MIT OR Apache-2.0 |
+| crc32fast | 1.5.5 | MIT OR Apache-2.0 |
+| crossbeam-deque | 0.8.8 | MIT OR Apache-2.0 |
+| crossbeam-epoch | 0.9.21 | MIT OR Apache-2.0 |
+| crossbeam-utils | 0.8.23 | MIT OR Apache-2.0 |
+| crypto-common | 0.2.2 | MIT OR Apache-2.0 |
+| derive_arbitrary | 1.5.0 | MIT OR Apache-2.0 |
+| digest | 0.11.3 | MIT OR Apache-2.0 |
+| ecb | 0.2.1 | MIT OR Apache-2.0 |
+| either | 1.19.0 | MIT OR Apache-2.0 |
+| encoding_rs | 0.8.44 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
+| equivalent | 1.0.3 | Apache-2.0 OR MIT |
+| errno | 0.3.15 | MIT OR Apache-2.0 |
+| find-msvc-tools | 0.1.15 | MIT OR Apache-2.0 |
+| flate2 | 1.1.11 | MIT OR Apache-2.0 |
+| form_urlencoded | 1.2.2 | MIT OR Apache-2.0 |
+| futures-core | 0.3.34 | MIT OR Apache-2.0 |
+| futures-task | 0.3.34 | MIT OR Apache-2.0 |
+| futures-util | 0.3.34 | MIT OR Apache-2.0 |
+| getrandom | 0.4.3 | MIT OR Apache-2.0 |
+| hashbrown | 0.17.1 | MIT OR Apache-2.0 |
+| http | 1.5.0 | MIT OR Apache-2.0 |
+| http-body | 1.1.0 | MIT |
+| http-body-util | 0.1.5 | MIT |
+| httparse | 1.10.1 | MIT OR Apache-2.0 |
+| httpdate | 1.0.3 | MIT OR Apache-2.0 |
+| hybrid-array | 0.4.15 | MIT OR Apache-2.0 |
+| hyper | 1.12.0 | MIT |
+| hyper-util | 0.1.21 | MIT |
+| iana-time-zone | 0.1.65 | MIT OR Apache-2.0 |
+| iana-time-zone-haiku | 0.1.2 | MIT OR Apache-2.0 |
+| indexmap | 2.14.2 | Apache-2.0 OR MIT |
+| inout | 0.2.6 | MIT OR Apache-2.0 |
+| itoa | 1.0.19 | MIT OR Apache-2.0 |
+| libc | 0.2.191 | MIT OR Apache-2.0 |
+| lock_api | 0.4.14 | MIT OR Apache-2.0 |
+| log | 0.4.35 | MIT OR Apache-2.0 |
+| lopdf | 0.47.0 | MIT |
+| matchit | 0.8.4 | MIT AND BSD-3-Clause |
+| md-5 | 0.11.0 | MIT OR Apache-2.0 |
+| memchr | 2.8.3 | Unlicense OR MIT |
+| mime | 0.3.18 | MIT OR Apache-2.0 |
+| miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 |
+| mio | 1.2.5 | MIT |
+| multer | 3.1.0 | MIT |
+| multiversion_no_op | 1.0.0 | Apache-2.0 OR MIT |
+| nom | 8.0.0 | MIT |
+| num-traits | 0.2.19 | MIT OR Apache-2.0 |
+| once_cell | 1.21.4 | MIT OR Apache-2.0 |
+| parking_lot | 0.12.5 | MIT OR Apache-2.0 |
+| parking_lot_core | 0.9.12 | MIT OR Apache-2.0 |
+| percent-encoding | 2.3.2 | MIT OR Apache-2.0 |
+| pin-project-lite | 0.2.17 | Apache-2.0 OR MIT |
+| proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
+| quick-xml | 0.37.5 | MIT |
+| quote | 1.0.47 | MIT OR Apache-2.0 |
+| rand | 0.10.4 | MIT OR Apache-2.0 |
+| rand_core | 0.10.1 | MIT OR Apache-2.0 |
+| rangemap | 1.8.0 | MIT/Apache-2.0 |
+| rayon | 1.12.0 | MIT OR Apache-2.0 |
+| rayon-core | 1.13.0 | MIT OR Apache-2.0 |
+| redox_syscall | 0.5.18 | MIT |
+| rustversion | 1.0.23 | MIT OR Apache-2.0 |
+| ryu | 1.0.23 | Apache-2.0 OR BSL-1.0 |
+| scopeguard | 1.2.0 | MIT OR Apache-2.0 |
+| serde | 1.0.229 | MIT OR Apache-2.0 |
+| serde_core | 1.0.229 | MIT OR Apache-2.0 |
+| serde_derive | 1.0.229 | MIT OR Apache-2.0 |
+| serde_json | 1.0.154 | MIT OR Apache-2.0 |
+| serde_path_to_error | 0.1.20 | MIT OR Apache-2.0 |
+| serde_urlencoded | 0.7.1 | MIT/Apache-2.0 |
+| sha2 | 0.11.1 | MIT OR Apache-2.0 |
+| shlex | 2.0.1 | MIT OR Apache-2.0 |
+| signal-hook-registry | 1.4.8 | MIT OR Apache-2.0 |
+| simd-adler32 | 0.3.10 | MIT |
+| simdutf8 | 0.1.5 | MIT OR Apache-2.0 |
+| slab | 0.4.12 | MIT |
+| smallvec | 1.16.6 | MIT OR Apache-2.0 |
+| socket2 | 0.6.5 | MIT OR Apache-2.0 |
+| spin | 0.9.9 | MIT |
+| stringprep | 0.1.5 | MIT/Apache-2.0 |
+| syn | 2.0.119 | MIT OR Apache-2.0 |
+| syn | 3.0.10 | MIT OR Apache-2.0 |
+| sync_wrapper | 1.0.2 | Apache-2.0 |
+| thiserror | 2.0.21 | MIT OR Apache-2.0 |
+| thiserror-impl | 2.0.21 | MIT OR Apache-2.0 |
+| tinyvec | 1.13.3 | Zlib OR Apache-2.0 OR MIT |
+| tokio | 1.54.1 | MIT |
+| tokio-macros | 2.7.2 | MIT |
+| tower | 0.5.3 | MIT |
+| tower-layer | 0.3.3 | MIT |
+| tower-service | 0.3.3 | MIT |
+| tracing | 0.1.44 | MIT |
+| tracing-core | 0.1.36 | MIT |
+| typenum | 1.20.1 | MIT OR Apache-2.0 |
+| unicode-bidi | 0.3.18 | MIT OR Apache-2.0 |
+| unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 |
+| unicode-normalization | 0.1.26 | (MIT OR Apache-2.0) AND Unicode-3.0 |
+| unicode-properties | 0.1.5 | (MIT OR Apache-2.0) AND Unicode-3.0 |
+| uuid | 1.29.3 | Apache-2.0 OR MIT |
+| version_check | 0.9.5 | MIT/Apache-2.0 |
+| weezl | 0.2.1 | MIT OR Apache-2.0 |
+| zip | 2.6.1 | MIT |
+| zlib-rs | 0.6.8 | Zlib |
+| zmij | 1.0.23 | MIT |
+| zopfli | 0.8.4 | Apache-2.0 |
+
+## Externe Programme (werden aufgerufen, nicht mitgeliefert)
+
+| Programm | Lizenz |
+|---|---|
+| LibreOffice | MPL-2.0 |
+| veraPDF (optional) | GPL-3.0-or-later oder MPL-2.0 |

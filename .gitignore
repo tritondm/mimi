@@ -1,0 +1,10 @@
+# Build
+/target/
+
+# Laufzeitdaten – enthalten hochgeladene Berichte und Passwort-Hashes, nie committen!
+/data/
+/users.txt
+/users.tmp
+
+# Externe Werkzeuge (veraPDF-Installer bzw. -Installation)
+/tools/

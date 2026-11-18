@@ -1,0 +1,164 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rampe – Benutzer</title>
+<style>
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;
+  --accent: #1f5fbf; --accent-text: #ffffff; --ok: #1d7a3e; --ok-bg: #e6f4ea;
+  --err: #b3261e; --err-bg: #fce8e6; --info: #3c4a5c; --info-bg: #eef1f5; --focus: #ffb300;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b; --card: #1d2127; --text: #e8eaed; --muted: #a2abb6; --line: #343a42;
+    --accent: #7fb0ff; --accent-text: #0d1b33; --ok: #7ed69b; --ok-bg: #173323;
+    --err: #ff9d94; --err-bg: #3d1a17; --info: #c3cdd9; --info-bg: #262c34;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+header { background: var(--card); border-bottom: 1px solid var(--line); padding: 16px; }
+header .bar { max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+header h1 { margin: 0; font-size: 1.3rem; }
+main { max-width: 900px; margin: 0 auto; padding: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+h2 { font-size: 1.15rem; margin: 0 0 12px; }
+button, .btn { font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text); border-radius: 6px; padding: 6px 12px; cursor: pointer; text-decoration: none; display: inline-block; }
+button.secondary, .btn.secondary { background: transparent; color: var(--accent); }
+button.danger { background: transparent; color: var(--err); border-color: var(--err); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+input[type=text], input[type=password] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+label { font-weight: 600; display: block; margin-bottom: 4px; }
+label.inline { display: inline-flex; gap: 6px; align-items: center; font-weight: normal; }
+.muted { color: var(--muted); font-size: .92rem; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .82rem; font-weight: 600; background: var(--info-bg); color: var(--info); }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px; border-top: 1px solid var(--line); vertical-align: middle; }
+th { border-top: 0; color: var(--muted); font-size: .9rem; }
+td.actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+@media (max-width: 700px) { form.grid { grid-template-columns: 1fr; } }
+.msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+.msg.err { background: var(--err-bg); color: var(--err); }
+.msg.ok { background: var(--ok-bg); color: var(--ok); }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Rampe – Benutzerverwaltung</h1>
+    <div><a class="btn secondary" href="/">Zurück zum Tool</a></div>
+  </div>
+</header>
+<main>
+  <div id="msg" class="msg hidden" role="status" aria-live="polite"></div>
+
+  <section class="card hidden" id="noaccess">
+    <h2>Kein Zugriff</h2>
+    <p>Diese Seite ist nur für Admins. <a href="/">Zur Anmeldung</a></p>
+  </section>
+
+  <div id="content" class="hidden">
+    <section class="card" aria-labelledby="h-new">
+      <h2 id="h-new">Benutzer anlegen</h2>
+      <form class="grid" id="newform">
+        <div><label for="n-name">Benutzername</label><input id="n-name" type="text" autocomplete="off" required pattern="[A-Za-z0-9._@\-]{1,64}"></div>
+        <div><label for="n-pw">Passwort <span class="muted" id="minpw"></span></label><input id="n-pw" type="password" autocomplete="new-password" required></div>
+        <div><button type="submit">Anlegen</button></div>
+        <div><label class="inline"><input type="checkbox" id="n-admin"> Admin (darf Benutzer verwalten)</label></div>
+      </form>
+      <p class="muted">Erlaubt sind Buchstaben, Ziffern und . _ - @. Das Passwort teilen Sie der Person bitte auf sicherem Weg mit.</p>
+    </section>
+
+    <section class="card" aria-labelledby="h-list">
+      <h2 id="h-list">Benutzer</h2>
+      <table>
+        <thead><tr><th scope="col">Name</th><th scope="col">Rolle</th><th scope="col"><span class="hidden">Aktionen</span></th></tr></thead>
+        <tbody id="users"></tbody>
+      </table>
+    </section>
+  </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let me = null, minPw = 12;
+
+function msg(text, ok) { const m = $('#msg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); m.classList.toggle('hidden', !text); }
+
+async function api(url, opts = {}) {
+  const r = await fetch(url, {credentials: 'same-origin', ...opts});
+  const body = (r.headers.get('content-type') || '').includes('json') ? await r.json() : {};
+  if (r.status === 401 || r.status === 403) { $('#content').classList.add('hidden'); $('#noaccess').classList.remove('hidden'); throw new Error(body.error || 'Kein Zugriff'); }
+  if (!r.ok) throw new Error(body.error || r.statusText);
+  return body;
+}
+const post = (url, data) => api(url, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(data)});
+
+function render(users) {
+  $('#users').innerHTML = users.map(u => {
+    const self = u.name === me;
+    return `<tr>
+      <td>${esc(u.name)}${self ? ' <span class="muted">(Sie)</span>' : ''}</td>
+      <td>${u.admin ? '<span class="badge">Admin</span>' : 'Benutzer'}</td>
+      <td class="actions">
+        <button class="secondary" data-pw="${esc(u.name)}">Passwort setzen</button>
+        ${self ? '' : `<button class="secondary" data-role="${esc(u.name)}" data-admin="${u.admin ? 0 : 1}">${u.admin ? 'Admin-Rechte entziehen' : 'Zum Admin machen'}</button>
+        <button class="danger" data-del="${esc(u.name)}">Löschen</button>`}
+      </td></tr>`;
+  }).join('');
+}
+
+$('#newform').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#n-name').value.trim(), password = $('#n-pw').value;
+  if (password.length < minPw) return msg(`Das Passwort muss mindestens ${minPw} Zeichen lang sein.`);
+  if (window.__users?.some(u => u.name === name) && !confirm(`„${name}“ gibt es schon. Passwort und Rolle überschreiben?`)) return;
+  try {
+    const r = await post('/api/admin/users', {name, password, admin: $('#n-admin').checked});
+    window.__users = r.users; render(r.users); e.target.reset(); msg(`Benutzer „${name}“ gespeichert.`, true);
+  } catch (err) { msg(err.message); }
+});
+
+$('#users').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  try {
+    let r;
+    if (b.dataset.pw) {
+      const pw = prompt(`Neues Passwort für „${b.dataset.pw}“ (mindestens ${minPw} Zeichen):`);
+      if (pw === null) return;
+      if (pw.length < minPw) return msg(`Das Passwort muss mindestens ${minPw} Zeichen lang sein.`);
+      const u = window.__users.find(x => x.name === b.dataset.pw);
+      r = await post('/api/admin/users', {name: b.dataset.pw, password: pw, admin: u.admin});
+      msg(`Passwort für „${b.dataset.pw}“ geändert. Bestehende Anmeldungen dieses Benutzers wurden beendet.`, true);
+    } else if (b.dataset.role) {
+      r = await post('/api/admin/users', {name: b.dataset.role, admin: b.dataset.admin === '1'});
+      msg(`Rolle von „${b.dataset.role}“ geändert.`, true);
+    } else if (b.dataset.del) {
+      if (!confirm(`Benutzer „${b.dataset.del}“ wirklich löschen?`)) return;
+      r = await api('/api/admin/users/' + encodeURIComponent(b.dataset.del), {method: 'DELETE'});
+      msg(`Benutzer „${b.dataset.del}“ gelöscht.`, true);
+    }
+    window.__users = r.users; render(r.users);
+  } catch (err) { msg(err.message); }
+});
+
+(async () => {
+  try {
+    const r = await fetch('/api/me', {credentials: 'same-origin'});
+    if (!r.ok) throw 0;
+    const j = await r.json(); me = j.user;
+    if (!j.admin) throw 0;
+    const l = await api('/api/admin/users');
+    minPw = l.min_password; $('#minpw').textContent = `(mind. ${minPw} Zeichen)`;
+    window.__users = l.users; render(l.users);
+    $('#content').classList.remove('hidden');
+  } catch (e) { $('#noaccess').classList.remove('hidden'); }
+})();
+</script>
+</body>
+</html>
