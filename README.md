@@ -22,7 +22,8 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
   Admin-Rechte vergeben/entziehen, löschen. Sich selbst löschen oder die eigenen
   Admin-Rechte entziehen geht nicht – es bleibt also immer ein Admin.
 - Alternativ über die Kommandozeile:
-  `rampe benutzer-anlegen NAME [--admin]`, `rampe benutzer-entfernen NAME`, `rampe benutzer-liste`.
+  `rampe benutzer-anlegen NAME [--admin]`, `rampe passwort-ändern NAME` (Rolle bleibt),
+  `rampe benutzer-entfernen NAME`, `rampe benutzer-liste`.
 - Passwörter werden mit Argon2id gehasht in `users.txt` gespeichert (Dateirechte 600).
 - Sitzungen: Cookie `HttpOnly`, `SameSite=Strict`, 8 Stunden ab letzter Aktivität.
   Passwortänderung oder Löschung beendet die Sitzungen des Benutzers sofort.

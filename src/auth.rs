@@ -7,7 +7,7 @@
 //! Benutzerdatei (Standard `users.txt`), eine Zeile pro Benutzer:
 //! `name:rolle:$argon2id$…` mit rolle = `admin` oder `benutzer`.
 //! Verwaltung im Browser unter `/admin` oder über die Unterbefehle
-//! `benutzer-anlegen`, `benutzer-entfernen`, `benutzer-liste`.
+//! `benutzer-anlegen`, `passwort-ändern`, `benutzer-entfernen`, `benutzer-liste`.
 
 use anyhow::{bail, Context, Result};
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
@@ -169,6 +169,26 @@ pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
             );
             Ok(true)
         }
+        Some("passwort-ändern") | Some("passwort-aendern") => {
+            let name = args.get(1).context("Aufruf: passwort-ändern <name>")?;
+            let mut users = read_users(users_file)?;
+            if !users.contains_key(name) {
+                bail!("Benutzer „{name}“ gibt es nicht – anlegen mit „rampe benutzer-anlegen {name}“.");
+            }
+            let pw = read_password(&format!("Neues Passwort für {name}: "))?;
+            check_password(&pw)?;
+            let pw2 = read_password("Passwort wiederholen: ")?;
+            if pw != pw2 {
+                bail!("Die Passwörter stimmen nicht überein.");
+            }
+            let hash = hash_password(&pw)?;
+            let rec = users.get_mut(name).expect("oben geprüft");
+            rec.hash = hash;
+            let admin = rec.admin;
+            write_users(users_file, &users)?;
+            println!("Passwort für „{name}“ ({}) geändert. Laufende Anmeldungen enden beim nächsten Neustart des Servers.", if admin { "Admin" } else { "Benutzer" });
+            Ok(true)
+        }
         Some("benutzer-entfernen") => {
             let name = args.get(1).context("Aufruf: benutzer-entfernen <name>")?;
             let mut users = read_users(users_file)?;
@@ -191,7 +211,7 @@ pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
         }
         Some("hilfe") | Some("--help") | Some("-h") => {
             println!(
-                "Rampe – Word-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen / Passwort ändern\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
+                "Rampe – Word-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
             );
             Ok(true)
         }
