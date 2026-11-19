@@ -1827,6 +1827,29 @@ fn unlink_bibliography(xml: &[u8]) -> Result<(Vec<u8>, usize)> {
     Ok((w.into_inner().into_inner(), if total > 0 { total } else { n_sdt }))
 }
 
+/// Zählt Word-Rahmen (aufeinanderfolgende Absätze mit `w:framePr` bilden einen Rahmen).
+fn count_frames(xml: &[u8]) -> Result<usize> {
+    let mut r = reader(xml);
+    let mut buf = Vec::new();
+    let (mut n, mut prev, mut cur) = (0usize, false, false);
+    loop {
+        match r.read_event_into(&mut buf)? {
+            Event::Eof => break,
+            Event::Start(e) if e.name().as_ref() == b"w:p" => cur = false,
+            Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:framePr" => cur = true,
+            Event::End(e) if e.name().as_ref() == b"w:p" => {
+                if cur && !prev {
+                    n += 1;
+                }
+                prev = cur;
+            }
+            _ => {}
+        }
+        buf.clear();
+    }
+    Ok(n)
+}
+
 fn is_header_footer(name: &str) -> bool {
     (name.starts_with("word/header") || name.starts_with("word/footer")) && name.ends_with(".xml") && !name.contains("/_rels/")
 }
@@ -1849,6 +1872,10 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
         }
     }
     if let Some(doc) = read_entry(docx, "word/document.xml")? {
+        let frames = count_frames(&doc)?;
+        if frames > 0 {
+            notes.push(format!("{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Rampe löst ihn nach dem Export dort heraus – das Layout bleibt unverändert."));
+        }
         let (new, n) = unlink_bibliography(&doc)?;
         if n > 0 {
             replaced.insert("word/document.xml".into(), new);
@@ -1986,7 +2013,7 @@ pub fn apply(docx: &[u8], changes: &Changes) -> Result<Vec<u8>> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     const STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -2010,11 +2037,13 @@ mod tests {
 <w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> BIBLIOGRAPHY </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Huber, A. (2024). Bodenkunde. Wien: Verlag.</w:t></w:r></w:p>
 <w:p><w:r><w:t>Maier, B. (2023). Chemie im Alltag. Graz: Verlag.</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
 </w:sdtContent></w:sdt>
+<w:p><w:pPr><w:framePr w:w="4000" w:wrap="around" w:hAnchor="page" w:x="2000" w:y="9000"/></w:pPr><w:r><w:t>Text im Rahmen, Zeile 1</w:t></w:r></w:p>
+<w:p><w:pPr><w:framePr w:w="4000" w:wrap="around" w:hAnchor="page" w:x="2000" w:y="9000"/></w:pPr><w:r><w:t>Text im Rahmen, Zeile 2</w:t></w:r></w:p>
 <w:p><w:r><w:t>Ende.</w:t></w:r></w:p>
 <w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1134" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>
 </w:body></w:document>"#;
 
-    fn fixture() -> Vec<u8> {
+    pub(crate) fn fixture() -> Vec<u8> {
         let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
         let o = zip::write::SimpleFileOptions::default();
         let parts: [(&str, &str); 5] = [
@@ -2112,7 +2141,7 @@ mod tests {
             println!("{n}");
         }
         if input.is_none() {
-            assert_eq!(notes.len(), 2, "{notes:?}");
+            assert_eq!(notes.len(), 3, "{notes:?}");
         }
     }
 }

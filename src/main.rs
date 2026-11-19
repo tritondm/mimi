@@ -7,6 +7,7 @@
 mod auth;
 mod docx;
 mod pdfcheck;
+mod pdffix;
 
 use axum::{
     body::Body,
@@ -347,6 +348,8 @@ async fn apply(State(st): St, Extension(user): Extension<auth::User>, AxPath(id)
 
 async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &str) -> Result<(), AppError> {
     let profile = st.jobs.parent().unwrap_or(&st.jobs).join("lo-profile");
+    // relative Pfade ergäben file://data/… – LibreOffice hielte "data" für einen Rechnernamen und hinge
+    let profile = std::path::absolute(&profile).unwrap_or(profile);
     let profile_url = format!("file://{}", profile.display());
     let _guard = st.lo_lock.lock().await;
     let fut = tokio::process::Command::new(&st.soffice)
@@ -391,8 +394,23 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     if !pdf.exists() {
         return Err(anyhow::anyhow!("LibreOffice hat kein PDF erzeugt").into());
     }
+    // Strukturbaum geradeziehen (Rahmen/Textfelder stecken sonst als Div in Absätzen)
     let pdf2 = pdf.clone();
-    let (pages, checks) = tokio::task::spawn_blocking(move || pdfcheck::basic_checks(&pdf2)).await.map_err(|e| anyhow::anyhow!(e))??;
+    let (pages, checks) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+        let moved = pdffix::fix_structure(&pdf2)?;
+        let (pages, mut checks) = pdfcheck::basic_checks(&pdf2)?;
+        if moved > 0 {
+            checks.insert(0, pdfcheck::Check {
+                ok: true,
+                severity: String::new(),
+                title: "Strukturbaum korrigiert".into(),
+                detail: format!("{moved} Bereich(e) aus Rahmen oder Textfeldern aus dem Absatz gelöst, in dem LibreOffice sie abgelegt hatte."),
+            });
+        }
+        Ok((pages, checks))
+    })
+    .await
+    .map_err(|e| anyhow::anyhow!(e))??;
     let vera = pdfcheck::run_verapdf(pdfcheck::find_verapdf(&st.base), &pdf).await;
     let report = pdfcheck::PdfReport { pages, checks, verapdf: vera };
     tokio::fs::write(out.join("report.json"), serde_json::to_vec_pretty(&report).unwrap_or_default()).await?;

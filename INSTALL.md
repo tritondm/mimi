@@ -174,7 +174,9 @@ lxc exec rampe -- journalctl -u rampe -f            # Protokoll
 lxc exec rampe -- apt-get upgrade                   # LibreOffice-Updates kommen über Ubuntu
 ```
 
-- Nach einem LibreOffice-Update einen Testbericht exportieren und mit veraPDF prüfen. Die
-  Vorbereitung in `prepare_for_pdf` gleicht Eigenheiten genau dieses Programms aus.
+- Nach einem LibreOffice-Update `cargo test --release -- --ignored` laufen lassen
+  (Regressionstest, siehe [FUNCTION.md](FUNCTION.md#testen)). Dazu einen echten Bericht
+  exportieren und mit veraPDF prüfen. Die Vorbereitung (`prepare_for_pdf`) und die
+  Nachbearbeitung (`pdffix`) gleichen Eigenheiten von LibreOffice aus.
 - Hochgeladene Berichte werden noch nicht automatisch gelöscht (`/var/lib/rampe/data/jobs/`).
 - Sicherung: `/var/lib/rampe/users.txt` genügt. Berichte lassen sich jederzeit neu hochladen.

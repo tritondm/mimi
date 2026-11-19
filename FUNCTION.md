@@ -16,7 +16,7 @@ Installation und Betrieb: [INSTALL.md](INSTALL.md) · Bedienung und Einstellunge
 | 2 Analysieren | `docx::analyze` | Bilder, Tabellen, Links, Überschriften, Farben, Titel und Sprache werden gelesen und als Liste von Befunden an den Browser geschickt. |
 | 3 Korrigieren | Browser → `POST /api/job/{id}/apply` | Die Änderungen werden mit `docx::apply` in `current.docx` geschrieben. Danach wird die Datei sofort neu analysiert. Ist sie nicht mehr lesbar, wird nicht gespeichert. |
 | 4 Vorbereiten | `docx::prepare_for_pdf` | Für den Export entsteht eine **Kopie** mit Anpassungen, die nur LibreOffice betreffen (siehe unten). |
-| 5 PDF erzeugen | LibreOffice ohne Oberfläche | Aus der Kopie entstehen `out/current.pdf` (PDF/UA, getaggt) und `out/current.odt`. |
+| 5 PDF erzeugen | LibreOffice ohne Oberfläche, danach `pdffix::fix_structure` | Aus der Kopie entstehen `out/current.pdf` (PDF/UA, getaggt) und `out/current.odt`. Anschließend richtet Rampe den Strukturbaum des PDFs (siehe [Nachbearbeitung](#nachbearbeitung-des-pdfs)). |
 | 6 Prüfen | `pdfcheck::basic_checks` + veraPDF | Basisprüfung und, falls installiert, die vollständige PDF/UA-1-Prüfung. Das Ergebnis liegt in `out/report.json`. |
 
 Die herunterladbare DOCX ist immer `current.docx`, also die Fassung mit den Korrekturen aus
@@ -29,6 +29,7 @@ Schritt 3 und ohne die Anpassungen aus Schritt 4. Sie bleibt eine normale Word-D
 | `src/main.rs` | Webserver (axum): Routen, Anmeldung, Ablage, Aufruf von LibreOffice |
 | `src/auth.rs` | Benutzer, Passwörter (Argon2id), Sitzungen, Kommandozeilenbefehle |
 | `src/docx.rs` | Lesen, Korrigieren und Vorbereiten der Word-Datei |
+| `src/pdffix.rs` | Nachbearbeitung des PDFs: falsch verschachtelte Struktur geradeziehen |
 | `src/pdfcheck.rs` | Basisprüfung des PDFs, Aufruf von veraPDF |
 | `static/index.html` | Die gesamte Oberfläche (eine Seite, ohne externe Abhängigkeiten) |
 | `static/admin.html` | Benutzerverwaltung |
@@ -72,11 +73,45 @@ behebt sie in einer Kopie, die nur für den Export entsteht:
 Welche Anpassungen ein Bericht bekommt, zeigt Rampe vor dem Export im Reiter
 „PDF erzeugen“ an (`pdf_prep` in der Analyse).
 
+## Nachbearbeitung des PDFs
+
+Word-**Rahmen** (`w:framePr`, z. B. Titelblock auf Seite 1, Impressum, Adressblock) und
+Textfelder setzt LibreOffice im PDF als `Div` **in den Absatz, an dem sie verankert sind**:
+
+```
+vorher                               nachher
+Document                             Document
+├─ Logo-Absatz (P)                   ├─ Logo-Absatz (P)
+├─ Block (P)                         ├─ Block (P)
+│   ├─ Figure, Figure                │   └─ Figure, Figure
+│   └─ Div            ✗              ├─ Div                ✓
+│       ├─ Title (P)                 │   ├─ Title (P)
+│       └─ Subtitle (P)              │   └─ Subtitle (P)
+```
+
+Ein Absatz darf keine Bereiche, Absätze oder Überschriften enthalten (ISO 32000-2 Anhang L).
+PDF/UA-1 und veraPDF prüfen das nicht, PDF/UA-2 und PAC schon.
+
+Ein Umbau der Word-Datei (Rahmen auflösen) würde das Layout verändern. Vor allem
+„unten an der Seite verankert“ lässt sich mit normalem Text nicht nachbauen. Deshalb
+korrigiert Rampe stattdessen das fertige PDF: Jedes Blockelement, das in einem Absatz
+steckt, wird eine Ebene höher direkt hinter diesen Absatz gehängt. Ein dadurch leerer Absatz
+fällt weg. Geändert werden nur Eltern-Verweise im Strukturbaum. Seiteninhalt, Zuordnung
+der Inhalte (MCID) und Layout bleiben unberührt.
+
+**Unabhängig von LibreOffice-Versionen:** Die Korrektur sucht nach der Regel („Blockelement
+in Absatz“), nicht nach einem bestimmten Muster von LibreOffice. Macht eine spätere Version
+den Baum selbst richtig, findet sie nichts und lässt das PDF unverändert. Macht sie es
+anders falsch, meldet die Basisprüfung „Falsch verschachtelte Struktur“. Ein Fehler wird
+also nie still durchgereicht. Nach einem LibreOffice-Update zeigt der Regressionstest
+(siehe [Testen](#testen)), ob alles noch passt.
+
 ## Prüfung des PDFs
 
 1. **Basisprüfung** (`pdfcheck.rs`, immer): getaggt, Sprache, Titel und dessen Anzeige,
    PDF/UA-Kennung, umgeleitete Standard-Tags, Alternativtexte, Überschriften und
-   Ebenensprünge, Tabellenköpfe, eingebettete Schriften, Linkbeschreibungen, ungetaggte Links.
+   Ebenensprünge, Verschachtelung (Blockelemente in Absätzen), Tabellenköpfe,
+   eingebettete Schriften, Linkbeschreibungen, ungetaggte Links.
 2. **veraPDF** (falls installiert): vollständige maschinelle Prüfung nach PDF/UA-1.
 
 Was keine Software prüfen kann, z. B. ob ein Alternativtext sinnvoll ist oder ob die
@@ -99,10 +134,34 @@ macht die Mitarbeiterin bzw. der Mitarbeiter.
 Alle 111 Verzeichniseinträge (Inhalt, Tabellen, Abbildungen) sind im PDF verlinkt.
 Die 63 Beschriftungen sind normale Absätze statt frei stehender `Caption`.
 
+Verschachtelungsregeln (veraPDF, Profil PDF/UA-2, Tabelle 5), vor und nach der Nachbearbeitung:
+
+| Regel | vorher | nachher |
+|---|---|---|
+| `P` enthält `Div` (Titelblock, Impressum, Adressblock) | 3 | 0 |
+| `P` enthält `P` (Absätze in diesen Rahmen) | 18 | 0 |
+| `P` enthält Überschrift („Impressum“) | 1 | 0 |
+
+Text und Seitenbild sind vor und nach der Nachbearbeitung identisch.
+Geprüft wurden der Text mit `pdftotext` und die Seiten 1, 2, 50 und 100 pixelgenau.
+
 ## Testen
 
 ```bash
 cargo test --release                     # Unit-Tests der XML-Umbauten
+cargo test --release -- --ignored        # zusätzlich mit LibreOffice (Regressionstest)
+```
+
+Der Regressionstest `libreoffice_roundtrip` jagt ein eingebautes Beispieldokument
+(Beschriftung, TD-Vorlage, Literaturverzeichnis, Rahmen) durch Vorbereitung, LibreOffice
+und Nachbearbeitung. Danach muss die Basisprüfung sauber sein. **Nach jedem
+LibreOffice-Update laufen lassen.** Am besten im Container mit der dort installierten
+Version, oder lokal mit derselben Version.
+
+Ein vorhandenes PDF nachbearbeiten und prüfen (schreibt `a.fixed.pdf` daneben):
+
+```bash
+RAMPE_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture
 ```
 
 Einen echten Bericht ohne Oberfläche durchspielen: Mit `RAMPE_TEST_APPLY=1` wird vorher
@@ -121,9 +180,6 @@ Ohne `RAMPE_TEST_IN` wird ein kleines eingebautes Beispieldokument verwendet.
 
 ## Offene Punkte
 
-- **Word-Rahmen** (`w:framePr`, z. B. Titelblock auf Seite 1, Impressum): LibreOffice setzt
-  ihren Inhalt als `Div` in einen Absatz. veraPDF stört das nicht, PAC schon. Geplant ist,
-  sie in normale Absätze umzuwandeln und die Lage über den Abstand nachzubilden.
 - **Zeilenhöhen in Tabellen**: Weichen sie vom Original ab, liegt das meist an fehlenden
   Schriften (siehe [INSTALL.md](INSTALL.md#schriften)). Feste Zeilenhöhen schneiden
   mehrzeilige Zellen ab und sind deshalb keine Lösung.

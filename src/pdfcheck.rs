@@ -99,6 +99,8 @@ struct StructStats {
     elements: usize,
     last_heading: u8,
     heading_jumps: usize,
+    /// Blockelemente (Div, P, Hn …) innerhalb eines Absatzes
+    nested_blocks: usize,
 }
 
 /// Standard-Strukturtypen (ISO 32000-1, 14.8.4) – dürfen laut PDF/UA nicht umgeleitet werden.
@@ -109,7 +111,8 @@ const STD_TYPES: &[&[u8]] = &[
     b"Annot", b"Ruby", b"RB", b"RT", b"RP", b"Warichu", b"WT", b"WP", b"Figure", b"Formula", b"Form",
 ];
 
-fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut StructStats, seen: &mut HashSet<(u32, u16)>, in_table: &mut Option<bool>, depth: usize) {
+#[allow(clippy::too_many_arguments)]
+fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut StructStats, seen: &mut HashSet<(u32, u16)>, in_table: &mut Option<bool>, in_para: bool, depth: usize) {
     if depth > 200 {
         return;
     }
@@ -121,20 +124,19 @@ fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut S
     match deref(doc, o) {
         Object::Array(a) => {
             for k in a {
-                walk(doc, k, role_map, stats, seen, in_table, depth + 1);
+                walk(doc, k, role_map, stats, seen, in_table, in_para, depth + 1);
             }
         }
         Object::Dictionary(d) => {
             let Some(Object::Name(s)) = get(doc, d, b"S") else {
                 return;
             };
-            let mut role = s.clone();
-            if let Some(rm) = role_map {
-                if let Some(Object::Name(m)) = get(doc, rm, &role) {
-                    role = m.clone();
-                }
-            }
+            let role = crate::pdffix::resolve_role(role_map, s);
             stats.elements += 1;
+            if in_para && crate::pdffix::BLOCK_TYPES.contains(&role.as_slice()) {
+                stats.nested_blocks += 1;
+            }
+            let para = crate::pdffix::PARA_TYPES.contains(&role.as_slice());
             match role.as_slice() {
                 b"Figure" => {
                     stats.figures += 1;
@@ -164,9 +166,9 @@ fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut S
             let mut local = if is_table { Some(false) } else { None };
             if let Some(k) = d.get(b"K").ok() {
                 if is_table {
-                    walk(doc, k, role_map, stats, seen, &mut local, depth + 1);
+                    walk(doc, k, role_map, stats, seen, &mut local, para, depth + 1);
                 } else {
-                    walk(doc, k, role_map, stats, seen, in_table, depth + 1);
+                    walk(doc, k, role_map, stats, seen, in_table, para, depth + 1);
                 }
             }
             if is_table {
@@ -270,7 +272,7 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         let mut stats = StructStats::default();
         let mut seen = HashSet::new();
         if let Ok(k) = t.get(b"K") {
-            walk(&doc, k, role_map, &mut stats, &mut seen, &mut None, 0);
+            walk(&doc, k, role_map, &mut stats, &mut seen, &mut None, false, 0);
         }
         if stats.figures_no_alt == 0 {
             checks.push(ok("Alternativtexte", format!("alle {} Abbildungen haben einen Alternativtext", stats.figures)));
@@ -284,6 +286,11 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         }
         if stats.heading_jumps > 0 {
             checks.push(bad("fehler", "Überschriftenebene übersprungen", format!("{} Mal folgt z. B. H4 direkt auf H2 – im Reiter „Struktur & Hinweise“ korrigierbar.", stats.heading_jumps)));
+        }
+        if stats.nested_blocks == 0 {
+            checks.push(ok("Verschachtelung", "keine Bereiche, Absätze oder Überschriften innerhalb von Absätzen"));
+        } else {
+            checks.push(bad("fehler", "Falsch verschachtelte Struktur", format!("{} Bereich(e), Absätze oder Überschriften stecken in einem Absatz (meist Rahmen oder Textfelder). PAC und PDF/UA-2 bemängeln das.", stats.nested_blocks)));
         }
         if stats.tables_no_th == 0 {
             checks.push(ok("Tabellenköpfe", format!("alle {} Tabellen haben Kopfzellen", stats.tables)));

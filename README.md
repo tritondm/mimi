@@ -76,11 +76,15 @@ DOCX bleibt unverändert):
   LibreOffice macht daraus sonst ein geschütztes Verzeichnis mit anderer Formatierung, getaggt
   als Inhaltsverzeichnis (`TOC`).
 
+Nach dem Export richtet Rampe den Strukturbaum des PDFs: Inhalte von Word-Rahmen und
+Textfeldern (Titelblock, Impressum), die LibreOffice in einen Absatz hängt, werden dort
+herausgelöst. Das Layout bleibt unverändert, siehe [FUNCTION.md](FUNCTION.md#nachbearbeitung-des-pdfs).
+
 Nach dem Export prüft das Tool das PDF:
 
 1. **Basisprüfung** (immer): getaggt, Sprache, Titel + Anzeige des Titels, PDF/UA-Kennung,
-   umgeleitete Standard-Tags, Alternativtexte, Überschriften und Ebenensprünge, Tabellenköpfe,
-   eingebettete Schriften, Linkbeschreibungen, ungetaggte Links.
+   umgeleitete Standard-Tags, Alternativtexte, Überschriften und Ebenensprünge, Verschachtelung,
+   Tabellenköpfe, eingebettete Schriften, Linkbeschreibungen, ungetaggte Links.
 2. **veraPDF** (optional, empfohlen): vollständige maschinelle Prüfung nach PDF/UA-1
    (Matterhorn-Protokoll – dieselbe Grundlage wie PAC).
 
