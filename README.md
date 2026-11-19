@@ -3,6 +3,9 @@
 Word-Bericht (.docx) hochladen → Probleme anzeigen und direkt beheben → barrierefreies
 PDF (PDF/UA) erzeugen und prüfen → PDF, korrigierte DOCX und ODT herunterladen.
 
+- **Wie es funktioniert:** [FUNCTION.md](FUNCTION.md) (Ablauf, Vorbereitung für LibreOffice, Praxistest)
+- **Installation am Server, Schriften, Betrieb:** [INSTALL.md](INSTALL.md)
+
 ## Starten
 
 ```bash
@@ -42,7 +45,8 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
 | `SOFFICE`       | `soffice`         | Pfad zu LibreOffice                         |
 | `VERAPDF`       | –                 | Pfad zum veraPDF-Startskript                |
 
-Voraussetzung auf dem Server: **LibreOffice** (läuft unsichtbar im Hintergrund).
+Voraussetzung auf dem Server: **LibreOffice** (läuft unsichtbar im Hintergrund) und die
+passenden **Schriften** (v. a. Carlito als Ersatz für Calibri), siehe [INSTALL.md](INSTALL.md#schriften).
 Die Mitarbeitenden brauchen nur einen Browser.
 
 ## Was das Tool prüft und behebt
@@ -65,6 +69,12 @@ DOCX bleibt unverändert):
   z. B. **alle Tabellenzellen** falsch getaggt (veraPDF 7.1-7, 7.2-10, 7.2-43).
 - Links und Verweis-Felder (z. B. `STYLEREF`) in Kopf-/Fußzeilen werden zu normalem Text,
   sonst entsteht auf jeder Seite ein ungetaggter Link (veraPDF 7.18.5).
+- Die Vorlage „Beschriftung“ (Word: `caption`) bekommt einen eigenen Namen. LibreOffice taggt
+  Beschriftungen sonst als frei stehende `Caption`, was PAC bemängelt; so werden
+  sie normale Absätze. Aussehen und Nummerierung bleiben gleich.
+- Literaturverzeichnisse (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) werden zu normalem Text.
+  LibreOffice macht daraus sonst ein geschütztes Verzeichnis mit anderer Formatierung, getaggt
+  als Inhaltsverzeichnis (`TOC`).
 
 Nach dem Export prüft das Tool das PDF:
 
@@ -87,6 +97,7 @@ java -jar verapdf-izpack-installer-*.jar
 ```
 
 Rampe findet veraPDF dann automatisch (oder Pfad über `VERAPDF=...` angeben).
+Am Server: siehe [INSTALL.md](INSTALL.md#4-verapdf).
 
 ## Bekannte Grenzen des Prototyps
 

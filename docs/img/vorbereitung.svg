@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" width="960" height="430" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Was die Vorbereitung im PDF ändert</title>
+  <desc id="d">Vergleich der PDF-Tags ohne und mit Vorbereitung. Ohne: Beschriftungen als frei stehende Caption, Tabellenzellen per RoleMap zu Absätzen, Links in Fußzeilen ungetaggt, Literaturverzeichnis als Inhaltsverzeichnis. Mit: normale Absätze, echte Tabellenzellen, Fußzeilen als Text, Literaturverzeichnis als Absätze.</desc>
+  <rect width="960" height="430" fill="#ffffff"/>
+
+  <!-- Spaltenköpfe -->
+  <rect x="4" y="4" width="470" height="44" rx="10" fill="#fde8e8" stroke="#c53030"/>
+  <text x="239" y="32" font-size="16" font-weight="700" text-anchor="middle" fill="#1a1a1a">LibreOffice direkt (Word-Datei unverändert)</text>
+  <rect x="486" y="4" width="470" height="44" rx="10" fill="#e5f5e8" stroke="#2f855a"/>
+  <text x="721" y="32" font-size="16" font-weight="700" text-anchor="middle" fill="#1a1a1a">Mit Rampe-Vorbereitung (Kopie)</text>
+
+  <g font-size="13" fill="#1a1a1a">
+    <!-- Zeile 1: Beschriftung -->
+    <text x="14" y="86" font-weight="700">Beschriftung „Tabelle 1: Messwerte“</text>
+    <rect x="14" y="96" width="74" height="24" rx="5" fill="#c53030"/>
+    <text x="51" y="113" text-anchor="middle" fill="#fff" font-weight="700">Caption</text>
+    <text x="98" y="113">frei stehend, nicht in Figure/Table → PAC-Fehler</text>
+    <text x="496" y="86" font-weight="700">Vorlage heißt „Bildunterschrift (Rampe)“</text>
+    <rect x="496" y="96" width="34" height="24" rx="5" fill="#2f855a"/>
+    <text x="513" y="113" text-anchor="middle" fill="#fff" font-weight="700">P</text>
+    <text x="540" y="113">normaler Absatz, sieht gleich aus</text>
+
+    <!-- Zeile 2: TD -->
+    <text x="14" y="164" font-weight="700">Tabellenzelle mit eigener Vorlage „TD“</text>
+    <rect x="14" y="174" width="34" height="24" rx="5" fill="#c53030"/>
+    <text x="31" y="191" text-anchor="middle" fill="#fff" font-weight="700">TD</text>
+    <text x="56" y="191">RoleMap TD → P: alle Zellen werden Absätze</text>
+    <text x="14" y="212" font-size="12" fill="#555">veraPDF 7.1-7, 7.2-10, 7.2-43</text>
+    <text x="496" y="164" font-weight="700">Vorlage heißt „TD Vorlage“</text>
+    <rect x="496" y="174" width="34" height="24" rx="5" fill="#2f855a"/>
+    <text x="513" y="191" text-anchor="middle" fill="#fff" font-weight="700">TD</text>
+    <text x="540" y="191">echte Tabellenzelle</text>
+
+    <!-- Zeile 3: Fußzeile -->
+    <text x="14" y="252" font-weight="700">Fußzeile mit Feld STYLEREF / Link</text>
+    <rect x="14" y="262" width="48" height="24" rx="5" fill="#c53030"/>
+    <text x="38" y="279" text-anchor="middle" fill="#fff" font-weight="700">Link</text>
+    <text x="70" y="279">ungetaggt – auf jeder Seite einmal</text>
+    <text x="14" y="300" font-size="12" fill="#555">veraPDF 7.18.5-1</text>
+    <text x="496" y="252" font-weight="700">Feld wird zu Text</text>
+    <rect x="496" y="262" width="80" height="24" rx="5" fill="#2f855a"/>
+    <text x="536" y="279" text-anchor="middle" fill="#fff" font-weight="700">Artefakt</text>
+    <text x="584" y="279">Kopf-/Fußzeile wie vorgesehen</text>
+
+    <!-- Zeile 4: Literatur -->
+    <text x="14" y="340" font-weight="700">Literaturverzeichnis als Feld (Word, Citavi, Zotero …)</text>
+    <rect x="14" y="350" width="48" height="24" rx="5" fill="#c53030"/>
+    <text x="38" y="367" text-anchor="middle" fill="#fff" font-weight="700">TOC</text>
+    <rect x="68" y="350" width="52" height="24" rx="5" fill="#c53030"/>
+    <text x="94" y="367" text-anchor="middle" fill="#fff" font-weight="700">TOCI</text>
+    <text x="128" y="367">als Inhaltsverzeichnis getaggt,</text>
+    <text x="14" y="392">geschützt und anders formatiert als in Word</text>
+    <text x="496" y="340" font-weight="700">Feld wird zu Text</text>
+    <rect x="496" y="350" width="34" height="24" rx="5" fill="#2f855a"/>
+    <text x="513" y="367" text-anchor="middle" fill="#fff" font-weight="700">P</text>
+    <text x="540" y="367">normale Absätze, genau wie in Word</text>
+  </g>
+
+  <line x1="480" y1="60" x2="480" y2="410" stroke="#ccc"/>
+  <text x="480" y="424" font-size="12" text-anchor="middle" fill="#555">Die herunterladbare DOCX bleibt unverändert – nur die Kopie für LibreOffice wird angepasst (src/docx.rs: prepare_for_pdf).</text>
+</svg>

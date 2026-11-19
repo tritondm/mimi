@@ -1,0 +1,23 @@
+[Unit]
+Description=Rampe – Word-Berichte barrierefrei machen
+After=network.target
+
+[Service]
+User=rampe
+Group=rampe
+WorkingDirectory=/var/lib/rampe
+Environment=HOME=/var/lib/rampe
+Environment=ADDR=0.0.0.0:8080
+Environment=COOKIE_SECURE=1
+Environment=USERS_FILE=/var/lib/rampe/users.txt
+Environment=DATA_DIR=/var/lib/rampe/data
+Environment=VERAPDF=/opt/verapdf/verapdf
+ExecStart=/opt/rampe/rampe
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/rampe /tmp
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
