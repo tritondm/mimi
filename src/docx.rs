@@ -54,6 +54,35 @@ pub struct TableInfo {
 pub struct HeadingInfo {
     pub level: u8,
     pub text: String,
+    /// Absatznummer im Dokument (für Korrekturen)
+    pub para: usize,
+    pub style: String,
+}
+
+/// Übersprungene Überschriftsebene, die das Tool korrigieren kann.
+#[derive(Serialize, Clone)]
+pub struct HeadingFix {
+    pub para: usize,
+    pub text: String,
+    pub from: u8,
+    pub to: u8,
+    /// Formatvorlage (ID), die die richtige Ebene hat
+    pub style: String,
+    pub style_name: String,
+    pub section: String,
+}
+
+/// Schriftfarbe mit zu wenig Kontrast zu weißem Hintergrund (WCAG 1.4.3).
+#[derive(Serialize, Clone)]
+pub struct ColorIssue {
+    /// z. B. "E6320F"
+    pub color: String,
+    pub ratio: f64,
+    /// Vorschlag: gleicher Farbton, so weit abgedunkelt, dass es reicht
+    pub suggestion: String,
+    pub suggestion_ratio: f64,
+    /// wo die Farbe vorkommt (Formatvorlagen / direkte Formatierung)
+    pub places: Vec<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -76,10 +105,20 @@ pub struct Analysis {
     /// Links insgesamt / Links ohne Beschreibung (QuickInfo)
     pub links_total: usize,
     pub links_missing: usize,
+    pub heading_fixes: Vec<HeadingFix>,
+    pub colors: Vec<ColorIssue>,
+    /// Was beim PDF-Export automatisch vorbereitet wird
+    pub pdf_prep: Vec<String>,
 }
 
 #[derive(Deserialize, Default)]
 pub struct Changes {
+    /// Überschriften auf eine andere Formatvorlage setzen
+    #[serde(default)]
+    pub headings: Vec<HeadingChange>,
+    /// Schriftfarben ersetzen
+    #[serde(default)]
+    pub colors: Vec<ColorChange>,
     pub title: Option<String>,
     pub language: Option<String>,
     #[serde(default)]
@@ -103,6 +142,74 @@ pub struct ImageChange {
 pub struct TableChange {
     pub index: usize,
     pub header: bool,
+}
+
+#[derive(Deserialize)]
+pub struct HeadingChange {
+    pub para: usize,
+    pub style: String,
+}
+
+#[derive(Deserialize)]
+pub struct ColorChange {
+    pub from: String,
+    pub to: String,
+}
+
+// ---------------------------------------------------------------------------
+// Kontrast (WCAG 2.x)
+// ---------------------------------------------------------------------------
+
+fn parse_hex(h: &str) -> Option<[f64; 3]> {
+    if h.len() != 6 || !h.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    let c = |i: usize| u8::from_str_radix(&h[i..i + 2], 16).ok().map(|v| v as f64 / 255.0);
+    Some([c(0)?, c(2)?, c(4)?])
+}
+
+fn luminance(rgb: [f64; 3]) -> f64 {
+    let lin = |x: f64| if x <= 0.04045 { x / 12.92 } else { ((x + 0.055) / 1.055).powf(2.4) };
+    0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2])
+}
+
+/// Kontrast gegen Weiß
+fn contrast_white(rgb: [f64; 3]) -> f64 {
+    1.05 / (luminance(rgb) + 0.05)
+}
+
+/// Gleicher Farbton, abgedunkelt bis der Kontrast gegen Weiß mindestens `target` ist.
+fn darken_to(rgb: [f64; 3], target: f64) -> [u8; 3] {
+    let to8 = |f: f64| -> [u8; 3] { [(rgb[0] * f * 255.0).round() as u8, (rgb[1] * f * 255.0).round() as u8, (rgb[2] * f * 255.0).round() as u8] };
+    let ratio8 = |c: [u8; 3]| contrast_white([c[0] as f64 / 255.0, c[1] as f64 / 255.0, c[2] as f64 / 255.0]);
+    let (mut lo, mut hi) = (0.0f64, 1.0f64);
+    for _ in 0..40 {
+        let mid = (lo + hi) / 2.0;
+        if ratio8(to8(mid)) >= target { lo = mid } else { hi = mid }
+    }
+    to8(lo)
+}
+
+const MIN_CONTRAST: f64 = 4.5;
+/// Vorschläge mit etwas Reserve, damit Rundungen in PDF/PAC nicht kippen
+const TARGET_CONTRAST: f64 = 4.6;
+
+/// Standard-Strukturtypen aus ISO 32000-1, 14.8.4. Eine eigene Formatvorlage mit
+/// genau diesem Namen würde LibreOffice im PDF per RoleMap auf P umleiten –
+/// das verbietet PDF/UA (7.1) und macht z. B. alle Tabellenzellen (TD) kaputt.
+const PDF_STD_TYPES: &[&str] = &[
+    "Document", "Part", "Art", "Sect", "Div", "BlockQuote", "Caption", "TOC", "TOCI", "Index", "NonStruct", "Private",
+    "P", "H", "H1", "H2", "H3", "H4", "H5", "H6", "L", "LI", "Lbl", "LBody", "Table", "TR", "TH", "TD", "THead",
+    "TBody", "TFoot", "Span", "Quote", "Note", "Reference", "BibEntry", "Code", "Link", "Annot", "Ruby", "RB", "RT",
+    "RP", "Warichu", "WT", "WP", "Figure", "Formula", "Form", "Artifact",
+];
+
+/// Feldtypen, die LibreOffice im PDF als Sprungmarke (Link) ausgibt.
+const LINK_FIELDS: &[&str] = &["STYLEREF", "REF", "PAGEREF", "NOTEREF", "HYPERLINK"];
+
+fn field_is_link(instr: &str) -> bool {
+    let first = instr.split_whitespace().next().unwrap_or("").to_ascii_uppercase();
+    LINK_FIELDS.contains(&first.as_str())
 }
 
 // ---------------------------------------------------------------------------
@@ -446,6 +553,8 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
     let mut hints: Vec<Hint> = Vec::new();
     let mut section = String::new();
     let mut last_level: u8 = 0;
+    // (Absatz, Ebene, vorherige Ebene, Text, Abschnitt)
+    let mut jumps: Vec<(usize, u8, u8, String, String)> = Vec::new();
 
     let mut in_t = false;
     let mut in_rpr = false;
@@ -674,6 +783,7 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                         if let Some(lvl) = level {
                             if !text.is_empty() {
                                 if last_level > 0 && lvl > last_level + 1 {
+                                    jumps.push((idx, lvl, last_level, snippet(&text, 120), section.clone()));
                                     hints.push(Hint {
                                         severity: "warnung".into(),
                                         kind: "ebene".into(),
@@ -690,7 +800,7 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                                     });
                                 }
                                 last_level = lvl;
-                                headings.push(HeadingInfo { level: lvl, text: snippet(&text, 120) });
+                                headings.push(HeadingInfo { level: lvl, text: snippet(&text, 120), para: idx, style: style.clone() });
                                 section = snippet(&text, 120);
                             }
                         } else if !p.in_table && !styles.is_caption(&style) && !styles.is_toc_or_index(&style) {
@@ -751,9 +861,262 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
         hints.push(Hint { severity: "hinweis".into(), kind: "tabelle".into(), text: format!("Tabelle {} hat nur eine Zeile – wird sie nur fürs Layout verwendet? Dann besser ohne Tabelle gestalten.", t.index + 1), section: t.section.clone() });
     }
 
+    // Übersprungene Ebenen: passende Formatvorlage je Ebene suchen
+    let mut level_styles: HashMap<u8, HashMap<String, usize>> = HashMap::new();
+    for h in &headings {
+        if styles.heading_level(&h.style) == Some(h.level) {
+            *level_styles.entry(h.level).or_default().entry(h.style.clone()).or_default() += 1;
+        }
+    }
+    let style_for_level = |lvl: u8| -> Option<String> {
+        if let Some(m) = level_styles.get(&lvl) {
+            // meistverwendete Vorlage dieser Ebene im Dokument
+            let mut v: Vec<_> = m.iter().collect();
+            v.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+            return v.first().map(|(k, _)| (*k).clone());
+        }
+        let mut cands: Vec<&String> = styles.map.keys().filter(|id| styles.heading_level(id) == Some(lvl)).collect();
+        cands.sort_by_key(|id| (!styles.map[*id].name.eq_ignore_ascii_case(&format!("heading {lvl}")), (*id).clone()));
+        cands.first().map(|s| (*s).clone())
+    };
+    let heading_fixes: Vec<HeadingFix> = jumps
+        .into_iter()
+        .filter_map(|(para, from, prev, text, section)| {
+            let to = prev + 1;
+            let style = style_for_level(to)?;
+            let style_name = styles.map.get(&style).map(|s| s.name.clone()).unwrap_or_default();
+            Some(HeadingFix { para, text, from, to, style, style_name: display_style_name(&style_name), section })
+        })
+        .collect();
+
+    let colors = color_issues(docx, &doc)?;
+    let pdf_prep = pdf_prep_notes(docx)?;
+
     let links = hyperlink_texts(&doc)?;
     let links_missing = links.iter().filter(|(has, t)| !has && !t.is_empty()).count();
-    Ok(Analysis { title, language: styles.language, images, tables, headings, hints, links_total: links.len(), links_missing })
+    Ok(Analysis { title, language: styles.language, images, tables, headings, hints, links_total: links.len(), links_missing, heading_fixes, colors, pdf_prep })
+}
+
+/// Word-interne englische Namen der eingebauten Vorlagen lesbar machen.
+fn display_style_name(n: &str) -> String {
+    let l = n.to_lowercase();
+    if let Some(k) = l.strip_prefix("heading ") {
+        return format!("Überschrift {k}");
+    }
+    n.to_string()
+}
+
+// ---------------------------------------------------------------------------
+// Schriftfarben
+// ---------------------------------------------------------------------------
+
+struct ColorStyle {
+    id: String,
+    name: String,
+    based_on: Option<String>,
+    colors: Vec<String>,
+}
+
+fn color_attr(e: &BytesStart) -> Option<String> {
+    let v = attr(e, b"w:val")?.to_ascii_uppercase();
+    parse_hex(&v).map(|_| v)
+}
+
+/// Sucht Schriftfarben mit zu wenig Kontrast in verwendeten Formatvorlagen,
+/// Aufzählungszeichen und direkter Formatierung.
+fn color_issues(docx: &[u8], doc: &[u8]) -> Result<Vec<ColorIssue>> {
+    // verwendete Vorlagen + direkte Farben im Text
+    let mut used: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut direct: HashMap<String, usize> = HashMap::new();
+    let mut used_nums: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut scan = |xml: &[u8], direct: &mut HashMap<String, usize>| -> Result<()> {
+        let mut r = reader(xml);
+        let mut buf = Vec::new();
+        let mut in_rpr = 0usize;
+        loop {
+            match r.read_event_into(&mut buf)? {
+                Event::Eof => break,
+                Event::Start(e) if e.name().as_ref() == b"w:rPr" => in_rpr += 1,
+                Event::End(e) if e.name().as_ref() == b"w:rPr" => in_rpr = in_rpr.saturating_sub(1),
+                Event::Start(e) | Event::Empty(e) => match e.name().as_ref() {
+                    b"w:pStyle" | b"w:rStyle" | b"w:tblStyle" => {
+                        if let Some(v) = attr(&e, b"w:val") {
+                            used.insert(v);
+                        }
+                    }
+                    b"w:numId" => {
+                        if let Some(v) = attr(&e, b"w:val") {
+                            used_nums.insert(v);
+                        }
+                    }
+                    b"w:color" if in_rpr > 0 => {
+                        if let Some(c) = color_attr(&e) {
+                            *direct.entry(c).or_default() += 1;
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+            buf.clear();
+        }
+        Ok(())
+    };
+    scan(doc, &mut direct)?;
+    for name in zip_names(docx)? {
+        if (name.starts_with("word/header") || name.starts_with("word/footer") || name == "word/footnotes.xml" || name == "word/endnotes.xml") && name.ends_with(".xml") {
+            if let Some(x) = read_entry(docx, &name)? {
+                scan(&x, &mut direct)?;
+            }
+        }
+    }
+
+    // Vorlagen
+    let mut cstyles: HashMap<String, ColorStyle> = HashMap::new();
+    let mut default_para: Option<String> = None;
+    if let Some(st) = read_entry(docx, "word/styles.xml")? {
+        let mut r = reader(&st);
+        let mut buf = Vec::new();
+        let mut cur: Option<ColorStyle> = None;
+        loop {
+            match r.read_event_into(&mut buf)? {
+                Event::Eof => break,
+                Event::Start(e) | Event::Empty(e) => match e.name().as_ref() {
+                    b"w:style" => {
+                        let id = attr(&e, b"w:styleId").unwrap_or_default();
+                        if attr(&e, b"w:type").as_deref() == Some("paragraph") && attr(&e, b"w:default").as_deref() == Some("1") {
+                            default_para = Some(id.clone());
+                        }
+                        cur = Some(ColorStyle { id, name: String::new(), based_on: None, colors: Vec::new() });
+                    }
+                    b"w:name" => {
+                        if let Some(c) = cur.as_mut() {
+                            c.name = attr(&e, b"w:val").unwrap_or_default();
+                        }
+                    }
+                    b"w:basedOn" => {
+                        if let Some(c) = cur.as_mut() {
+                            c.based_on = attr(&e, b"w:val");
+                        }
+                    }
+                    b"w:color" => {
+                        if let (Some(c), Some(col)) = (cur.as_mut(), color_attr(&e)) {
+                            c.colors.push(col);
+                        }
+                    }
+                    _ => {}
+                },
+                Event::End(e) if e.name().as_ref() == b"w:style" => {
+                    if let Some(c) = cur.take() {
+                        cstyles.insert(c.id.clone(), c);
+                    }
+                }
+                _ => {}
+            }
+            buf.clear();
+        }
+    }
+    if let Some(d) = default_para {
+        used.insert(d);
+    }
+    // Basisvorlagen der verwendeten Vorlagen gelten mit
+    let mut stack: Vec<String> = used.iter().cloned().collect();
+    while let Some(id) = stack.pop() {
+        if let Some(b) = cstyles.get(&id).and_then(|s| s.based_on.clone()) {
+            if used.insert(b.clone()) {
+                stack.push(b);
+            }
+        }
+    }
+
+    let mut places: HashMap<String, Vec<String>> = HashMap::new();
+    let mut ids: Vec<&String> = used.iter().collect();
+    ids.sort();
+    for id in ids {
+        if let Some(s) = cstyles.get(id) {
+            for c in &s.colors {
+                let p = places.entry(c.clone()).or_default();
+                let label = format!("Formatvorlage „{}“", display_style_name(&s.name));
+                if !p.contains(&label) {
+                    p.push(label);
+                }
+            }
+        }
+    }
+    // Aufzählungszeichen / Nummern
+    if let Some(nb) = read_entry(docx, "word/numbering.xml")? {
+        let mut abs_colors: HashMap<String, Vec<String>> = HashMap::new();
+        let mut num_to_abs: HashMap<String, String> = HashMap::new();
+        let mut r = reader(&nb);
+        let mut buf = Vec::new();
+        let mut cur_abs: Option<String> = None;
+        let mut cur_num: Option<String> = None;
+        loop {
+            match r.read_event_into(&mut buf)? {
+                Event::Eof => break,
+                Event::Start(e) | Event::Empty(e) => match e.name().as_ref() {
+                    b"w:abstractNum" => cur_abs = attr(&e, b"w:abstractNumId"),
+                    b"w:num" => cur_num = attr(&e, b"w:numId"),
+                    b"w:abstractNumId" => {
+                        if let (Some(n), Some(a)) = (cur_num.clone(), attr(&e, b"w:val")) {
+                            num_to_abs.insert(n, a);
+                        }
+                    }
+                    b"w:color" => {
+                        if let (Some(a), Some(c)) = (cur_abs.clone(), color_attr(&e)) {
+                            abs_colors.entry(a).or_default().push(c);
+                        }
+                    }
+                    _ => {}
+                },
+                Event::End(e) => match e.name().as_ref() {
+                    b"w:abstractNum" => cur_abs = None,
+                    b"w:num" => cur_num = None,
+                    _ => {}
+                },
+                _ => {}
+            }
+            buf.clear();
+        }
+        // Nummerierungen, die von verwendeten Vorlagen benutzt werden, sind schwer
+        // vollständig aufzulösen – direkt im Text verwendete reichen für die Praxis.
+        for n in &used_nums {
+            if let Some(cols) = num_to_abs.get(n).and_then(|a| abs_colors.get(a)) {
+                for c in cols {
+                    let p = places.entry(c.clone()).or_default();
+                    let label = "Aufzählungszeichen/Nummerierung".to_string();
+                    if !p.contains(&label) {
+                        p.push(label);
+                    }
+                }
+            }
+        }
+    }
+    for (c, n) in &direct {
+        places.entry(c.clone()).or_default().push(format!("{n}× direkt im Text formatiert"));
+    }
+
+    let mut out: Vec<ColorIssue> = places
+        .into_iter()
+        .filter_map(|(c, places)| {
+            let rgb = parse_hex(&c)?;
+            let ratio = contrast_white(rgb);
+            if ratio >= MIN_CONTRAST {
+                return None;
+            }
+            let d = darken_to(rgb, TARGET_CONTRAST);
+            let sugg = format!("{:02X}{:02X}{:02X}", d[0], d[1], d[2]);
+            let sr = contrast_white([d[0] as f64 / 255.0, d[1] as f64 / 255.0, d[2] as f64 / 255.0]);
+            Some(ColorIssue { color: c, ratio: (ratio * 100.0).floor() / 100.0, suggestion: sugg, suggestion_ratio: (sr * 100.0).floor() / 100.0, places })
+        })
+        .collect();
+    out.sort_by(|a, b| a.ratio.partial_cmp(&b.ratio).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(out)
+}
+
+fn zip_names(docx: &[u8]) -> Result<Vec<String>> {
+    let zip = zip::ZipArchive::new(Cursor::new(docx))?;
+    Ok(zip.file_names().map(|s| s.to_string()).collect())
 }
 
 // ---------------------------------------------------------------------------
@@ -801,6 +1164,10 @@ fn apply_document(xml: &[u8], changes: &Changes) -> Result<Vec<u8>> {
     let mut link_count = 0usize;
     let img_map: HashMap<usize, &ImageChange> = changes.images.iter().map(|c| (c.index, c)).collect();
     let tbl_map: HashMap<usize, bool> = changes.tables.iter().map(|c| (c.index, c.header)).collect();
+    let head_map: HashMap<usize, &str> = changes.headings.iter().map(|c| (c.para, c.style.as_str())).collect();
+    // Absatzzählung wie in analyze(): jedes w:p (auch leere) zählt
+    let mut para_count = 0usize;
+    let mut para_stack: Vec<usize> = Vec::new();
 
     let mut r = reader(xml);
     let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len() + 4096)));
@@ -1006,6 +1373,23 @@ fn apply_document(xml: &[u8], changes: &Changes) -> Result<Vec<u8>> {
                     }
                 }
             }
+            Event::Start(e) if e.name().as_ref() == b"w:p" => {
+                para_stack.push(para_count);
+                para_count += 1;
+            }
+            Event::Empty(e) if e.name().as_ref() == b"w:p" => {
+                para_count += 1;
+            }
+            Event::End(e) if e.name().as_ref() == b"w:p" => {
+                para_stack.pop();
+            }
+            Event::Empty(e) if e.name().as_ref() == b"w:pStyle" => {
+                if let Some(style) = para_stack.last().and_then(|i| head_map.get(i)) {
+                    w.write_event(Event::Empty(copy_start_with(e, &[("w:val", style)])))?;
+                    buf.clear();
+                    continue;
+                }
+            }
             Event::Start(e) if e.name().as_ref() == b"w:tbl" => {
                 table_stack.push((table_count, 0));
                 table_count += 1;
@@ -1117,12 +1501,216 @@ fn apply_language(xml: &[u8], lang: &str) -> Result<Vec<u8>> {
     Ok(w.into_inner().into_inner())
 }
 
+// ---------------------------------------------------------------------------
+// Vorbereitung für den PDF-Export
+// ---------------------------------------------------------------------------
+
+/// Benennt eigene Formatvorlagen um, deren Name ein PDF-Standard-Tag ist.
+/// Nur der Anzeigename (w:name) ändert sich, die ID und alle Verweise bleiben.
+fn rename_std_styles(xml: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
+    // vorhandene Namen sammeln, um Doppelungen zu vermeiden
+    let mut names = std::collections::HashSet::new();
+    {
+        let mut r = reader(xml);
+        let mut buf = Vec::new();
+        loop {
+            match r.read_event_into(&mut buf)? {
+                Event::Eof => break,
+                Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:name" => {
+                    if let Some(v) = attr(&e, b"w:val") {
+                        names.insert(v);
+                    }
+                }
+                _ => {}
+            }
+            buf.clear();
+        }
+    }
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len() + 256)));
+    let mut buf = Vec::new();
+    let mut custom = false;
+    let mut renamed = Vec::new();
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) if e.name().as_ref() == b"w:style" => {
+                custom = matches!(attr(e, b"w:customStyle").as_deref(), Some("1") | Some("true"));
+            }
+            Event::End(e) if e.name().as_ref() == b"w:style" => custom = false,
+            Event::Empty(e) if custom && e.name().as_ref() == b"w:name" => {
+                if let Some(v) = attr(e, b"w:val") {
+                    if PDF_STD_TYPES.contains(&v.as_str()) {
+                        let mut new = format!("{v} Vorlage");
+                        let mut i = 2;
+                        while names.contains(&new) {
+                            new = format!("{v} Vorlage {i}");
+                            i += 1;
+                        }
+                        names.insert(new.clone());
+                        renamed.push(format!("Formatvorlage „{v}“ heißt im PDF „{new}“, weil „{v}“ ein reservierter PDF-Tag ist (sonst werden z. B. alle Tabellenzellen falsch getaggt)."));
+                        w.write_event(Event::Empty(copy_start_with(e, &[("w:val", new.as_str())])))?;
+                        buf.clear();
+                        continue;
+                    }
+                }
+            }
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), renamed))
+}
+
+/// Entfernt Verknüpfungen (Hyperlinks und Verweis-Felder wie STYLEREF) aus
+/// Kopf- und Fußzeilen. Der angezeigte Text bleibt stehen. Kopf-/Fußzeilen sind
+/// im PDF Artefakte; Links darin verletzen PDF/UA 7.18.5.
+fn unlink_header_footer(xml: &[u8]) -> Result<(Vec<u8>, usize)> {
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len())));
+    let mut buf = Vec::new();
+    let mut fld_stack: Vec<bool> = Vec::new();
+    let mut hl_depth = 0usize;
+    let mut n = 0usize;
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) if e.name().as_ref() == b"w:fldSimple" => {
+                let drop = field_is_link(&attr(e, b"w:instr").unwrap_or_default());
+                fld_stack.push(drop);
+                if drop {
+                    n += 1;
+                    buf.clear();
+                    continue;
+                }
+            }
+            Event::End(e) if e.name().as_ref() == b"w:fldSimple" => {
+                if fld_stack.pop() == Some(true) {
+                    buf.clear();
+                    continue;
+                }
+            }
+            Event::Start(e) if e.name().as_ref() == b"w:hyperlink" => {
+                hl_depth += 1;
+                n += 1;
+                buf.clear();
+                continue;
+            }
+            Event::End(e) if hl_depth > 0 && e.name().as_ref() == b"w:hyperlink" => {
+                hl_depth -= 1;
+                buf.clear();
+                continue;
+            }
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), n))
+}
+
+fn is_header_footer(name: &str) -> bool {
+    (name.starts_with("word/header") || name.starts_with("word/footer")) && name.ends_with(".xml") && !name.contains("/_rels/")
+}
+
+/// Bereitet eine Kopie der DOCX für den PDF-Export mit LibreOffice vor.
+/// Die herunterladbare DOCX bleibt davon unberührt.
+pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
+    let mut replaced: HashMap<String, Vec<u8>> = HashMap::new();
+    let mut notes = Vec::new();
+    if let Some(st) = read_entry(docx, "word/styles.xml")? {
+        let (new, ren) = rename_std_styles(&st)?;
+        if !ren.is_empty() {
+            replaced.insert("word/styles.xml".into(), new);
+            notes.extend(ren);
+        }
+    }
+    let mut links = 0;
+    for name in zip_names(docx)? {
+        if is_header_footer(&name) {
+            if let Some(x) = read_entry(docx, &name)? {
+                let (new, n) = unlink_header_footer(&x)?;
+                if n > 0 {
+                    links += n;
+                    replaced.insert(name, new);
+                }
+            }
+        }
+    }
+    if links > 0 {
+        notes.push(format!("{links} Verknüpfung(en) in Kopf-/Fußzeilen (z. B. Feld STYLEREF) werden im PDF als normaler Text ausgegeben – sonst entsteht auf jeder Seite ein ungetaggter Link."));
+    }
+    if replaced.is_empty() {
+        return Ok((docx.to_vec(), notes));
+    }
+    Ok((rewrite_zip(docx, &replaced)?, notes))
+}
+
+/// Nur die Hinweise, ohne die Datei zu bauen (für die Analyse).
+fn pdf_prep_notes(docx: &[u8]) -> Result<Vec<String>> {
+    Ok(prepare_for_pdf(docx)?.1)
+}
+
+fn rewrite_zip(docx: &[u8], replaced: &HashMap<String, Vec<u8>>) -> Result<Vec<u8>> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(docx))?;
+    let mut out = zip::ZipWriter::new(Cursor::new(Vec::with_capacity(docx.len())));
+    let opts = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    for i in 0..zip.len() {
+        let name = zip.by_index_raw(i)?.name().to_string();
+        if let Some(data) = replaced.get(&name) {
+            out.start_file(name, opts)?;
+            out.write_all(data)?;
+        } else {
+            let f = zip.by_index_raw(i)?;
+            out.raw_copy_file(f)?;
+        }
+    }
+    Ok(out.finish()?.into_inner())
+}
+
+/// Ersetzt Schriftfarben (w:color) und entfernt dabei Designfarben-Verweise,
+/// die sonst Vorrang vor dem RGB-Wert hätten.
+fn apply_colors(xml: &[u8], map: &HashMap<String, String>) -> Result<(Vec<u8>, usize)> {
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len())));
+    let mut buf = Vec::new();
+    let mut n = 0;
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:color" => {
+                if let Some(to) = attr(e, b"w:val").and_then(|v| map.get(&v.to_ascii_uppercase())) {
+                    let mut ne = BytesStart::new("w:color");
+                    for a in e.attributes().flatten() {
+                        match a.key.as_ref() {
+                            b"w:val" => ne.push_attribute(("w:val", to.as_str())),
+                            b"w:themeColor" | b"w:themeTint" | b"w:themeShade" => {}
+                            _ => ne.push_attribute(a),
+                        }
+                    }
+                    n += 1;
+                    w.write_event(if matches!(ev, Event::Empty(_)) { Event::Empty(ne) } else { Event::Start(ne) })?;
+                    buf.clear();
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), n))
+}
+
 /// Wendet die Änderungen an und liefert die neue DOCX-Datei.
 pub fn apply(docx: &[u8], changes: &Changes) -> Result<Vec<u8>> {
-    let mut zip = zip::ZipArchive::new(Cursor::new(docx))?;
     let mut replaced: HashMap<String, Vec<u8>> = HashMap::new();
 
-    if !changes.images.is_empty() || !changes.tables.is_empty() || changes.link_descriptions {
+    if !changes.images.is_empty() || !changes.tables.is_empty() || changes.link_descriptions || !changes.headings.is_empty() {
         let doc = read_entry(docx, "word/document.xml")?.context("word/document.xml fehlt")?;
         replaced.insert("word/document.xml".into(), apply_document(&doc, changes)?);
     }
@@ -1139,17 +1727,33 @@ pub fn apply(docx: &[u8], changes: &Changes) -> Result<Vec<u8>> {
         }
     }
 
-    let mut out = zip::ZipWriter::new(Cursor::new(Vec::with_capacity(docx.len())));
-    let opts = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-    for i in 0..zip.len() {
-        let name = zip.by_index_raw(i)?.name().to_string();
-        if let Some(data) = replaced.get(&name) {
-            out.start_file(name, opts)?;
-            out.write_all(data)?;
-        } else {
-            let f = zip.by_index_raw(i)?;
-            out.raw_copy_file(f)?;
+    // Farben: auf alle Teile anwenden, die Schriftfarben enthalten können
+    let color_map: HashMap<String, String> = changes
+        .colors
+        .iter()
+        .filter_map(|c| {
+            let f = c.from.trim().trim_start_matches('#').to_ascii_uppercase();
+            let t = c.to.trim().trim_start_matches('#').to_ascii_uppercase();
+            (parse_hex(&f).is_some() && parse_hex(&t).is_some()).then_some((f, t))
+        })
+        .collect();
+    if !color_map.is_empty() {
+        for name in zip_names(docx)? {
+            let relevant = name == "word/document.xml" || name == "word/styles.xml" || name == "word/numbering.xml" || name == "word/footnotes.xml" || name == "word/endnotes.xml" || is_header_footer(&name);
+            if !relevant {
+                continue;
+            }
+            let src = match replaced.remove(&name) {
+                Some(x) => x,
+                None => match read_entry(docx, &name)? {
+                    Some(x) => x,
+                    None => continue,
+                },
+            };
+            let (new, _) = apply_colors(&src, &color_map)?;
+            replaced.insert(name, new);
         }
     }
-    Ok(out.finish()?.into_inner())
+
+    rewrite_zip(docx, &replaced)
 }

@@ -52,12 +52,24 @@ Die Mitarbeitenden brauchen nur einen Browser.
 | Tabellen       | erste Zeile nicht als Kopfzeile markiert        | ja (Häkchen)     |
 | Dokument       | Titel, Hauptsprache                             | ja               |
 | Links          | fehlende Linkbeschreibung (v. a. Verzeichnisse) | ja (automatisch) |
+| Überschriften  | übersprungene Ebene (z. B. Ebene 4 nach Ebene 2) | ja (Vorlage der richtigen Ebene) |
+| Schriftfarben  | Kontrast unter 4,5 : 1 zu Weiß (Vorlagen, Aufzählungszeichen, direkt) | ja (Farbton abdunkeln) |
 | Struktur       | keine Überschriften, Sprünge in den Ebenen, fett statt Überschrift, getippte Aufzählungen, leere Absätze als Abstand | nein – Hinweis, in Word korrigieren |
+
+Beim PDF-Export passt Rampe eine **Kopie** des Dokuments automatisch an (die herunterladbare
+DOCX bleibt unverändert):
+
+- Eigene Formatvorlagen, die wie ein PDF-Standard-Tag heißen (z. B. „TD“, „TH“, „Quote“),
+  werden umbenannt. LibreOffice würde sie sonst per RoleMap auf `P` umleiten – damit wären
+  z. B. **alle Tabellenzellen** falsch getaggt (veraPDF 7.1-7, 7.2-10, 7.2-43).
+- Links und Verweis-Felder (z. B. `STYLEREF`) in Kopf-/Fußzeilen werden zu normalem Text,
+  sonst entsteht auf jeder Seite ein ungetaggter Link (veraPDF 7.18.5).
 
 Nach dem Export prüft das Tool das PDF:
 
 1. **Basisprüfung** (immer): getaggt, Sprache, Titel + Anzeige des Titels, PDF/UA-Kennung,
-   Alternativtexte, Überschriften, Tabellenköpfe, eingebettete Schriften, Linkbeschreibungen.
+   umgeleitete Standard-Tags, Alternativtexte, Überschriften und Ebenensprünge, Tabellenköpfe,
+   eingebettete Schriften, Linkbeschreibungen, ungetaggte Links.
 2. **veraPDF** (optional, empfohlen): vollständige maschinelle Prüfung nach PDF/UA-1
    (Matterhorn-Protokoll – dieselbe Grundlage wie PAC).
 
@@ -85,6 +97,11 @@ Rampe findet veraPDF dann automatisch (oder Pfad über `VERAPDF=...` angeben).
   ohnehin als Artefakt aus).
 - Alte VML-Grafiken (sehr alte Word-Dateien) werden nicht erkannt.
 - Vorschau nur für PNG/JPG/GIF/SVG, nicht für EMF/WMF.
+- Schriftfarben in eingefügten Grafiken (EMF/WMF, Bilder) werden nicht geprüft; PAC prüft
+  Text in Vektorgrafiken aber mit.
+- Kontrast wird nur gegen Weiß geprüft, nicht gegen farbig hinterlegte Absätze/Zellen.
+- Verweis-Felder in Kopf-/Fußzeilen werden nur als einfaches Feld (`w:fldSimple`) erkannt,
+  nicht als zusammengesetztes Feld.
 - Freies Bearbeiten des Textes ist nicht vorgesehen; dafür könnte später Collabora Online
   eingebunden werden.
 - Die korrigierte DOCX wurde mit LibreOffice getestet, noch nicht mit Microsoft Word.

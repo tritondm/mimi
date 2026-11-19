@@ -97,7 +97,17 @@ struct StructStats {
     tables_no_th: usize,
     headings: usize,
     elements: usize,
+    last_heading: u8,
+    heading_jumps: usize,
 }
+
+/// Standard-Strukturtypen (ISO 32000-1, 14.8.4) – dürfen laut PDF/UA nicht umgeleitet werden.
+const STD_TYPES: &[&[u8]] = &[
+    b"Document", b"Part", b"Art", b"Sect", b"Div", b"BlockQuote", b"Caption", b"TOC", b"TOCI", b"Index", b"NonStruct",
+    b"Private", b"P", b"H", b"H1", b"H2", b"H3", b"H4", b"H5", b"H6", b"L", b"LI", b"Lbl", b"LBody", b"Table", b"TR",
+    b"TH", b"TD", b"THead", b"TBody", b"TFoot", b"Span", b"Quote", b"Note", b"Reference", b"BibEntry", b"Code", b"Link",
+    b"Annot", b"Ruby", b"RB", b"RT", b"RP", b"Warichu", b"WT", b"WP", b"Figure", b"Formula", b"Form",
+];
 
 fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut StructStats, seen: &mut HashSet<(u32, u16)>, in_table: &mut Option<bool>, depth: usize) {
     if depth > 200 {
@@ -134,7 +144,15 @@ fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut S
                         stats.figures_no_alt += 1;
                     }
                 }
-                b"H" | b"H1" | b"H2" | b"H3" | b"H4" | b"H5" | b"H6" => stats.headings += 1,
+                b"H" => stats.headings += 1,
+                b"H1" | b"H2" | b"H3" | b"H4" | b"H5" | b"H6" => {
+                    stats.headings += 1;
+                    let lvl = role[1] - b'0';
+                    if stats.last_heading > 0 && lvl > stats.last_heading + 1 {
+                        stats.heading_jumps += 1;
+                    }
+                    stats.last_heading = lvl;
+                }
                 b"TH" => {
                     if let Some(t) = in_table.as_mut() {
                         *t = true;
@@ -241,6 +259,14 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
     // Strukturbaum
     if let Some(t) = tree {
         let role_map = get(&doc, t, b"RoleMap").and_then(|o| if let Object::Dictionary(d) = o { Some(d) } else { None });
+        let remapped: Vec<String> = role_map
+            .map(|rm| rm.iter().filter(|(k, _)| STD_TYPES.contains(&k.as_slice())).map(|(k, _)| String::from_utf8_lossy(k).into_owned()).collect())
+            .unwrap_or_default();
+        if remapped.is_empty() {
+            checks.push(ok("Standard-Tags", "keine Standard-Tags umgeleitet"));
+        } else {
+            checks.push(bad("fehler", "Standard-Tags umgeleitet", format!("Formatvorlage(n) mit reserviertem Namen: {} – Rampe benennt diese beim Export automatisch um; tritt der Fehler trotzdem auf, Vorlage in Word umbenennen.", remapped.join(", "))));
+        }
         let mut stats = StructStats::default();
         let mut seen = HashSet::new();
         if let Ok(k) = t.get(b"K") {
@@ -256,6 +282,9 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         } else {
             checks.push(bad("warnung", "Keine Überschriften", "Das PDF hat keine Überschriften-Tags."));
         }
+        if stats.heading_jumps > 0 {
+            checks.push(bad("fehler", "Überschriftenebene übersprungen", format!("{} Mal folgt z. B. H4 direkt auf H2 – im Reiter „Struktur & Hinweise“ korrigierbar.", stats.heading_jumps)));
+        }
         if stats.tables_no_th == 0 {
             checks.push(ok("Tabellenköpfe", format!("alle {} Tabellen haben Kopfzellen", stats.tables)));
         } else {
@@ -267,6 +296,7 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
     let mut not_embedded = HashSet::new();
     let mut links_total = 0;
     let mut links_no_contents = 0;
+    let mut links_untagged = 0;
     for obj in doc.objects.values() {
         if let Some(d) = match obj {
             Object::Dictionary(d) => Some(d),
@@ -286,6 +316,9 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
             if let Ok(Object::Name(st)) = d.get(b"Subtype") {
                 if st == b"Link" {
                     links_total += 1;
+                    if !d.has(b"StructParent") {
+                        links_untagged += 1;
+                    }
                     let has = d.get(b"Contents").map(|c| !text_string(c).trim().is_empty()).unwrap_or(false);
                     if !has {
                         links_no_contents += 1;
@@ -305,6 +338,10 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         checks.push(ok("Links beschrieben", format!("{} Links", links_total)));
     } else {
         checks.push(bad("warnung", "Links ohne Beschreibung", format!("{} von {} Links", links_no_contents, links_total)));
+    }
+
+    if links_untagged > 0 {
+        checks.push(bad("fehler", "Links ohne Tag", format!("{} Links sind nicht im Strukturbaum (meist Felder/Links in Kopf- oder Fußzeile).", links_untagged)));
     }
 
     Ok((pages, checks))

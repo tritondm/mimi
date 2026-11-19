@@ -370,11 +370,22 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     let out = dir.join("out");
     let _ = tokio::fs::remove_dir_all(&out).await;
     tokio::fs::create_dir_all(&out).await?;
-    let input = dir.join("current.docx");
+    // Für LibreOffice eine vorbereitete Kopie verwenden (Vorlagennamen, Links in
+    // Kopf-/Fußzeilen); die herunterladbare DOCX bleibt unverändert.
+    let prep_dir = dir.join("prep");
+    let _ = tokio::fs::remove_dir_all(&prep_dir).await;
+    tokio::fs::create_dir_all(&prep_dir).await?;
+    let src = tokio::fs::read(dir.join("current.docx")).await?;
+    let (prepared, _notes) = tokio::task::spawn_blocking(move || docx::prepare_for_pdf(&src)).await.map_err(|e| anyhow::anyhow!(e))??;
+    let input = prep_dir.join("current.docx");
+    tokio::fs::write(&input, &prepared).await?;
+    drop(prepared);
 
     let pdf_filter = r#"pdf:writer_pdf_Export:{"UseTaggedPDF":{"type":"boolean","value":"true"},"PDFUACompliance":{"type":"boolean","value":"true"},"ExportBookmarks":{"type":"boolean","value":"true"},"ExportNotes":{"type":"boolean","value":"false"}}"#;
     soffice_convert(&st, &input, &out, pdf_filter).await?;
     soffice_convert(&st, &input, &out, "odt").await?;
+
+    let _ = tokio::fs::remove_dir_all(&prep_dir).await;
 
     let pdf = out.join("current.pdf");
     if !pdf.exists() {

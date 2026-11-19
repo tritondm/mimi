@@ -65,6 +65,8 @@ table.list th { border-top: 0; color: var(--muted); font-weight: 600; font-size:
 ul.hints { list-style: none; padding: 0; margin: 0; }
 ul.hints li { padding: 8px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; }
 ul.hints li:first-child { border-top: 0; }
+.swatch { display: inline-block; width: 1.4em; height: 1.4em; border-radius: 4px; border: 1px solid var(--line); vertical-align: middle; }
+.sample { font-weight: 600; padding: 2px 6px; background: #fff; border-radius: 4px; border: 1px solid var(--line); }
 .outline { margin: 0; padding: 0; list-style: none; max-height: 420px; overflow: auto; }
 .outline li { padding: 2px 0; }
 .actions { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 16px; }
@@ -145,6 +147,9 @@ ul.hints li:first-child { border-top: 0; }
       <h3 style="margin-top:12px">Links</h3>
       <p id="linkinfo"></p>
       <label class="inline" id="linkopt"><input type="checkbox" id="links"> Fehlende Linkbeschreibungen automatisch aus dem Linktext ergänzen (betrifft vor allem Inhalts-, Abbildungs- und Tabellenverzeichnis)</label>
+      <h3 style="margin-top:12px">Schriftfarben (Kontrast)</h3>
+      <div id="colors"></div>
+      <p class="muted">Text muss sich mit mindestens 4,5 : 1 vom weißen Hintergrund abheben (WCAG). Farbige Schrift <em>in eingefügten Grafiken</em> (z.&nbsp;B. rot/grün beschriftete Schemata) kann das Tool nicht prüfen – PAC prüft sie aber mit. Solche Grafiken in der Ursprungsdatei mit dunkleren Farben neu erstellen.</p>
     </section>
 
     <section id="p-img" role="tabpanel" aria-labelledby="t-img" class="card hidden">
@@ -169,6 +174,7 @@ ul.hints li:first-child { border-top: 0; }
     <section id="p-str" role="tabpanel" aria-labelledby="t-str" class="card hidden">
       <div class="grid2">
         <div>
+          <div id="hfix"></div>
           <h2>Hinweise</h2>
           <p class="muted">Diese Punkte bitte in Word korrigieren – das Tool kann sie nicht automatisch beheben.</p>
           <ul class="hints" id="hints"></ul>
@@ -183,6 +189,7 @@ ul.hints li:first-child { border-top: 0; }
     <section id="p-exp" role="tabpanel" aria-labelledby="t-exp" class="card hidden">
       <h2>PDF erzeugen und prüfen</h2>
       <p class="muted">Das PDF wird mit LibreOffice im Format PDF/UA erzeugt und anschließend geprüft. Die Prüfung ersetzt nicht den abschließenden Test mit PAC, sollte ihn aber zur Formsache machen.</p>
+      <div id="prep"></div>
       <p><button id="export2">PDF erzeugen und prüfen</button></p>
       <div id="report" aria-live="polite"></div>
       <div id="downloads" class="row hidden" style="margin-top:12px">
@@ -240,6 +247,7 @@ function dirty() {
   for (const img of a.images) { const s = imgState(img); if (s.alt !== img.alt || s.dec !== img.decorative) return true; }
   for (const t of a.tables) if (tblHeader(t) !== t.header) return true;
   if (edits.links && a.links_missing) return true;
+  if (Object.keys(edits.headings).length || Object.keys(edits.colors).length) return true;
   return false;
 }
 function captionText(c) { return (c || '').replace(/^(Abbildung|Abb\.|Figure|Fig\.|Grafik|Tabelle)\s*\d+[.:]?\s*/i, '').trim(); }
@@ -252,7 +260,9 @@ function counts() {
   const docOpen = (title.trim() ? 0 : 1) + (lang ? 0 : 1) + (a.links_missing && !edits.links ? 1 : 0);
   const hintsErr = a.hints.filter(h => h.severity === 'fehler' && !['titel','sprache'].includes(h.kind)).length;
   const hintsWarn = a.hints.filter(h => h.severity === 'warnung').length;
-  return {imgOpen, tblOpen, docOpen, hintsErr, hintsWarn};
+  const headOpen = a.heading_fixes.filter(f => !edits.headings[f.para]).length;
+  const colOpen = a.colors.filter(c => !edits.colors[c.color]).length;
+  return {imgOpen, tblOpen, docOpen: docOpen + colOpen, hintsErr: hintsErr + headOpen, hintsWarn};
 }
 
 function renderSummary() {
@@ -284,6 +294,14 @@ function renderDoc() {
     : `<span class="badge b-ok">OK</span> ${a.links_total ? `Alle ${a.links_total} Links haben eine Beschreibung.` : 'Keine Links im Dokument.'}`;
   $('#linkopt').classList.toggle('hidden', !a.links_missing);
   $('#links').checked = !!edits.links;
+  $('#colors').innerHTML = a.colors.length ? '<table class="list"><thead><tr><th scope="col">Farbe</th><th scope="col">Kontrast</th><th scope="col">Verwendet in</th><th scope="col">Korrektur</th></tr></thead><tbody>' +
+    a.colors.map(c => `<tr>
+      <td><span class="swatch" style="background:#${esc(c.color)}"></span> <span class="sample" style="color:#${esc(c.color)}">Beispiel</span> #${esc(c.color)}</td>
+      <td><span class="badge b-err">${c.ratio.toFixed(2)} : 1</span></td>
+      <td>${c.places.map(esc).join('<br>')}</td>
+      <td><label class="inline"><input type="checkbox" data-col="${esc(c.color)}" ${edits.colors[c.color] ? 'checked' : ''}> abdunkeln auf <span class="swatch" style="background:#${esc(c.suggestion)}"></span> <span class="sample" style="color:#${esc(c.suggestion)}">Beispiel</span> #${esc(c.suggestion)} (${c.suggestion_ratio.toFixed(2)} : 1)</label></td>
+    </tr>`).join('') + '</tbody></table>'
+    : '<p><span class="badge b-ok">OK</span> Alle Schriftfarben im Text haben genug Kontrast.</p>';
 }
 
 function renderImages() {
@@ -328,15 +346,24 @@ function renderTables() {
 function renderStructure() {
   const a = job.analysis;
   const sev = {fehler: ['b-err','Fehler'], warnung: ['b-warn','Warnung'], hinweis: ['b-info','Hinweis']};
-  const hints = a.hints.filter(h => !['titel','sprache'].includes(h.kind));
+  $('#hfix').innerHTML = a.heading_fixes.length ? `<h2>Übersprungene Überschriftenebenen</h2>
+    <p class="muted">PAC und veraPDF verlangen, dass keine Ebene ausgelassen wird (z.&nbsp;B. Ebene 4 direkt nach Ebene 2). Das Tool kann diese Überschriften auf die richtige Ebene setzen – dabei ändert sich ggf. die Nummerierung.</p>
+    <p><button class="secondary" id="hfix-all">Alle korrigieren</button></p>
+    <ul class="hints">` + a.heading_fixes.map(f => `<li><span class="badge b-err">H${f.from}→H${f.to}</span><div><label class="inline"><input type="checkbox" data-head="${f.para}" data-style="${esc(f.style)}" ${edits.headings[f.para] ? 'checked' : ''}> „${esc(f.text)}“ auf Ebene ${f.to} setzen (Vorlage „${esc(f.style_name)}“)</label><div class="muted">Abschnitt: ${esc(f.section)}</div></div></li>`).join('') + '</ul>' : '';
+  const fixable = t => a.heading_fixes.some(f => { const m = /„(.*?)…?“/.exec(t); return m && f.text.startsWith(m[1].replace(/…$/, '')); });
+  const hints = a.hints.filter(h => !['titel','sprache'].includes(h.kind) && !(h.kind === 'ebene' && h.text.startsWith('Überschrift Ebene') && fixable(h.text)));
   $('#hints').innerHTML = hints.length ? hints.map(h => `<li><span class="badge ${sev[h.severity][0]}">${sev[h.severity][1]}</span><div>${esc(h.text)}${h.section ? `<div class="muted">Abschnitt: ${esc(h.section)}</div>` : ''}</div></li>`).join('')
     : '<li><span class="badge b-ok">OK</span> Keine Hinweise.</li>';
   $('#outline').innerHTML = a.headings.map(h => `<li style="padding-left:${(h.level - 1) * 18}px"><span class="badge b-info">H${h.level}</span> ${esc(h.text)}</li>`).join('') || '<li>Keine Überschriften gefunden.</li>';
 }
 
-function renderAll() { renderDoc(); renderImages(); renderTables(); renderStructure(); renderSummary(); }
+function renderPrep() {
+  const p = job.analysis.pdf_prep || [];
+  $('#prep').innerHTML = p.length ? '<h3>Wird beim PDF-Export automatisch angepasst</h3><ul class="hints">' + p.map(t => `<li><span class="badge b-info">auto</span><div>${esc(t)}</div></li>`).join('') + '</ul><p class="muted">Die herunterladbare Word-Datei bleibt dabei unverändert.</p>' : '';
+}
+function renderAll() { renderPrep(); renderDoc(); renderImages(); renderTables(); renderStructure(); renderSummary(); }
 
-function newEdits() { return {images: {}, tables: {}, links: !!(job && job.analysis.links_missing)}; }
+function newEdits() { return {images: {}, tables: {}, headings: {}, colors: {}, links: !!(job && job.analysis.links_missing)}; }
 function loadJob(j) {
   job = j; edits = newEdits();
   $('#docname').textContent = j.name;
@@ -366,6 +393,8 @@ async function save() {
   for (const img of a.images) { const s = imgState(img); if (s.alt !== img.alt || s.dec !== img.decorative) body.images.push({index: img.index, alt: s.alt.trim(), decorative: s.dec}); }
   for (const t of a.tables) if (tblHeader(t) !== t.header) body.tables.push({index: t.index, header: tblHeader(t)});
   if (edits.links && a.links_missing) body.link_descriptions = true;
+  body.headings = Object.entries(edits.headings).map(([para, style]) => ({para: +para, style}));
+  body.colors = a.colors.filter(c => edits.colors[c.color]).map(c => ({from: c.color, to: c.suggestion}));
   status('<span class="spinner"></span> Speichere …');
   try {
     const j = await api(`/api/job/${job.id}/apply`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
@@ -453,6 +482,21 @@ $('#fillcaps').addEventListener('click', () => {
 $('#tables').addEventListener('change', e => {
   const i = e.target.dataset.tbl; if (i === undefined) return;
   edits.tables[i] = e.target.checked; renderTables(); renderSummary();
+});
+$('#hfix').addEventListener('change', e => {
+  const p = e.target.dataset.head; if (p === undefined) return;
+  if (e.target.checked) edits.headings[p] = e.target.dataset.style; else delete edits.headings[p];
+  renderSummary();
+});
+$('#hfix').addEventListener('click', e => {
+  if (e.target.id !== 'hfix-all') return;
+  for (const f of job.analysis.heading_fixes) edits.headings[f.para] = f.style;
+  renderStructure(); renderSummary();
+});
+$('#colors').addEventListener('change', e => {
+  const c = e.target.dataset.col; if (c === undefined) return;
+  if (e.target.checked) edits.colors[c] = true; else delete edits.colors[c];
+  renderSummary();
 });
 $('#save').addEventListener('click', save);
 $('#export').addEventListener('click', exportPdf);
