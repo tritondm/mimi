@@ -1612,6 +1612,221 @@ fn unlink_header_footer(xml: &[u8]) -> Result<(Vec<u8>, usize)> {
     Ok((w.into_inner().into_inner(), n))
 }
 
+/// Benennt die Word-Vorlage „caption“ (deutsch „Beschriftung“) um. LibreOffice
+/// taggt Absätze mit dieser Vorlage (und direkt davon abgeleitete) im PDF als
+/// `Caption` – frei stehend, nicht innerhalb von Figure/Table, was PAC
+/// bemängelt. Mit eigenem Namen werden sie normale Absätze (P);
+/// Aussehen, Nummerierung (SEQ-Felder) und Verzeichnisse bleiben gleich.
+fn rename_caption_style(xml: &[u8]) -> Result<(Vec<u8>, bool)> {
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len() + 64)));
+    let mut buf = Vec::new();
+    let mut in_style = false;
+    let mut done = false;
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) if e.name().as_ref() == b"w:style" => in_style = true,
+            Event::End(e) if e.name().as_ref() == b"w:style" => in_style = false,
+            Event::Empty(e) if in_style && e.name().as_ref() == b"w:name" => {
+                if attr(e, b"w:val").is_some_and(|v| v.eq_ignore_ascii_case("caption")) {
+                    w.write_event(Event::Empty(copy_start_with(e, &[("w:val", CAPTION_NEW_NAME)])))?;
+                    done = true;
+                    buf.clear();
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), done))
+}
+
+const CAPTION_NEW_NAME: &str = "Bildunterschrift (Rampe)";
+
+/// Feldbefehle für Literaturverzeichnisse: Word (BIBLIOGRAPHY), Citavi, Zotero, EndNote.
+fn is_bibliography_instr(instr: &str) -> bool {
+    let up = instr.trim().to_ascii_uppercase();
+    let first = up.split_whitespace().next().unwrap_or("");
+    first == "BIBLIOGRAPHY" || (first == "ADDIN" && (up.contains("BIBL") || up.contains("REFLIST")))
+}
+
+/// Macht Literaturverzeichnis-Felder zu normalem Text: Feldklammern und
+/// Feldbefehl fallen weg, das angezeigte Ergebnis bleibt. Ein umgebendes
+/// Inhaltssteuerelement mit Katalog „Bibliographies“ wird ebenfalls aufgelöst.
+/// Sonst baut LibreOffice daraus ein geschütztes Verzeichnis, das anders
+/// aussieht als in Word.
+fn unlink_bibliography(xml: &[u8]) -> Result<(Vec<u8>, usize)> {
+    // 1. Durchgang: welche Felder (in Reihenfolge ihres Beginns) und welche
+    //    Inhaltssteuerelemente sind Literaturverzeichnisse?
+    let mut bib_fields: Vec<bool> = Vec::new();
+    let mut bib_sdts: Vec<bool> = Vec::new();
+    {
+        let mut r = reader(xml);
+        let mut buf = Vec::new();
+        let mut stack: Vec<(usize, bool, String)> = Vec::new(); // (Feld, im Befehlsteil, Befehl)
+        let mut sdt_stack: Vec<usize> = Vec::new();
+        let mut in_instr = false;
+        loop {
+            match r.read_event_into(&mut buf)? {
+                Event::Eof => break,
+                Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:fldChar" => {
+                    match attr(&e, b"w:fldCharType").as_deref() {
+                        Some("begin") => {
+                            stack.push((bib_fields.len(), true, String::new()));
+                            bib_fields.push(false);
+                        }
+                        Some("separate") => {
+                            if let Some(top) = stack.last_mut() {
+                                top.1 = false;
+                                bib_fields[top.0] = is_bibliography_instr(&top.2);
+                            }
+                        }
+                        Some("end") => {
+                            if let Some((i, instr_phase, instr)) = stack.pop() {
+                                if instr_phase {
+                                    bib_fields[i] = is_bibliography_instr(&instr);
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Event::Start(e) if e.name().as_ref() == b"w:instrText" => in_instr = true,
+                Event::End(e) if e.name().as_ref() == b"w:instrText" => in_instr = false,
+                Event::Text(t) if in_instr => {
+                    if let Some(top) = stack.last_mut() {
+                        if top.1 {
+                            top.2.push_str(&t.unescape().unwrap_or_default());
+                        }
+                    }
+                }
+                Event::Start(e) if e.name().as_ref() == b"w:sdt" => {
+                    sdt_stack.push(bib_sdts.len());
+                    bib_sdts.push(false);
+                }
+                Event::End(e) if e.name().as_ref() == b"w:sdt" => {
+                    sdt_stack.pop();
+                }
+                Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:docPartGallery" => {
+                    if attr(&e, b"w:val").as_deref() == Some("Bibliographies") {
+                        if let Some(&i) = sdt_stack.last() {
+                            bib_sdts[i] = true;
+                        }
+                    }
+                }
+                _ => {}
+            }
+            buf.clear();
+        }
+    }
+    let n = bib_fields.iter().filter(|b| **b).count();
+    let n_sdt = bib_sdts.iter().filter(|b| **b).count();
+
+    // 2. Durchgang: schreiben, dabei die markierten Teile weglassen.
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len())));
+    let mut buf = Vec::new();
+    let mut field_no = 0usize;
+    let mut stack: Vec<(bool, bool)> = Vec::new(); // (Literaturverzeichnis, im Befehlsteil)
+    let mut simple_stack: Vec<bool> = Vec::new();
+    let mut sdt_no = 0usize;
+    let mut sdt_stack: Vec<bool> = Vec::new();
+    let mut skip_depth = 0usize; // innerhalb eines weggelassenen Teilbaums
+    let mut simple_n = 0usize;
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        if skip_depth > 0 {
+            match &ev {
+                Event::Start(_) => skip_depth += 1,
+                Event::End(_) => skip_depth -= 1,
+                Event::Eof => break,
+                _ => {}
+            }
+            buf.clear();
+            continue;
+        }
+        let drop_instr = stack.last().is_some_and(|&(bib, instr)| bib && instr);
+        let mut drop = false;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:fldChar" => {
+                let is_start = matches!(ev, Event::Start(_));
+                match attr(e, b"w:fldCharType").as_deref() {
+                    Some("begin") => {
+                        let bib = bib_fields.get(field_no).copied().unwrap_or(false);
+                        field_no += 1;
+                        stack.push((bib, true));
+                        drop = bib;
+                    }
+                    Some("separate") => {
+                        if let Some(top) = stack.last_mut() {
+                            top.1 = false;
+                            drop = top.0;
+                        }
+                    }
+                    Some("end") => {
+                        if let Some((bib, _)) = stack.pop() {
+                            drop = bib;
+                        }
+                    }
+                    _ => drop = drop_instr,
+                }
+                if drop && is_start {
+                    skip_depth = 1;
+                }
+            }
+            Event::Start(e) if drop_instr && e.name().as_ref() == b"w:instrText" => {
+                skip_depth = 1;
+                drop = true;
+            }
+            Event::Empty(e) if drop_instr && e.name().as_ref() == b"w:instrText" => drop = true,
+            Event::Start(e) if e.name().as_ref() == b"w:fldSimple" => {
+                let bib = is_bibliography_instr(&attr(e, b"w:instr").unwrap_or_default());
+                simple_stack.push(bib);
+                if bib {
+                    simple_n += 1;
+                    drop = true;
+                }
+            }
+            Event::End(e) if e.name().as_ref() == b"w:fldSimple" => drop = simple_stack.pop() == Some(true),
+            Event::Start(e) if e.name().as_ref() == b"w:sdt" => {
+                let bib = bib_sdts.get(sdt_no).copied().unwrap_or(false);
+                sdt_no += 1;
+                sdt_stack.push(bib);
+                drop = bib;
+            }
+            Event::End(e) if e.name().as_ref() == b"w:sdt" => drop = sdt_stack.pop() == Some(true),
+            Event::Start(e) if sdt_stack.last() == Some(&true) && matches!(e.name().as_ref(), b"w:sdtPr" | b"w:sdtEndPr") => {
+                skip_depth = 1;
+                drop = true;
+            }
+            Event::Empty(e) if sdt_stack.last() == Some(&true) && matches!(e.name().as_ref(), b"w:sdtPr" | b"w:sdtEndPr") => drop = true,
+            _ => {}
+        }
+        // w:sdtContent eines aufgelösten Steuerelements: nur die Hülle weglassen
+        if let Event::Start(e) = &ev {
+            if e.name().as_ref() == b"w:sdtContent" && sdt_stack.last() == Some(&true) {
+                drop = true;
+            }
+        }
+        if let Event::End(e) = &ev {
+            if e.name().as_ref() == b"w:sdtContent" && sdt_stack.last() == Some(&true) {
+                drop = true;
+            }
+        }
+        if !drop {
+            w.write_event(ev)?;
+        }
+        buf.clear();
+    }
+    let total = n + simple_n;
+    Ok((w.into_inner().into_inner(), if total > 0 { total } else { n_sdt }))
+}
+
 fn is_header_footer(name: &str) -> bool {
     (name.starts_with("word/header") || name.starts_with("word/footer")) && name.ends_with(".xml") && !name.contains("/_rels/")
 }
@@ -1623,9 +1838,21 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
     let mut notes = Vec::new();
     if let Some(st) = read_entry(docx, "word/styles.xml")? {
         let (new, ren) = rename_std_styles(&st)?;
-        if !ren.is_empty() {
-            replaced.insert("word/styles.xml".into(), new);
-            notes.extend(ren);
+        let changed = !ren.is_empty();
+        notes.extend(ren);
+        let (new2, cap) = rename_caption_style(&new)?;
+        if cap {
+            notes.push("Beschriftungen (Abbildung, Tabelle, Formel) werden im PDF als normale Absätze ausgegeben. LibreOffice würde sie sonst als frei stehende „Caption“ taggen, was PAC bemängelt.".into());
+        }
+        if changed || cap {
+            replaced.insert("word/styles.xml".into(), new2);
+        }
+    }
+    if let Some(doc) = read_entry(docx, "word/document.xml")? {
+        let (new, n) = unlink_bibliography(&doc)?;
+        if n > 0 {
+            replaced.insert("word/document.xml".into(), new);
+            notes.push("Das Literaturverzeichnis wird im PDF als normaler Text ausgegeben – genau wie in Word. LibreOffice würde daraus sonst ein geschütztes Verzeichnis mit anderer Formatierung machen.".into());
         }
     }
     let mut links = 0;
@@ -1756,4 +1983,136 @@ pub fn apply(docx: &[u8], changes: &Changes) -> Result<Vec<u8>> {
     }
 
     rewrite_zip(docx, &replaced)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:latentStyles><w:lsdException w:name="caption" w:semiHidden="1" w:unhideWhenUsed="1" w:qFormat="1"/></w:latentStyles>
+<w:style w:type="paragraph" w:default="1" w:styleId="Standard"><w:name w:val="Normal"/><w:qFormat/></w:style>
+<w:style w:type="paragraph" w:styleId="berschrift1"><w:name w:val="heading 1"/><w:basedOn w:val="Standard"/><w:pPr><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="32"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Beschriftung"><w:name w:val="caption"/><w:basedOn w:val="Standard"/><w:next w:val="Standard"/><w:qFormat/><w:rPr><w:i/><w:color w:val="44546A"/><w:sz w:val="18"/></w:rPr></w:style>
+</w:styles>"#;
+
+    const DOC: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+<w:p><w:pPr><w:pStyle w:val="berschrift1"/></w:pPr><w:r><w:t>Ergebnisse</w:t></w:r></w:p>
+<w:p><w:r><w:t>Ein Absatz Text vor der Tabelle.</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Beschriftung"/></w:pPr><w:r><w:t xml:space="preserve">Tabelle </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> SEQ Tabelle \* ARABIC </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t>: Messwerte</w:t></w:r></w:p>
+<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="4500"/><w:gridCol w:w="4500"/></w:tblGrid>
+<w:tr><w:trPr><w:tblHeader/></w:trPr><w:tc><w:p><w:r><w:t>Probe</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>pH</w:t></w:r></w:p></w:tc></w:tr>
+<w:tr><w:tc><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>6,8</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+<w:p><w:pPr><w:pStyle w:val="berschrift1"/></w:pPr><w:r><w:t>Literatur</w:t></w:r></w:p>
+<w:sdt><w:sdtPr><w:id w:val="-1"/><w:docPartObj><w:docPartGallery w:val="Bibliographies"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtEndPr/><w:sdtContent>
+<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> BIBLIOGRAPHY </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Huber, A. (2024). Bodenkunde. Wien: Verlag.</w:t></w:r></w:p>
+<w:p><w:r><w:t>Maier, B. (2023). Chemie im Alltag. Graz: Verlag.</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+</w:sdtContent></w:sdt>
+<w:p><w:r><w:t>Ende.</w:t></w:r></w:p>
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1134" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>
+</w:body></w:document>"#;
+
+    fn fixture() -> Vec<u8> {
+        let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let o = zip::write::SimpleFileOptions::default();
+        let parts: [(&str, &str); 5] = [
+            ("[Content_Types].xml", r#"<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>"#),
+            ("_rels/.rels", r#"<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>"#),
+            ("word/_rels/document.xml.rels", r#"<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>"#),
+            ("word/document.xml", DOC),
+            ("word/styles.xml", STYLES),
+        ];
+        for (n, c) in parts {
+            out.start_file(n, o).unwrap();
+            out.write_all(c.as_bytes()).unwrap();
+        }
+        out.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn caption_style_renamed_only_in_style() {
+        let (new, done) = rename_caption_style(STYLES.as_bytes()).unwrap();
+        let s = String::from_utf8(new).unwrap();
+        assert!(done);
+        assert!(s.contains(&format!(r#"w:styleId="Beschriftung"><w:name w:val="{CAPTION_NEW_NAME}"/>"#)));
+        // latentStyles bleiben unverändert
+        assert!(s.contains(r#"<w:lsdException w:name="caption""#));
+    }
+
+    #[test]
+    fn bibliography_becomes_text() {
+        let (new, n) = unlink_bibliography(DOC.as_bytes()).unwrap();
+        let s = String::from_utf8(new).unwrap();
+        assert_eq!(n, 1);
+        assert!(!s.contains("BIBLIOGRAPHY"));
+        assert!(!s.contains("w:sdt"));
+        assert!(!s.contains("Bibliographies"));
+        assert!(s.contains("Huber, A. (2024)") && s.contains("Maier, B. (2023)"));
+        // das SEQ-Feld der Beschriftung bleibt erhalten
+        assert!(s.contains("SEQ Tabelle"));
+        assert_eq!(s.matches("w:fldCharType=").count(), 3);
+        // Ergebnis ist wohlgeformt
+        let mut r = reader(s.as_bytes());
+        let mut buf = Vec::new();
+        loop {
+            if matches!(r.read_event_into(&mut buf).unwrap(), Event::Eof) { break; }
+            buf.clear();
+        }
+    }
+
+    #[test]
+    fn other_fields_untouched() {
+        let xml = r#"<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> TOC \o "1-3" \h </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>x</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>"#;
+        let (new, n) = unlink_bibliography(xml.as_bytes()).unwrap();
+        assert_eq!(n, 0);
+        assert_eq!(String::from_utf8(new).unwrap(), xml);
+        assert!(is_bibliography_instr(" ADDIN ZOTERO_BIBL {} CSL_BIBLIOGRAPHY "));
+        assert!(is_bibliography_instr("ADDIN EN.REFLIST"));
+        assert!(!is_bibliography_instr("ADDIN ZOTERO_ITEM CSL_CITATION {}"));
+    }
+
+    /// Ende-zu-Ende mit LibreOffice: `cargo test -- --ignored`.
+    /// Schreibt Original und vorbereitete Kopie nach RAMPE_TEST_OUT (Standard: target/prep-test).
+    #[test]
+    #[ignore]
+    fn write_fixture_for_libreoffice() {
+        let dir = std::path::PathBuf::from(std::env::var("RAMPE_TEST_OUT").unwrap_or("target/prep-test".into()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // RAMPE_TEST_IN=bericht.docx: echtes Dokument statt des eingebauten Beispiels
+        let input = std::env::var("RAMPE_TEST_IN").ok();
+        let orig = match &input {
+            Some(p) => std::fs::read(p).unwrap(),
+            None => fixture(),
+        };
+        // RAMPE_TEST_APPLY=1: vorher alles anwenden, was man in der Oberfläche anklicken
+        // kann (Alternativtexte als Platzhalter, Linkbeschreibungen, Ebenen, Farben, Tabellenköpfe)
+        let orig = if std::env::var("RAMPE_TEST_APPLY").is_ok() {
+            let a = analyze(&orig).unwrap();
+            let ch: Changes = serde_json::from_value(serde_json::json!({
+                "title": if a.title.is_empty() { "Testtitel".to_string() } else { a.title.clone() },
+                "language": if a.language.is_empty() { "de-AT".to_string() } else { a.language.clone() },
+                "images": a.images.iter().map(|i| serde_json::json!({"index": i.index, "alt": format!("Platzhalter {}", i.index), "decorative": false})).collect::<Vec<_>>(),
+                "tables": a.tables.iter().map(|t| serde_json::json!({"index": t.index, "header": true})).collect::<Vec<_>>(),
+                "link_descriptions": true,
+                "headings": a.heading_fixes.iter().map(|f| serde_json::json!({"para": f.para, "style": f.style})).collect::<Vec<_>>(),
+                "colors": a.colors.iter().map(|c| serde_json::json!({"from": c.color, "to": c.suggestion})).collect::<Vec<_>>(),
+            }))
+            .unwrap();
+            println!("angewendet: {} Bilder, {} Tabellen, {} Ebenen, {} Farben, {} Links ohne Beschreibung", a.images.len(), a.tables.len(), a.heading_fixes.len(), a.colors.len(), a.links_missing);
+            apply(&orig, &ch).unwrap()
+        } else {
+            orig
+        };
+        let (prep, notes) = prepare_for_pdf(&orig).unwrap();
+        std::fs::write(dir.join("original.docx"), &orig).unwrap();
+        std::fs::write(dir.join("vorbereitet.docx"), &prep).unwrap();
+        for n in &notes {
+            println!("{n}");
+        }
+        if input.is_none() {
+            assert_eq!(notes.len(), 2, "{notes:?}");
+        }
+    }
 }
