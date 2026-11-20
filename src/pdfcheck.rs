@@ -73,7 +73,7 @@ fn get<'a>(doc: &'a Document, d: &'a Dictionary, key: &[u8]) -> Option<&'a Objec
     d.get(key).ok().map(|o| deref(doc, o))
 }
 
-fn text_string(o: &Object) -> String {
+pub(crate) fn text_string(o: &Object) -> String {
     match o {
         Object::String(b, _) => {
             if b.len() >= 2 && b[0] == 0xFE && b[1] == 0xFF {

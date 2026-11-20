@@ -69,6 +69,9 @@ behebt sie in einer Kopie, die nur für den Export entsteht:
 | Die Vorlage „Beschriftung“ (`caption`) heißt in der Kopie „Bildunterschrift (Rampe)“ | LibreOffice taggt Beschriftungen als `Caption`, aber frei stehend statt innerhalb von `Figure`/`Table`. PAC bemängelt das. Als normaler Absatz ist es korrekt. Nummerierung (SEQ-Felder) und Verzeichnisse bleiben gleich. | `rename_caption_style` |
 | Links und Verweis-Felder (`STYLEREF`, `REF`, `PAGEREF` …) in Kopf- und Fußzeilen werden zu Text | Kopf- und Fußzeilen sind im PDF Artefakte. Ein Link darin ist ungetaggt, und zwar auf jeder Seite (veraPDF 7.18.5-1). | `unlink_header_footer` |
 | Literaturverzeichnis-Felder (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) werden zu Text | LibreOffice baut sonst ein geschütztes Verzeichnis, das anders aussieht als in Word und als Inhaltsverzeichnis (`TOC`) getaggt wird. | `unlink_bibliography` |
+| Absatzabstände der Tabellenvorlage werden direkt an die Zellabsätze geschrieben, soweit Absatzvorlage (außer „Standard“) oder direkte Formatierung sie nicht festlegen | So rechnet Word. LibreOffice nimmt stattdessen die Dokument-Standardwerte (z. B. Zeilenabstand 1,25 statt 1,1 aus „Tabellenraster“). Die Zeilen werden höher. Beim Praxistest-Bericht: 65 statt 57 Seiten. Bedingte Formate (erste Zeile usw.) werden nicht berücksichtigt. | `apply_table_spacing` |
+| Links auf lokale Dateien (`file://`, `C:\…`, `\\server\…`) werden zu Text | Sie führen im PDF ins Leere. Rampe meldet sie auch in der Analyse. | `unlink_local` |
+| Bilder und Formen in Kopf-/Fußzeilen werden dekorativ, mit Alternativtext `rampe:dekorativ` | Kopf-/Fußzeilen sind Artefakte, verankerte Grafiken darin taggt LibreOffice aber als `Figure` (PAC: „Possibly inappropriate use of a Figure“). Bei Bildern genügt die Word-Markierung „dekorativ“. Formen (Zierbalken) taggt LibreOffice trotzdem; die Nachbearbeitung erkennt sie am Alternativtext. Dasselbe gilt für Formen, die im Text als dekorativ markiert sind. | `decorate_all`, `mark_decorative_alt` |
 
 Welche Anpassungen ein Bericht bekommt, zeigt Rampe vor dem Export im Reiter
 „PDF erzeugen“ an (`pdf_prep` in der Analyse).
@@ -98,6 +101,12 @@ korrigiert Rampe stattdessen das fertige PDF: Jedes Blockelement, das in einem A
 steckt, wird eine Ebene höher direkt hinter diesen Absatz gehängt. Ein dadurch leerer Absatz
 fällt weg. Geändert werden nur Eltern-Verweise im Strukturbaum. Seiteninhalt, Zuordnung
 der Inhalte (MCID) und Layout bleiben unberührt.
+
+**Dekorative Formen:** LibreOffice übernimmt die Word-Markierung „dekorativ“ nur bei Bildern.
+Formen (Rechtecke, Zierbalken) werden als `Figure` getaggt. Die Export-Kopie gibt ihnen den
+Alternativtext `rampe:dekorativ`. Die Nachbearbeitung macht aus ihrem markierten Inhalt
+`/Artifact BMC`, leert den Eintrag im ParentTree und entfernt das Strukturelement
+(`artifact_decorative`). Das Seitenbild bleibt gleich.
 
 **Unabhängig von LibreOffice-Versionen:** Die Korrektur sucht nach der Regel („Blockelement
 in Absatz“), nicht nach einem bestimmten Muster von LibreOffice. Macht eine spätere Version
@@ -180,7 +189,8 @@ Ohne `RAMPE_TEST_IN` wird ein kleines eingebautes Beispieldokument verwendet.
 
 ## Offene Punkte
 
-- **Zeilenhöhen in Tabellen**: Weichen sie vom Original ab, liegt das meist an fehlenden
-  Schriften (siehe [INSTALL.md](INSTALL.md#schriften)). Feste Zeilenhöhen schneiden
-  mehrzeilige Zellen ab und sind deshalb keine Lösung.
+- **Zeilenhöhen in Tabellen**: Abstände aus Tabellenvorlagen gleicht die Vorbereitung aus
+  (siehe oben). Bleiben Abweichungen, liegt das meist an fehlenden Schriften (siehe
+  [INSTALL.md](INSTALL.md#schriften)). Feste Zeilenhöhen schneiden mehrzeilige Zellen ab und
+  sind deshalb keine Lösung.
 - Weitere Grenzen des Prototyps: siehe [README.md](README.md#bekannte-grenzen-des-prototyps).

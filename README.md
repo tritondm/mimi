@@ -69,6 +69,14 @@ DOCX bleibt unverändert):
   z. B. **alle Tabellenzellen** falsch getaggt (veraPDF 7.1-7, 7.2-10, 7.2-43).
 - Links und Verweis-Felder (z. B. `STYLEREF`) in Kopf-/Fußzeilen werden zu normalem Text,
   sonst entsteht auf jeder Seite ein ungetaggter Link (veraPDF 7.18.5).
+- Absatzabstände aus Tabellenvorlagen werden wie in Word übernommen, sonst sind die
+  Tabellenzeilen in LibreOffice höher.
+- Links auf lokale Dateien (`C:\Users\…`, `file://`) werden zu Text.
+- Bilder und Formen in Kopf-/Fußzeilen werden dekorativ (Artefakt statt Abbildung).
+
+Bilder werden in voller Auflösung mit JPEG-Qualität 95 eingebettet. Wahlweise geht das auch
+verlustfrei, per Häkchen vor dem Export: bessere Qualität und keine Säume bei transparentem
+Hintergrund, aber deutlich größere Datei.
 - Die Vorlage „Beschriftung“ (Word: `caption`) bekommt einen eigenen Namen. LibreOffice taggt
   Beschriftungen sonst als frei stehende `Caption`, was PAC bemängelt; so werden
   sie normale Absätze. Aussehen und Nummerierung bleiben gleich.
@@ -114,7 +122,7 @@ Am Server: siehe [INSTALL.md](INSTALL.md#4-verapdf).
 - Alte VML-Grafiken (sehr alte Word-Dateien) werden nicht erkannt.
 - Vorschau nur für PNG/JPG/GIF/SVG, nicht für EMF/WMF.
 - Schriftfarben in eingefügten Grafiken (EMF/WMF, Bilder) werden nicht geprüft; PAC prüft
-  Text in Vektorgrafiken aber mit.
+  Text in Vektorgrafiken aber mit. Rampe weist auf EMF/WMF- und SmartArt-Grafiken mit Text hin.
 - Kontrast wird nur gegen Weiß geprüft, nicht gegen farbig hinterlegte Absätze/Zellen.
 - Verweis-Felder in Kopf-/Fußzeilen werden nur als einfaches Feld (`w:fldSimple`) erkannt,
   nicht als zusammengesetztes Feld.

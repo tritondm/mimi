@@ -18,6 +18,11 @@ const DECORATIVE_URI: &str = "{C183D7F6-B498-43B3-948B-1728B52AA6E4}";
 const NS_A: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const NS_ADEC: &str = "http://schemas.microsoft.com/office/drawing/2017/decorative";
 
+/// Alternativtext, mit dem die Export-Kopie dekorative Bilder und Formen kennzeichnet.
+/// LibreOffice beachtet „dekorativ“ nur bei Bildern; `pdffix` macht Abbildungen mit
+/// diesem Alternativtext nach dem Export zu Artefakten.
+pub const DECORATIVE_ALT: &str = "rampe:dekorativ";
+
 // ---------------------------------------------------------------------------
 // Ergebnis-Strukturen
 // ---------------------------------------------------------------------------
@@ -36,6 +41,8 @@ pub struct ImageInfo {
     pub kind: String,
     pub caption: String,
     pub section: String,
+    /// Textstellen in einer EMF/WMF-Vektorgrafik (0 = keine oder kein Vektorformat)
+    pub vector_text: usize,
     #[serde(skip)]
     para: usize,
 }
@@ -682,6 +689,11 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                             images[*i].kind = "diagramm".into();
                         }
                     }
+                    b"a:graphicData" if attr(e, b"uri").is_some_and(|u| u.ends_with("/diagram")) => {
+                        if let Some(Some(i)) = drawing_stack.last() {
+                            images[*i].kind = "smartart".into();
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -841,6 +853,44 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                 img.caption = paras[j].text.clone();
                 break;
             }
+        }
+    }
+
+    // Vektorgrafiken mit Text
+    for img in images.iter_mut().filter(|i| i.kind == "smartart" && !i.decorative) {
+        let name = snippet(if img.caption.is_empty() { &img.name } else { &img.caption }, 80);
+        hints.push(Hint { severity: "hinweis".into(), kind: "grafiktext".into(), text: format!("Grafik „{name}“ ist eine SmartArt-Grafik mit Text. PAC gibt dafür eine Warnung aus („Possibly inappropriate use of a Figure“). Unproblematisch, wenn der Alternativtext die Texte der Grafik wiedergibt."), section: img.section.clone() });
+    }
+    for img in images.iter_mut() {
+        let Some(m) = img.media.as_deref() else { continue };
+        let ext = m.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+        if ext != "emf" && ext != "wmf" {
+            continue;
+        }
+        if let Some(data) = read_entry(docx, &format!("word/{m}"))? {
+            img.vector_text = vector_text_count(&data);
+        }
+        if img.vector_text == 0 || img.decorative {
+            continue;
+        }
+        let name = snippet(if img.caption.is_empty() { &img.name } else { &img.caption }, 80);
+        if img.vector_text >= VECTOR_TABLE_TEXTS {
+            hints.push(Hint { severity: "warnung".into(), kind: "grafiktext".into(), text: format!("Grafik „{name}“ enthält sehr viel Text ({} Textstellen) – vermutlich eine als Bild eingefügte Tabelle. Bitte als echte Word-Tabelle einfügen; als Bild ist der Inhalt für Screenreader kaum nutzbar und PAC warnt („Possibly inappropriate use of a Figure“).", img.vector_text), section: img.section.clone() });
+        } else {
+            hints.push(Hint { severity: "hinweis".into(), kind: "grafiktext".into(), text: format!("Grafik „{name}“ ist eine Vektorgrafik mit Text ({} Textstellen). PAC gibt dafür eine Warnung aus („Possibly inappropriate use of a Figure“). Unproblematisch, wenn der Alternativtext die Beschriftungen wiedergibt – Schriftfarben in der Grafik selbst auf Kontrast prüfen.", img.vector_text), section: img.section.clone() });
+        }
+    }
+
+    // Links auf lokale Dateien
+    let local_ids = local_link_ids(&rels);
+    if !local_ids.is_empty() {
+        let texts = local_link_texts(&doc, &local_ids)?;
+        if !texts.is_empty() {
+            let mut ex: Vec<String> = texts.iter().take(3).map(|t| format!("„{}“", snippet(t, 50))).collect();
+            if texts.len() > 3 {
+                ex.push("…".into());
+            }
+            hints.push(Hint { severity: "warnung".into(), kind: "link".into(), text: format!("{} Link(s) zeigen auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…\\Downloads) und führen ins Leere: {}. Im PDF macht Rampe normalen Text daraus; in Word den Link entfernen (Rechtsklick → Link entfernen).", texts.len(), ex.join(", ")), section: String::new() });
         }
     }
 
@@ -1876,19 +1926,50 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
         if frames > 0 {
             notes.push(format!("{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Rampe löst ihn nach dem Export dort heraus – das Layout bleibt unverändert."));
         }
-        let (new, n) = unlink_bibliography(&doc)?;
+        let mut doc_changed = false;
+        let (mut doc, n) = unlink_bibliography(&doc)?;
         if n > 0 {
-            replaced.insert("word/document.xml".into(), new);
+            doc_changed = true;
             notes.push("Das Literaturverzeichnis wird im PDF als normaler Text ausgegeben – genau wie in Word. LibreOffice würde daraus sonst ein geschütztes Verzeichnis mit anderer Formatierung machen.".into());
+        }
+        if let Some(rels) = read_entry(docx, "word/_rels/document.xml.rels")? {
+            let ids = local_link_ids(&parse_rels(&rels)?);
+            if !ids.is_empty() {
+                let (new, n) = unlink_local(&doc, &ids)?;
+                if n > 0 {
+                    doc = new;
+                    doc_changed = true;
+                    notes.push(format!("{n} Link(s) auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…) werden im PDF als normaler Text ausgegeben – sie würden dort ins Leere führen."));
+                }
+            }
+        }
+        let (new, n) = mark_decorative_alt(&doc)?;
+        if n > 0 {
+            doc = new;
+            doc_changed = true;
+        }
+        if let Some(st) = read_entry(docx, "word/styles.xml")? {
+            let (new, n) = apply_table_spacing(&doc, &st)?;
+            if n > 0 {
+                doc = new;
+                doc_changed = true;
+                notes.push(format!("Absatzabstände aus den Tabellenvorlagen werden in {n} Tabellenzellen übernommen, wie Word es macht. LibreOffice würde sonst die Standardabstände verwenden und die Tabellenzeilen höher machen."));
+            }
+        }
+        if doc_changed {
+            replaced.insert("word/document.xml".into(), doc);
         }
     }
     let mut links = 0;
+    let mut deco = 0;
     for name in zip_names(docx)? {
         if is_header_footer(&name) {
             if let Some(x) = read_entry(docx, &name)? {
                 let (new, n) = unlink_header_footer(&x)?;
-                if n > 0 {
+                let (new, d) = decorate_all(&new)?;
+                if n > 0 || d > 0 {
                     links += n;
+                    deco += d;
                     replaced.insert(name, new);
                 }
             }
@@ -1896,6 +1977,9 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
     }
     if links > 0 {
         notes.push(format!("{links} Verknüpfung(en) in Kopf-/Fußzeilen (z. B. Feld STYLEREF) werden im PDF als normaler Text ausgegeben – sonst entsteht auf jeder Seite ein ungetaggter Link."));
+    }
+    if deco > 0 {
+        notes.push(format!("{deco} Bild(er) und Form(en) in Kopf-/Fußzeilen (Logos, Zierbalken) werden als dekorativ markiert. Kopf- und Fußzeilen liest der Screenreader ohnehin nicht vor; LibreOffice würde sie sonst als Abbildung taggen."));
     }
     if replaced.is_empty() {
         return Ok((docx.to_vec(), notes));
@@ -2012,6 +2096,593 @@ pub fn apply(docx: &[u8], changes: &Changes) -> Result<Vec<u8>> {
     rewrite_zip(docx, &replaced)
 }
 
+// ---------------------------------------------------------------------------
+// Export-Kopie: Abstände aus Tabellenvorlagen, Kopf-/Fußzeilenbilder, lokale Links
+// ---------------------------------------------------------------------------
+
+const SPACING_KEYS: [&str; 8] = ["w:before", "w:after", "w:line", "w:lineRule", "w:beforeLines", "w:afterLines", "w:beforeAutospacing", "w:afterAutospacing"];
+
+/// Kinder von w:pPr, die laut Schema nach w:spacing kommen.
+const AFTER_SPACING: [&[u8]; 14] = [
+    b"w:ind", b"w:contextualSpacing", b"w:mirrorIndents", b"w:suppressOverlap", b"w:jc", b"w:textDirection", b"w:textAlignment",
+    b"w:textboxTightWrap", b"w:outlineLvl", b"w:divId", b"w:cnfStyle", b"w:rPr", b"w:sectPr", b"w:pPrChange",
+];
+
+fn spacing_attrs(e: &BytesStart) -> Vec<(String, String)> {
+    e.attributes()
+        .flatten()
+        .filter_map(|a| {
+            let k = String::from_utf8_lossy(a.key.as_ref()).into_owned();
+            SPACING_KEYS.contains(&k.as_str()).then(|| (k, a.unescape_value().map(|v| v.into_owned()).unwrap_or_default()))
+        })
+        .collect()
+}
+
+#[derive(Default)]
+struct SpacingStyle {
+    based_on: Option<String>,
+    spacing: Vec<(String, String)>,
+}
+
+/// Absatzabstände der Formatvorlagen (nur w:pPr/w:spacing der Vorlage selbst,
+/// nicht die bedingten Formate einer Tabellenvorlage).
+struct SpacingStyles {
+    map: HashMap<String, SpacingStyle>,
+    default_para: Option<String>,
+    default_table: Option<String>,
+}
+
+impl SpacingStyles {
+    fn parse(xml: &[u8]) -> Result<Self> {
+        let mut r = reader(xml);
+        let mut buf = Vec::new();
+        let mut map = HashMap::new();
+        let (mut default_para, mut default_table) = (None, None);
+        let mut cur: Option<(String, SpacingStyle)> = None;
+        let mut cond = 0usize;
+        let mut in_ppr = false;
+        loop {
+            let ev = r.read_event_into(&mut buf)?;
+            match &ev {
+                Event::Eof => break,
+                Event::Start(e) | Event::Empty(e) => {
+                    let empty = matches!(ev, Event::Empty(_));
+                    match e.name().as_ref() {
+                        b"w:style" => {
+                            let id = attr(e, b"w:styleId").unwrap_or_default();
+                            if attr(e, b"w:default").as_deref() == Some("1") {
+                                match attr(e, b"w:type").as_deref() {
+                                    Some("paragraph") => default_para = Some(id.clone()),
+                                    Some("table") => default_table = Some(id.clone()),
+                                    _ => {}
+                                }
+                            }
+                            cur = Some((id, SpacingStyle::default()));
+                        }
+                        b"w:basedOn" => {
+                            if let Some((_, s)) = cur.as_mut() {
+                                s.based_on = attr(e, b"w:val");
+                            }
+                        }
+                        b"w:tblStylePr" if !empty => cond += 1,
+                        b"w:pPr" if !empty && cond == 0 => in_ppr = true,
+                        b"w:spacing" if in_ppr && cond == 0 => {
+                            if let Some((_, s)) = cur.as_mut() {
+                                s.spacing = spacing_attrs(e);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Event::End(e) => match e.name().as_ref() {
+                    b"w:style" => {
+                        if let Some((id, s)) = cur.take() {
+                            map.insert(id, s);
+                        }
+                        cond = 0;
+                        in_ppr = false;
+                    }
+                    b"w:tblStylePr" => cond = cond.saturating_sub(1),
+                    b"w:pPr" => in_ppr = false,
+                    _ => {}
+                },
+                _ => {}
+            }
+            buf.clear();
+        }
+        Ok(SpacingStyles { map, default_para, default_table })
+    }
+
+    /// Abstände entlang der basedOn-Kette; die Vorlage `stop` (und alles darüber) zählt nicht.
+    fn resolved(&self, id: &str, stop: Option<&str>) -> HashMap<String, String> {
+        let mut chain = Vec::new();
+        let mut cur = Some(id.to_string());
+        while let Some(c) = cur {
+            if chain.len() > 15 || stop == Some(c.as_str()) {
+                break;
+            }
+            match self.map.get(&c) {
+                Some(s) => {
+                    chain.push(s);
+                    cur = s.based_on.clone();
+                }
+                None => break,
+            }
+        }
+        let mut out = HashMap::new();
+        for s in chain.iter().rev() {
+            for (k, v) in &s.spacing {
+                out.insert(k.clone(), v.clone());
+            }
+        }
+        out
+    }
+}
+
+/// Word: Absatzabstände der Tabellenvorlage gelten in den Zellen, solange die
+/// Absatzvorlage (außer „Standard“) oder direkte Formatierung sie nicht selbst
+/// festlegt – sie stehen also über den Dokument-Standardwerten. LibreOffice nimmt
+/// stattdessen die Dokument-Standardwerte (z. B. Zeilenabstand 1,25 statt 1,1),
+/// wodurch Tabellenzeilen höher werden. Hier werden die fehlenden Werte der
+/// Tabellenvorlage direkt an die Zellabsätze geschrieben.
+fn apply_table_spacing(doc: &[u8], styles_xml: &[u8]) -> Result<(Vec<u8>, usize)> {
+    let st = SpacingStyles::parse(styles_xml)?;
+    let mut table_cache: HashMap<String, HashMap<String, String>> = HashMap::new();
+    let mut r = reader(doc);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(doc.len() + 4096)));
+    let mut buf = Vec::new();
+    // je offener Tabelle: Abstände ihrer Vorlage
+    let mut tables: Vec<HashMap<String, String>> = Vec::new();
+    let mut txbx = 0usize;
+    // Zustand des aktuellen Zellabsatzes: None = nichts zu tun
+    // Some((Phase, pStyle)): 0 = w:pPr erwartet, 1 = in w:pPr (Tiefe), 2 = erledigt
+    let mut phase: Option<(u8, usize, Option<String>)> = None;
+    let mut n = 0usize;
+
+    // fehlende Werte für einen Absatz berechnen und mit direkter Formatierung mischen
+    let spacing_for = |table: &HashMap<String, String>, style: Option<&str>, direct: &[(String, String)]| -> Option<Vec<(String, String)>> {
+        let style = style.map(str::to_string).or(st.default_para.clone()).unwrap_or_default();
+        let para = st.resolved(&style, st.default_para.as_deref());
+        let has = |k: &str| para.contains_key(k) || direct.iter().any(|(dk, _)| dk == k);
+        let mut add = Vec::new();
+        for (k, v) in table {
+            let skip = match k.as_str() {
+                "w:line" | "w:lineRule" => has("w:line"),
+                k => has(k),
+            };
+            if !skip {
+                add.push((k.clone(), v.clone()));
+            }
+        }
+        if add.is_empty() {
+            return None;
+        }
+        add.sort();
+        let mut out = direct.to_vec();
+        out.extend(add);
+        Some(out)
+    };
+    let spacing_el = |attrs: &[(String, String)]| {
+        let mut e = BytesStart::new("w:spacing");
+        for (k, v) in attrs {
+            e.push_attribute((k.as_str(), v.as_str()));
+        }
+        Event::Empty(e)
+    };
+
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        if matches!(ev, Event::Eof) {
+            break;
+        }
+        // Zellabsatz: w:pPr erwartet
+        if let Some((0, _, _)) = phase {
+            let table = tables.last().cloned().unwrap_or_default();
+            match &ev {
+                Event::Start(e) if e.name().as_ref() == b"w:pPr" => {
+                    phase = Some((1, 0, None));
+                    w.write_event(ev)?;
+                    buf.clear();
+                    continue;
+                }
+                Event::Empty(e) if e.name().as_ref() == b"w:pPr" => {
+                    if let Some(sp) = spacing_for(&table, None, &[]) {
+                        w.write_event(Event::Start(BytesStart::new("w:pPr")))?;
+                        w.write_event(spacing_el(&sp))?;
+                        w.write_event(Event::End(BytesEnd::new("w:pPr")))?;
+                        n += 1;
+                    } else {
+                        w.write_event(ev)?;
+                    }
+                    phase = None;
+                    buf.clear();
+                    continue;
+                }
+                Event::Text(_) | Event::Comment(_) => {}
+                _ => {
+                    if let Some(sp) = spacing_for(&table, None, &[]) {
+                        w.write_event(Event::Start(BytesStart::new("w:pPr")))?;
+                        w.write_event(spacing_el(&sp))?;
+                        w.write_event(Event::End(BytesEnd::new("w:pPr")))?;
+                        n += 1;
+                    }
+                    phase = None;
+                    // Ereignis unten normal weiterverarbeiten
+                }
+            }
+        }
+        // in w:pPr eines Zellabsatzes
+        if let Some((1, depth, style)) = phase.as_mut() {
+            let table = tables.last().cloned().unwrap_or_default();
+            match &ev {
+                Event::Start(e) | Event::Empty(e) if *depth == 0 => {
+                    let name = e.name();
+                    if name.as_ref() == b"w:pStyle" {
+                        *style = attr(e, b"w:val");
+                    } else if name.as_ref() == b"w:spacing" {
+                        let direct = spacing_attrs(e);
+                        if let Some(sp) = spacing_for(&table, style.as_deref(), &direct) {
+                            let mut ne = BytesStart::new("w:spacing");
+                            for a in e.attributes().flatten() {
+                                if !SPACING_KEYS.contains(&String::from_utf8_lossy(a.key.as_ref()).as_ref()) {
+                                    ne.push_attribute(a);
+                                }
+                            }
+                            for (k, v) in &sp {
+                                ne.push_attribute((k.as_str(), v.as_str()));
+                            }
+                            w.write_event(if matches!(ev, Event::Empty(_)) { Event::Empty(ne) } else { Event::Start(ne) })?;
+                            n += 1;
+                        } else {
+                            w.write_event(ev.clone())?;
+                        }
+                        let started = matches!(ev, Event::Start(_));
+                        phase = Some((2, if started { 1 } else { 0 }, None));
+                        buf.clear();
+                        continue;
+                    } else if AFTER_SPACING.contains(&name.as_ref()) {
+                        if let Some(sp) = spacing_for(&table, style.as_deref(), &[]) {
+                            w.write_event(spacing_el(&sp))?;
+                            n += 1;
+                        }
+                        phase = Some((2, 0, None));
+                        // w:pPr-Ende unten nicht mehr behandeln; Tiefe wird nicht gebraucht
+                        w.write_event(ev)?;
+                        buf.clear();
+                        continue;
+                    }
+                    if matches!(ev, Event::Start(_)) {
+                        *depth += 1;
+                    }
+                }
+                Event::Start(_) => *depth += 1,
+                Event::End(e) if *depth == 0 && e.name().as_ref() == b"w:pPr" => {
+                    if let Some(sp) = spacing_for(&table, style.as_deref(), &[]) {
+                        w.write_event(spacing_el(&sp))?;
+                        n += 1;
+                    }
+                    phase = None;
+                    w.write_event(ev)?;
+                    buf.clear();
+                    continue;
+                }
+                Event::End(_) => *depth = depth.saturating_sub(1),
+                _ => {}
+            }
+            w.write_event(ev)?;
+            buf.clear();
+            continue;
+        }
+
+        match &ev {
+            Event::Start(e) if e.name().as_ref() == b"w:tbl" => {
+                let def = st.default_table.clone();
+                let sp = def.map(|d| st.resolved(&d, None)).unwrap_or_default();
+                tables.push(sp);
+            }
+            Event::Empty(e) if e.name().as_ref() == b"w:tblStyle" => {
+                if let (Some(top), Some(id)) = (tables.last_mut(), attr(e, b"w:val")) {
+                    *top = table_cache.entry(id.clone()).or_insert_with(|| st.resolved(&id, None)).clone();
+                }
+            }
+            Event::End(e) if e.name().as_ref() == b"w:tbl" => {
+                tables.pop();
+            }
+            Event::Start(e) if e.name().as_ref() == b"w:txbxContent" => txbx += 1,
+            Event::End(e) if e.name().as_ref() == b"w:txbxContent" => txbx = txbx.saturating_sub(1),
+            Event::Start(e) if e.name().as_ref() == b"w:p" => {
+                if txbx == 0 && tables.last().is_some_and(|t| !t.is_empty()) {
+                    phase = Some((0, 0, None));
+                } else {
+                    phase = None;
+                }
+            }
+            Event::End(e) if e.name().as_ref() == b"w:p" => phase = None,
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), n))
+}
+
+/// Markiert alle Bilder und Formen eines Teils (Kopf-/Fußzeile) als dekorativ.
+/// Kopf- und Fußzeilen sind im PDF Artefakte; LibreOffice taggt verankerte
+/// Grafiken darin aber trotzdem als `Figure` (PAC: „Possibly inappropriate use
+/// of a Figure structure element“).
+fn decorate_all(xml: &[u8]) -> Result<(Vec<u8>, usize)> {
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len() + 1024)));
+    let mut buf = Vec::new();
+    // (extLst gesehen, decorative gesehen)
+    let mut docpr: Option<(bool, bool)> = None;
+    let mut in_lst = false;
+    let mut n = 0usize;
+    let ext_list = |w: &mut Writer<Cursor<Vec<u8>>>| -> Result<()> {
+        let mut lst = BytesStart::new("a:extLst");
+        lst.push_attribute(("xmlns:a", NS_A));
+        w.write_event(Event::Start(lst))?;
+        write_decorative_ext(w, true)?;
+        w.write_event(Event::End(BytesEnd::new("a:extLst")))?;
+        Ok(())
+    };
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        match &ev {
+            Event::Eof => break,
+            Event::Empty(e) if e.name().as_ref() == b"wp:docPr" => {
+                w.write_event(Event::Start(copy_start_with(e, &[("descr", DECORATIVE_ALT)])))?;
+                ext_list(&mut w)?;
+                w.write_event(Event::End(BytesEnd::new("wp:docPr")))?;
+                n += 1;
+                buf.clear();
+                continue;
+            }
+            Event::Start(e) if e.name().as_ref() == b"wp:docPr" => {
+                docpr = Some((false, false));
+                w.write_event(Event::Start(copy_start_with(e, &[("descr", DECORATIVE_ALT)])))?;
+                buf.clear();
+                continue;
+            }
+            Event::Start(e) if docpr.is_some() && e.name().as_ref() == b"a:extLst" => {
+                in_lst = true;
+                if let Some(d) = docpr.as_mut() {
+                    d.0 = true;
+                }
+            }
+            Event::Start(e) | Event::Empty(e) if docpr.is_some() && e.name().as_ref() == b"adec:decorative" => {
+                if let Some(d) = docpr.as_mut() {
+                    d.1 = true;
+                }
+                if !matches!(attr(e, b"val").as_deref(), Some("1") | Some("true")) {
+                    n += 1;
+                }
+                let ne = copy_start_with(e, &[("val", "1")]);
+                w.write_event(if matches!(ev, Event::Empty(_)) { Event::Empty(ne) } else { Event::Start(ne) })?;
+                buf.clear();
+                continue;
+            }
+            Event::End(e) if in_lst && e.name().as_ref() == b"a:extLst" => {
+                in_lst = false;
+                if let Some((_, false)) = docpr {
+                    write_decorative_ext(&mut w, true)?;
+                    n += 1;
+                    if let Some(d) = docpr.as_mut() {
+                        d.1 = true;
+                    }
+                }
+            }
+            Event::End(e) if e.name().as_ref() == b"wp:docPr" => {
+                if let Some((false, _)) = docpr.take() {
+                    ext_list(&mut w)?;
+                    n += 1;
+                }
+            }
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), n))
+}
+
+/// Gibt als dekorativ markierten Bildern und Formen im Fließtext den
+/// Alternativtext [`DECORATIVE_ALT`], damit `pdffix` auch Formen ausblenden kann.
+fn mark_decorative_alt(xml: &[u8]) -> Result<(Vec<u8>, usize)> {
+    // 1. welche docPr (nach Reihenfolge) sind dekorativ?
+    let mut deco = std::collections::HashSet::new();
+    {
+        let mut r = reader(xml);
+        let mut buf = Vec::new();
+        let (mut idx, mut inside) = (0usize, false);
+        loop {
+            match r.read_event_into(&mut buf)? {
+                Event::Eof => break,
+                Event::Start(e) if e.name().as_ref() == b"wp:docPr" => {
+                    inside = true;
+                    idx += 1;
+                }
+                Event::Empty(e) if e.name().as_ref() == b"wp:docPr" => idx += 1,
+                Event::End(e) if e.name().as_ref() == b"wp:docPr" => inside = false,
+                Event::Start(e) | Event::Empty(e) if inside && e.name().as_ref() == b"adec:decorative" => {
+                    if matches!(attr(&e, b"val").as_deref(), Some("1") | Some("true")) {
+                        deco.insert(idx - 1);
+                    }
+                }
+                _ => {}
+            }
+            buf.clear();
+        }
+    }
+    if deco.is_empty() {
+        return Ok((xml.to_vec(), 0));
+    }
+    // 2. Alternativtext setzen
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len() + 256)));
+    let mut buf = Vec::new();
+    let mut idx = 0usize;
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"wp:docPr" => {
+                let i = idx;
+                idx += 1;
+                if deco.contains(&i) {
+                    let ne = copy_start_with(e, &[("descr", DECORATIVE_ALT)]);
+                    w.write_event(if matches!(ev, Event::Empty(_)) { Event::Empty(ne) } else { Event::Start(ne) })?;
+                    buf.clear();
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), deco.len()))
+}
+
+/// Linkziel, das nur auf einem einzelnen Rechner existiert (C:\…, file://, \\server\…).
+fn is_local_target(t: &str) -> bool {
+    let l = t.trim().to_ascii_lowercase();
+    let b = l.as_bytes();
+    l.starts_with("file:") || l.starts_with("\\\\") || (b.len() > 2 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b[2] == b'\\' || b[2] == b'/'))
+}
+
+fn local_link_ids(rels: &HashMap<String, String>) -> std::collections::HashSet<String> {
+    rels.iter().filter(|(_, t)| is_local_target(t)).map(|(id, _)| id.clone()).collect()
+}
+
+/// Sichtbare Texte der Links auf lokale Dateien (für den Hinweis).
+fn local_link_texts(doc: &[u8], ids: &std::collections::HashSet<String>) -> Result<Vec<String>> {
+    let mut r = reader(doc);
+    let mut buf = Vec::new();
+    let mut out = Vec::new();
+    let mut cur: Option<String> = None;
+    let mut in_t = false;
+    loop {
+        match r.read_event_into(&mut buf)? {
+            Event::Eof => break,
+            Event::Start(e) if e.name().as_ref() == b"w:hyperlink" => {
+                cur = attr(&e, b"r:id").filter(|id| ids.contains(id)).map(|_| String::new());
+            }
+            Event::Start(e) if e.name().as_ref() == b"w:t" => in_t = true,
+            Event::End(e) if e.name().as_ref() == b"w:t" => in_t = false,
+            Event::Text(t) if in_t => {
+                if let Some(c) = cur.as_mut() {
+                    c.push_str(&t.unescape()?);
+                }
+            }
+            Event::End(e) if e.name().as_ref() == b"w:hyperlink" => {
+                if let Some(c) = cur.take() {
+                    out.push(clean_link_text(&c));
+                }
+            }
+            _ => {}
+        }
+        buf.clear();
+    }
+    Ok(out)
+}
+
+/// Löst Links auf lokale Dateien auf; der Text bleibt stehen.
+fn unlink_local(doc: &[u8], ids: &std::collections::HashSet<String>) -> Result<(Vec<u8>, usize)> {
+    let mut r = reader(doc);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(doc.len())));
+    let mut buf = Vec::new();
+    let mut stack: Vec<bool> = Vec::new();
+    let mut n = 0usize;
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) if e.name().as_ref() == b"w:hyperlink" => {
+                let drop = attr(e, b"r:id").is_some_and(|id| ids.contains(&id));
+                stack.push(drop);
+                if drop {
+                    n += 1;
+                    buf.clear();
+                    continue;
+                }
+            }
+            Event::End(e) if e.name().as_ref() == b"w:hyperlink" => {
+                if stack.pop() == Some(true) {
+                    buf.clear();
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        w.write_event(ev)?;
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), n))
+}
+
+/// Zählt Textausgaben in einer EMF- oder WMF-Grafik (0 bei anderen Formaten).
+pub fn vector_text_count(data: &[u8]) -> usize {
+    let u16at = |i: usize| data.get(i..i + 2).map(|b| u16::from_le_bytes([b[0], b[1]]));
+    let u32at = |i: usize| data.get(i..i + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
+    // EMF: erster Datensatz EMR_HEADER, Signatur " EMF" an Byte 40
+    if data.len() > 44 && u32at(0) == Some(1) && &data[40..44] == b" EMF" {
+        let (mut i, mut gdi, mut plus) = (0usize, 0usize, 0usize);
+        while let (Some(t), Some(sz)) = (u32at(i), u32at(i + 4)) {
+            let sz = sz as usize;
+            if sz < 8 || i + sz > data.len() {
+                break;
+            }
+            match t {
+                // EXTTEXTOUTA/W, POLYTEXTOUTA/W, SMALLTEXTOUT
+                83 | 84 | 96 | 97 | 108 => gdi += 1,
+                // EMR_COMMENT mit EMF+-Datensätzen
+                70 if sz >= 16 && &data[i + 12..i + 16] == b"EMF+" => {
+                    let mut j = i + 16;
+                    let end = i + sz;
+                    while j + 12 <= end {
+                        let (Some(pt), Some(psz)) = (u16at(j), u32at(j + 4)) else { break };
+                        if psz < 12 {
+                            break;
+                        }
+                        // DrawString, DrawDriverString
+                        if pt == 0x401C || pt == 0x4036 {
+                            plus += 1;
+                        }
+                        j += psz as usize;
+                    }
+                }
+                14 => break, // EMR_EOF
+                _ => {}
+            }
+            i += sz;
+        }
+        // Dual-EMF enthält beides; nicht doppelt zählen
+        return gdi.max(plus);
+    }
+    // WMF, ggf. mit „placeable“-Kopf
+    let mut i = if u32at(0) == Some(0x9AC6_CDD7) { 22 } else { 0 };
+    if !matches!(u16at(i), Some(1) | Some(2)) || u16at(i + 2) != Some(9) {
+        return 0;
+    }
+    i += 18;
+    let mut n = 0;
+    while let (Some(sz), Some(f)) = (u32at(i), u16at(i + 4)) {
+        if f == 0 || sz < 3 {
+            break;
+        }
+        // META_TEXTOUT, META_EXTTEXTOUT
+        if f == 0x0521 || f == 0x0A32 {
+            n += 1;
+        }
+        i += sz as usize * 2;
+    }
+    n
+}
+
+/// Ab so vielen Textstellen ist eine Vektorgrafik vermutlich eine eingefügte Tabelle.
+const VECTOR_TABLE_TEXTS: usize = 300;
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -2102,6 +2773,90 @@ pub(crate) mod tests {
         assert!(!is_bibliography_instr("ADDIN ZOTERO_ITEM CSL_CITATION {}"));
     }
 
+    #[test]
+    fn table_style_spacing_reaches_cells() {
+        let st = r#"<w:styles xmlns:w="w"><w:docDefaults><w:pPrDefault><w:pPr><w:spacing w:after="360" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Standard"><w:name w:val="Normal"/></w:style>
+<w:style w:type="paragraph" w:styleId="TD"><w:name w:val="TD"/><w:basedOn w:val="Standard"/><w:pPr><w:spacing w:before="80" w:after="60"/></w:pPr></w:style>
+<w:style w:type="table" w:default="1" w:styleId="NormaleTabelle"><w:name w:val="Normal Table"/></w:style>
+<w:style w:type="table" w:styleId="Raster"><w:name w:val="Table Grid"/><w:basedOn w:val="NormaleTabelle"/><w:pPr><w:spacing w:before="40" w:after="20" w:line="264" w:lineRule="auto"/></w:pPr><w:tblStylePr w:type="firstRow"><w:pPr><w:spacing w:line="500"/></w:pPr></w:tblStylePr></w:style>
+<w:style w:type="table" w:styleId="Haus"><w:name w:val="Haus"/><w:basedOn w:val="Raster"/></w:style></w:styles>"#;
+        let doc = r#"<w:document xmlns:w="w"><w:body><w:p><w:r><w:t>außen</w:t></w:r></w:p>
+<w:tbl><w:tblPr><w:tblStyle w:val="Haus"/></w:tblPr><w:tr><w:tc>
+<w:p><w:pPr><w:pStyle w:val="TD"/><w:jc w:val="right"/></w:pPr><w:r><w:t>a</w:t></w:r></w:p>
+<w:p><w:r><w:t>b</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:t>c</w:t></w:r></w:p>
+</w:tc></w:tr></w:tbl></w:body></w:document>"#;
+        let (out, n) = apply_table_spacing(doc.as_bytes(), st.as_bytes()).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert_eq!(n, 3, "{out}");
+        // TD legt before/after selbst fest: nur der Zeilenabstand kommt aus der Tabellenvorlage
+        assert!(out.contains(r#"<w:pStyle w:val="TD"/><w:spacing w:line="264" w:lineRule="auto"/><w:jc"#), "{out}");
+        // Standard-Absatz: alles aus der Tabellenvorlage (Standard zählt nicht)
+        assert!(out.contains(r#"<w:p><w:pPr><w:spacing w:after="20" w:before="40" w:line="264" w:lineRule="auto"/></w:pPr><w:r><w:t>b"#), "{out}");
+        // direkte Formatierung bleibt, fehlende Werte kommen dazu
+        assert!(out.contains(r#"<w:spacing w:line="240" w:lineRule="auto" w:after="20" w:before="40"/>"#), "{out}");
+        // außerhalb der Tabelle unverändert
+        assert!(out.contains(r#"<w:p><w:r><w:t>außen"#));
+    }
+
+    #[test]
+    fn header_drawings_become_decorative() {
+        let x = r#"<w:hdr xmlns:w="w" xmlns:wp="wp"><w:p><w:r><w:drawing><wp:anchor><wp:docPr id="1" name="Balken" descr="Leerer Platzhalter"/></wp:anchor></w:drawing><w:drawing><wp:inline><wp:docPr id="2" name="Logo"><a:extLst xmlns:a="a"><a:ext uri="{X}"/></a:extLst></wp:docPr></wp:inline></w:drawing></w:r></w:p></w:hdr>"#;
+        let (out, n) = decorate_all(x.as_bytes()).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert_eq!(n, 2, "{out}");
+        assert_eq!(out.matches(r#"adec:decorative xmlns:adec="http://schemas.microsoft.com/office/drawing/2017/decorative" val="1""#).count(), 2, "{out}");
+        assert_eq!(out.matches(DECORATIVE_ALT).count(), 2);
+        assert!(out.contains(r#"<a:ext uri="{X}"/>"#));
+        // zweiter Lauf: nichts Neues
+        assert_eq!(decorate_all(out.as_bytes()).unwrap().1, 0);
+    }
+
+    #[test]
+    fn local_links_unlinked() {
+        assert!(is_local_target(r"file:///C:\Users\x\Downloads\ohne"));
+        assert!(is_local_target(r"C:\Daten\a.pdf"));
+        assert!(is_local_target(r"\\server\freigabe\a.pdf"));
+        assert!(!is_local_target("https://www.ris.bka.gv.at/"));
+        assert!(!is_local_target("mailto:a@b.at"));
+        let ids: std::collections::HashSet<String> = ["rId9".to_string()].into();
+        let doc = r#"<w:p xmlns:w="w" xmlns:r="r"><w:hyperlink r:id="rId9"><w:r><w:t>Abbildung 16 Text 12</w:t></w:r></w:hyperlink><w:hyperlink r:id="rId1"><w:r><w:t>Web</w:t></w:r></w:hyperlink></w:p>"#;
+        assert_eq!(local_link_texts(doc.as_bytes(), &ids).unwrap(), vec!["Abbildung 16 Text".to_string()]);
+        let (out, n) = unlink_local(doc.as_bytes(), &ids).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(out.matches("<w:hyperlink").count(), 1);
+        assert!(out.contains("Abbildung 16 Text 12"));
+    }
+
+    #[test]
+    fn vector_text_in_emf_and_wmf() {
+        fn rec(t: u32, body: &[u8]) -> Vec<u8> {
+            let mut v = t.to_le_bytes().to_vec();
+            v.extend(((8 + body.len()) as u32).to_le_bytes());
+            v.extend(body);
+            v
+        }
+        let mut hdr = vec![0u8; 80];
+        hdr[40..44].copy_from_slice(b" EMF");
+        let mut emf = rec(1, &hdr[8..]);
+        emf.extend(rec(84, &[0; 8]));
+        emf.extend(rec(84, &[0; 8]));
+        emf.extend(rec(14, &[0; 12]));
+        assert_eq!(vector_text_count(&emf), 2);
+        // WMF: Kopf (18 Bytes), META_TEXTOUT, META_EOF
+        let mut wmf = vec![1, 0, 9, 0, 0, 3];
+        wmf.extend([0u8; 12]);
+        wmf.extend(4u32.to_le_bytes());
+        wmf.extend(0x0521u16.to_le_bytes());
+        wmf.extend([0u8; 2]);
+        wmf.extend(3u32.to_le_bytes());
+        wmf.extend(0u16.to_le_bytes());
+        assert_eq!(vector_text_count(&wmf), 1);
+        assert_eq!(vector_text_count(b"\x89PNG\r\n\x1a\n"), 0);
+    }
+
     /// Ende-zu-Ende mit LibreOffice: `cargo test -- --ignored`.
     /// Schreibt Original und vorbereitete Kopie nach RAMPE_TEST_OUT (Standard: target/prep-test).
     #[test]
@@ -2142,6 +2897,9 @@ pub(crate) mod tests {
         }
         if input.is_none() {
             assert_eq!(notes.len(), 3, "{notes:?}");
+        }
+        for h in analyze(&orig).unwrap().hints.iter().filter(|h| matches!(h.kind.as_str(), "grafiktext" | "link")) {
+            println!("[{}] {}", h.severity, h.text);
         }
     }
 }

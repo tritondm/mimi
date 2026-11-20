@@ -190,6 +190,7 @@ ul.hints li:first-child { border-top: 0; }
       <h2>PDF erzeugen und prüfen</h2>
       <p class="muted">Das PDF wird mit LibreOffice im Format PDF/UA erzeugt und anschließend geprüft. Die Prüfung ersetzt nicht den abschließenden Test mit PAC, sollte ihn aber zur Formsache machen.</p>
       <div id="prep"></div>
+      <p><label class="inline"><input type="checkbox" id="lossless"> Bilder verlustfrei speichern – beste Qualität, auch bei transparentem Hintergrund, aber deutlich größere Datei (bei vielen Fotos ein Vielfaches)</label></p>
       <p><button id="export2">PDF erzeugen und prüfen</button></p>
       <div id="report" aria-live="polite"></div>
       <div id="downloads" class="row hidden" style="margin-top:12px">
@@ -312,11 +313,12 @@ function renderImages() {
     const s = imgState(img);
     const prev = img.media && PREVIEWABLE.test(img.media)
       ? `<img class="preview" loading="lazy" alt="" src="/api/job/${job.id}/media/${encodeURI(img.media)}">`
-      : `<div class="noprev">${img.kind === 'diagramm' ? 'Diagramm (Word-Diagramm)' : img.kind === 'form' ? 'Form / Textfeld' : 'Keine Vorschau (' + esc((img.media || '').split('.').pop()) + ')'}</div>`;
+      : `<div class="noprev">${img.kind === 'diagramm' ? 'Diagramm (Word-Diagramm)' : img.kind === 'form' ? 'Form / Textfeld' : img.kind === 'smartart' ? 'SmartArt-Grafik' : 'Keine Vorschau (' + esc((img.media || '').split('.').pop()) + ')'}</div>`;
     return `<div class="img-card" data-i="${img.index}">
       <div>${prev}</div>
       <div>
         <h3>${esc(img.caption || img.name || 'Bild')} <span class="badge ${s.cls}">${s.st}</span></h3>
+        ${img.vector_text ? `<p><span class="badge ${img.vector_text >= 300 ? 'b-warn' : 'b-info'}">Grafik mit Text</span> ${img.vector_text >= 300 ? `Sehr viel Text (${img.vector_text} Textstellen) – vermutlich eine Tabelle als Bild. Besser als echte Word-Tabelle einfügen.` : `${img.vector_text} Textstelle(n): Beschriftungen in den Alternativtext aufnehmen, Schriftfarben auf Kontrast prüfen.`}</p>` : ''}
         <p class="muted">Abschnitt: ${esc(img.section || '– (vor der ersten Überschrift, z. B. Titelseite)')} · Word-Name: ${esc(img.name)}</p>
         <label for="alt-${img.index}">Alternativtext</label>
         <textarea id="alt-${img.index}" data-alt="${img.index}" ${s.dec ? 'disabled' : ''}>${esc(s.alt)}</textarea>
@@ -411,7 +413,7 @@ async function exportPdf() {
   $('#report').innerHTML = '<p><span class="spinner"></span> LibreOffice erzeugt das PDF und prüft es – das kann bei großen Berichten 1–2 Minuten dauern …</p>';
   status('<span class="spinner"></span> PDF wird erzeugt …');
   try {
-    const r = await api(`/api/job/${job.id}/export`, {method: 'POST'});
+    const r = await api(`/api/job/${job.id}/export${$('#lossless').checked ? '?lossless=1' : ''}`, {method: 'POST'});
     const fails = r.checks.filter(c => !c.ok);
     let html = `<h3>Basisprüfung (${r.pages} Seiten) ${fails.length ? `<span class="badge b-err">${fails.length} Problem(e)</span>` : '<span class="badge b-ok">bestanden</span>'}</h3><ul class="hints">`;
     html += r.checks.map(c => `<li><span class="badge ${c.ok ? 'b-ok' : (c.severity === 'fehler' ? 'b-err' : 'b-warn')}">${c.ok ? '✓' : '✗'}</span><div><strong>${esc(c.title)}</strong><div class="muted">${esc(c.detail)}</div></div></li>`).join('');

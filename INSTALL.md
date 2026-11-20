@@ -21,8 +21,8 @@ Internet ──https──▶ Host server.example.org (LXD)
 | veraPDF | `/opt/verapdf/verapdf` |
 | nginx-Konfiguration | Container `rproxy`: `/etc/nginx/conf.d/rampe.conf` (Vorlage: `deploy/nginx-rampe.conf`) |
 
-Stand der eingesetzten Versionen (November 2026): Ubuntu 26.04.1 LTS, LibreOffice 26.2.6,
-OpenJDK 25 (headless), veraPDF 1.30.
+Stand der eingesetzten Versionen (November 2026): Ubuntu 26.04.1 LTS, LibreOffice 26.8.3
+(Pakete von The Document Foundation unter `/opt/libreoffice26.8`), OpenJDK 25 (headless), veraPDF 1.30.
 
 ## Neuen Server einrichten
 
@@ -51,6 +51,22 @@ lxc exec rampe -- apt-get install -y --no-install-recommends \
 
 `libreoffice-writer-nogui` ist LibreOffice ohne Oberfläche (kein X11 nötig).
 Zu den Schriften siehe [unten](#schriften).
+
+**LibreOffice 26.8 von The Document Foundation** (wird von Rampe verwendet): Das LibreOffice
+26.2 aus Ubuntu 26.04 lässt beim PDF-Export alle Links aus Inhalts-, Abbildungs- und
+Tabellenverzeichnis weg. Die offiziellen Pakete installieren sich zusätzlich nach `/opt`;
+das Ubuntu-Paket bleibt als Rückfall und liefert die Abhängigkeiten.
+
+```bash
+lxc exec rampe -- sh -c '
+  cd /root && curl -fsSLO https://download.documentfoundation.org/libreoffice/stable/26.8.3/deb/x86_64/LibreOffice_26.8.3_Linux_x86-64_deb.tar.gz
+  tar xzf LibreOffice_26.8.3_Linux_x86-64_deb.tar.gz && apt-get install -y ./LibreOffice_26.8.3*_deb/DEBS/*.deb
+  apt-get install -y libxinerama1 libcups2t64 libsm6 libice6 libx11-xcb1 libxrandr2
+  /opt/libreoffice26.8/program/soffice --version'
+```
+
+`deploy/rampe.service` setzt `SOFFICE=/opt/libreoffice26.8/program/soffice`. Für eine neuere
+Version Pfad und Versionsnummer anpassen.
 
 ### 3. Benutzer und Verzeichnisse
 
@@ -171,7 +187,7 @@ Rampe automatisch gefunden) oder an einen beliebigen Ort mit Verweis im PATH bzw
 ```bash
 lxc exec rampe -- systemctl status rampe
 lxc exec rampe -- journalctl -u rampe -f            # Protokoll
-lxc exec rampe -- apt-get upgrade                   # LibreOffice-Updates kommen über Ubuntu
+lxc exec rampe -- apt-get upgrade                   # Systempakete; LibreOffice in /opt von Hand (siehe oben)
 ```
 
 - Nach einem LibreOffice-Update `cargo test --release -- --ignored` laufen lassen

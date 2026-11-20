@@ -11,7 +11,7 @@ mod pdffix;
 
 use axum::{
     body::Body,
-    extract::{DefaultBodyLimit, Extension, Multipart, Path as AxPath, Request, State},
+    extract::{DefaultBodyLimit, Extension, Multipart, Path as AxPath, Query, Request, State},
     http::{header, HeaderMap, HeaderValue, Method, StatusCode},
     middleware::{self, Next},
     response::{Html, IntoResponse, Response},
@@ -368,7 +368,8 @@ async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &st
     Ok(())
 }
 
-async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
+async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>, Query(q): Query<std::collections::HashMap<String, String>>) -> Result<Json<serde_json::Value>, AppError> {
+    let lossless = q.get("lossless").is_some_and(|v| v == "1");
     let dir = job_dir(&st, &id, &user)?;
     let out = dir.join("out");
     let _ = tokio::fs::remove_dir_all(&out).await;
@@ -384,8 +385,14 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     tokio::fs::write(&input, &prepared).await?;
     drop(prepared);
 
-    let pdf_filter = r#"pdf:writer_pdf_Export:{"UseTaggedPDF":{"type":"boolean","value":"true"},"PDFUACompliance":{"type":"boolean","value":"true"},"ExportBookmarks":{"type":"boolean","value":"true"},"ExportNotes":{"type":"boolean","value":"false"}}"#;
-    soffice_convert(&st, &input, &out, pdf_filter).await?;
+    // Bilder in voller Auflösung (LibreOffice rechnet sonst auf 300 dpi herunter) und
+    // JPEG-Qualität 95 statt 90. Wahlweise verlustfrei: keine JPEG-Artefakte an Schrift
+    // und Linien, keine dunklen Säume bei Transparenz – aber deutlich größere Datei.
+    let images = if lossless { r#""UseLosslessCompression":{"type":"boolean","value":"true"}"# } else { r#""Quality":{"type":"long","value":"95"}"# };
+    let pdf_filter = format!(
+        r#"pdf:writer_pdf_Export:{{"UseTaggedPDF":{{"type":"boolean","value":"true"}},"PDFUACompliance":{{"type":"boolean","value":"true"}},"ExportBookmarks":{{"type":"boolean","value":"true"}},"ExportNotes":{{"type":"boolean","value":"false"}},"ReduceImageResolution":{{"type":"boolean","value":"false"}},{images}}}"#
+    );
+    soffice_convert(&st, &input, &out, &pdf_filter).await?;
     soffice_convert(&st, &input, &out, "odt").await?;
 
     let _ = tokio::fs::remove_dir_all(&prep_dir).await;
@@ -397,15 +404,17 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     // Strukturbaum geradeziehen (Rahmen/Textfelder stecken sonst als Div in Absätzen)
     let pdf2 = pdf.clone();
     let (pages, checks) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
-        let moved = pdffix::fix_structure(&pdf2)?;
+        let fix = pdffix::fix_structure(&pdf2)?;
         let (pages, mut checks) = pdfcheck::basic_checks(&pdf2)?;
-        if moved > 0 {
-            checks.insert(0, pdfcheck::Check {
-                ok: true,
-                severity: String::new(),
-                title: "Strukturbaum korrigiert".into(),
-                detail: format!("{moved} Bereich(e) aus Rahmen oder Textfeldern aus dem Absatz gelöst, in dem LibreOffice sie abgelegt hatte."),
-            });
+        let mut done = Vec::new();
+        if fix.moved > 0 {
+            done.push(format!("{} Bereich(e) aus Rahmen oder Textfeldern aus dem Absatz gelöst, in dem LibreOffice sie abgelegt hatte.", fix.moved));
+        }
+        if fix.artifacts > 0 {
+            done.push(format!("{} dekorative Form(en) (z. B. Zierbalken in Kopf-/Fußzeilen) als Artefakt ausgeblendet – LibreOffice hätte sie als Abbildung getaggt.", fix.artifacts));
+        }
+        if !done.is_empty() {
+            checks.insert(0, pdfcheck::Check { ok: true, severity: String::new(), title: "Strukturbaum korrigiert".into(), detail: done.join(" ") });
         }
         Ok((pages, checks))
     })

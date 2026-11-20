@@ -12,6 +12,8 @@ Environment=COOKIE_SECURE=1
 Environment=USERS_FILE=/var/lib/rampe/users.txt
 Environment=DATA_DIR=/var/lib/rampe/data
 Environment=VERAPDF=/opt/verapdf/verapdf
+# LibreOffice von The Document Foundation (26.2 aus Ubuntu lässt die Links der Verzeichnisse weg)
+Environment=SOFFICE=/opt/libreoffice26.8/program/soffice
 ExecStart=/opt/rampe/rampe
 Restart=on-failure
 NoNewPrivileges=true
