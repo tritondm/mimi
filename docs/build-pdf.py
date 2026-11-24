@@ -3,7 +3,7 @@
 # dependencies = ["markdown"]
 # ///
 # SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org
-"""Erzeugt INSTRUCTION.pdf und INSTRUCTION.en.pdf aus den Markdown-Anleitungen.
+"""Erzeugt INSTRUCTION_de.pdf und INSTRUCTION.en.pdf aus den Markdown-Anleitungen.
 
 Aufruf im Projektordner:  uv run docs/build-pdf.py
 Benötigt: uv und Chromium (oder Google Chrome) im PATH, Schrift Carlito empfohlen.
@@ -19,7 +19,7 @@ import markdown
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = [
-    ("INSTRUCTION.md", "INSTRUCTION.pdf", "de", "Leo – Anleitung"),
+    ("INSTRUCTION.md", "INSTRUCTION_de.pdf", "de", "Leo – Anleitung"),
     ("INSTRUCTION.en.md", "INSTRUCTION.en.pdf", "en", "Leo – User Guide"),
 ]
 # Sprachumschalter „Deutsch · English“ gehört nicht ins PDF
