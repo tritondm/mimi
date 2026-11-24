@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org
 """Erzeugt die PDFs der Anleitung und der Matterhorn-Übersicht (DE/EN) aus Markdown.
 
-Aufruf im Projektordner:  uv run docs/build-pdf.py
+Aufruf im Projektordner:  uv run docs/build-pdf.py            (alle)
+                          uv run docs/build-pdf.py DATEI.md   (nur diese)
 Benötigt: uv und Chromium (oder Google Chrome) im PATH, Schrift Carlito empfohlen.
 """
 import re
@@ -58,8 +59,17 @@ def browser() -> str:
 
 def main() -> None:
     exe = browser()
+    docs = DOCS
+    if len(sys.argv) > 1:
+        # einzelne Dateien: uv run docs/build-pdf.py DATEI.md … → DATEI.pdf, Titel = erste Überschrift
+        docs = []
+        for arg in sys.argv[1:]:
+            src = Path(arg).resolve().relative_to(ROOT)
+            first = (ROOT / src).read_text(encoding="utf-8").splitlines()[0].lstrip("# ").strip()
+            lang = "en" if ".en." in src.name else "de"
+            docs.append((str(src), str(src.with_suffix(".pdf")), lang, first))
     with tempfile.TemporaryDirectory() as tmp:
-        for src, out, lang, title in DOCS:
+        for src, out, lang, title in docs:
             text = SWITCH.sub("", (ROOT / src).read_text(encoding="utf-8"))
             body = markdown.markdown(text, extensions=["tables", "toc", "sane_lists"])
             html = (
