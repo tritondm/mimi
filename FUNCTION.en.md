@@ -31,9 +31,11 @@ step 3 and without the adjustments from step 4. It remains a normal Word file.
 | File | Purpose |
 |---|---|
 | `src/main.rs` | Web server (axum): routes, login, storage, calling LibreOffice |
+| `src/cleanup.rs` | Automatic deletion of reports |
 | `src/auth.rs` | Users, passwords (Argon2id), sessions, command-line commands |
 | `src/docx.rs` | Reading, correcting and preparing the Word file |
 | `src/pdffix.rs` | Post-processing of the PDF: straightening incorrectly nested structure |
+| `src/formula.rs` | Equations: find them, linear format, store own alt texts |
 | `src/pdfcheck.rs` | Basic check of the PDF, calling veraPDF |
 | `static/index.html` | The entire user interface (one page, no external dependencies) |
 | `static/admin.html` | User management |
@@ -52,6 +54,7 @@ understand (charts, macros, Word extensions) is preserved byte for byte.
 | Area | Detection | Correction in Leo |
 |---|---|---|
 | Images, shapes, charts | missing or meaningless alt text (“Bild 3”, file name) | enter text, use the caption, or “decorative” |
+| Equations (`m:oMath`) | need an alt text in the PDF (veraPDF 7.7-1) | linear format as suggestion or own text → `docProps/custom.xml`, on export `Alt` on the `Formula` element |
 | Tables | first row not marked as header row | checkbox → `w:tblHeader` |
 | Document | title and main language missing | fields → `docProps/core.xml`, default language in `styles.xml` |
 | Links | link without ScreenTip (mainly in tables of contents) | ScreenTip from the link text. LibreOffice turns it into the link description `/Contents` |
@@ -113,12 +116,38 @@ alt text `rampe:dekorativ`. Post-processing turns their marked content into
 `/Artifact BMC`, clears the entry in the ParentTree and removes the structure element
 (`artifact_decorative`). The page image stays the same.
 
+**Equations:** LibreOffice tags Word equations as `Formula`, but without alt text. Word has no
+field for it. Leo generates the linear format (as Word shows it under “Linear”, e.g.
+`E=mc^2`) and suggests it. An own text is stored as a custom document property
+`Leo-Formel-<checksum of the linear format>` in `docProps/custom.xml`. It is kept by Word and
+LibreOffice; if the equation changes, Leo asks again. Post-processing sets the texts in order
+as `Alt` on the `Formula` elements (body, then footnotes, then endnotes; `set_formula_alts`).
+If the number of equations in Word and PDF does not match, it sets no text and reports this in
+the check report. Better a message than a wrongly assigned text.
+
 **Independent of LibreOffice versions:** The correction looks for the rule (“block element
 in paragraph”), not for a particular LibreOffice pattern. If a later version builds the tree
 correctly itself, it finds nothing and leaves the PDF unchanged. If it gets it wrong in a
 different way, the basic check reports “Falsch verschachtelte Struktur” (incorrectly nested
 structure). So an error is never passed through silently. After a LibreOffice update the
 regression test (see [Testing](#testing)) shows whether everything still works.
+
+## Automatic deletion
+
+The user interface only ever shows the report last worked on. Older reports could not be
+opened by the user anyway. Therefore (`cleanup.rs`):
+
+| Case | deleted after |
+|---|---|
+| a user's report last worked on | `JOB_TTL_DAYS` days without use (default 30) |
+| older reports of the same user | 1 day without use (buffer for two browser tabs) |
+| leftovers of aborted uploads (no `owner.txt`) | 1 day |
+| all reports of a user | immediately when the user is deleted |
+| a single report | immediately with “Bericht jetzt löschen” (`DELETE /api/job/{id}`) |
+
+Use means any access to the report (open, save, export, download). Leo writes the time to
+`last_used`. A report that is being exported is never deleted. Leo cleans up at start and then
+hourly. `JOB_TTL_DAYS=0` turns deletion off.
 
 ## Checking the PDF
 

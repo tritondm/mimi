@@ -205,5 +205,8 @@ lxc exec rampe -- apt-get upgrade                   # system packages; LibreOffi
   (regression test, see [FUNCTION.en.md](FUNCTION.en.md#testing)). Also export a real report
   and check it with veraPDF. The preparation (`prepare_for_pdf`) and the post-processing
   (`pdffix`) compensate for LibreOffice quirks.
-- Uploaded reports are not yet deleted automatically (`/var/lib/rampe/data/jobs/`).
+- Leo deletes reports (`/var/lib/rampe/data/jobs/`) automatically: 30 days after their last use
+  (`JOB_TTL_DAYS` in `deploy/rampe.service`), a user's superseded reports after 1 day.
+  Leo cleans up at start and then hourly. The journal only shows the count, e.g.
+  “3 Bericht(e) gelöscht (412 MB, Löschfrist abgelaufen)” (3 reports deleted, deadline expired).
 - Backup: `/var/lib/rampe/users.txt` is sufficient. Reports can be uploaded again at any time.

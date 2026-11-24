@@ -29,6 +29,9 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
 
 - Without logging in, nothing but the login page is reachable.
 - Every user sees **only their own** uploaded reports.
+- Reports are deleted automatically 30 days after their last use (`JOB_TTL_DAYS`), a user's
+  older reports one day after they uploaded a new one. “Bericht jetzt löschen” (delete report
+  now) does it immediately. Deleting a user also deletes their reports.
 - **Admins** manage users in the browser under **`/admin`**: create, set password,
   grant/revoke admin rights, delete. Admins cannot delete themselves or revoke their own
   admin rights, so there is always an admin left.
@@ -53,6 +56,7 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
 | `COOKIE_SECURE` | –                 | `1` = cookie over HTTPS only                 |
 | `SOFFICE`       | `soffice`         | path to LibreOffice                          |
 | `VERAPDF`       | –                 | path to the veraPDF launcher script          |
+| `JOB_TTL_DAYS`  | `30`              | delete reports this many days after last use, superseded ones after 1 day; `0` = off |
 
 Required on the server: **LibreOffice** (runs invisibly in the background) and the matching
 **fonts** (above all Carlito as a substitute for Calibri), see [INSTALL.en.md](INSTALL.en.md#fonts).
@@ -63,6 +67,7 @@ Staff only need a browser.
 | Area           | Check                                           | Fixable in the tool |
 |----------------|-------------------------------------------------|---------------------|
 | Images         | missing or meaningless alt text                 | yes (text field, use caption, “decorative”) |
+| Equations      | equations from the equation editor need an alt text | yes (linear format as suggestion, own text) |
 | Tables         | first row not marked as header row              | yes (checkbox)      |
 | Document       | title, main language                            | yes                 |
 | Links          | missing link description (mainly tables of contents) | yes (automatic) |
@@ -122,7 +127,6 @@ On the server: see [INSTALL.en.md](INSTALL.en.md#4-verapdf).
 
 ## Known limitations of the prototype
 
-- Uploaded files remain in `data/jobs/` (no automatic deletion yet).
 - No built-in HTTPS – for network use put a reverse proxy (nginx/Caddy) in front.
 - The lockout after failed attempts is per user name; an attacker could temporarily lock
   out a user this way.

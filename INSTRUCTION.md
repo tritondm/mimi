@@ -21,6 +21,7 @@ Sie brauchen dafür nur einen Browser. Adresse: **<https://leo.example.org>**
 | Bereich | Leo erkennt … | … und behebt es so |
 |---|---|---|
 | Bilder, Grafiken, Diagramme | fehlende oder nichtssagende Alternativtexte („Bild 3“, Dateiname) | Sie tippen den Text ein, übernehmen die Bildunterschrift oder markieren das Bild als „dekorativ“ |
+| Formeln | Formeln aus dem Formeleditor von Word brauchen einen Alternativtext | Leo schlägt die Linearform vor (z. B. `E=mc^2`), Sie können einen eigenen Text eintragen |
 | Tabellen | erste Zeile nicht als Kopfzeile markiert | Häkchen setzen |
 | Dokumenttitel | Titel fehlt | Feld ausfüllen |
 | Sprache | Hauptsprache fehlt | Auswahl (z. B. Deutsch – Österreich) |
@@ -127,7 +128,7 @@ Die Farbe sieht danach fast gleich aus, ist aber besser lesbar.
 Farbige Schrift **in eingefügten Grafiken** (Schemata, Diagramme als Bild) kann Leo
 nicht prüfen. Solche Grafiken bitte in der Ursprungsdatei mit dunkleren Farben neu erstellen.
 
-## 4. Reiter „Bilder“
+## 4. Reiter „Bilder“ (bzw. „Bilder & Formeln“)
 
 Jedes Bild braucht entweder einen **Alternativtext** oder die Markierung **dekorativ**.
 
@@ -168,6 +169,20 @@ daneben, genügt ein Verweis („Daten siehe Tabelle 4“).
 **Grafiken mit Text:** Leo kennzeichnet Grafiken, die Beschriftungen enthalten.
 Nehmen Sie diese Beschriftungen in den Alternativtext auf. Bei sehr viel Text ist es
 vermutlich eine **Tabelle als Bild** – diese bitte in Word als echte Tabelle einfügen.
+
+### Formeln
+
+Enthält der Bericht Formeln aus dem Formeleditor von Word, heißt der Reiter
+**Bilder & Formeln**, und unter den Bildern steht der Abschnitt **Formeln**. Jede Formel
+braucht im PDF einen Alternativtext, den der Screenreader vorliest.
+
+- Ohne Eingabe verwendet Leo die **Linearform**, wie Word sie unter „Linear“ zeigt,
+  z. B. `E=mc^2`. Damit ist das PDF in Ordnung.
+- Besser verständlich ist oft ein **gesprochener Text**, z. B. „E gleich m mal c Quadrat“.
+  Bei langen Formeln lohnt sich das besonders.
+- **Linearform übernehmen** setzt den Vorschlag wieder ein.
+- Ihr Text wird in der Word-Datei gespeichert. Ändern Sie die Formel später in Word, fragt
+  Leo neu.
 
 ## 5. Reiter „Tabellen“
 
@@ -262,6 +277,14 @@ PDF erneut.
 | **Korrigierte Word-Datei (.docx)** | Ihr Bericht mit allen Korrekturen aus Leo (Alternativtexte, Kopfzeilen, Farben …). Verwenden Sie diese Datei für spätere Änderungen, dann müssen Sie nicht alles neu eingeben. |
 | **OpenDocument (.odt)** | dieselbe Fassung für LibreOffice |
 
+### Bericht löschen
+
+Ihre Berichte werden **automatisch gelöscht**: 30 Tage nach der letzten Nutzung, ältere
+Berichte schon einen Tag, nachdem Sie einen neuen hochgeladen haben. Das Datum steht in der
+Übersicht oben. Mit **Bericht jetzt löschen** (ganz unten im Reiter „PDF & Download“)
+entfernen Sie alles sofort vom Server. Laden Sie vorher herunter, was Sie brauchen. Mit der
+korrigierten Word-Datei können Sie jederzeit neu beginnen.
+
 ## 9. Abschließend: Prüfung mit PAC
 
 Öffnen Sie das PDF in **PAC** (PDF Accessibility Checker, Windows) und übermitteln Sie das
@@ -288,6 +311,10 @@ Leo zeigt dann die Art der Grafik an. Orientieren Sie sich an Bildunterschrift u
 **Das PDF sieht etwas anders aus als in Word.**
 Das PDF wird mit LibreOffice erzeugt. Kleine Abweichungen (Zeilenumbrüche, Seitenzahl)
 sind möglich. Fallen sie stark auf, melden Sie das bitte an die Administration.
+
+**Mein Bericht ist weg.**
+Berichte werden 30 Tage nach der letzten Nutzung gelöscht, ältere schon einen Tag nach dem
+Hochladen eines neuen. Laden Sie die korrigierte Word-Datei hoch, dann ist alles wieder da.
 
 **Meine Sitzung ist abgelaufen.**
 Neu anmelden. Gespeicherte Änderungen bleiben erhalten, ungespeicherte gehen verloren.

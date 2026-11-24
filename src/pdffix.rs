@@ -328,6 +328,70 @@ pub fn artifact_decorative(doc: &mut Document) -> Result<usize> {
     Ok(n)
 }
 
+/// Alle `Formula`-Elemente in der Reihenfolge des Strukturbaums (Tiefensuche).
+fn formula_elements(doc: &Document) -> Vec<ObjectId> {
+    let Some(root) = doc.catalog().ok().and_then(|c| c.get(b"StructTreeRoot").ok()).and_then(|o| o.as_reference().ok()) else {
+        return Vec::new();
+    };
+    let role_map = doc.get_object(root).ok().and_then(|o| o.as_dict().ok()).and_then(|d| d.get(b"RoleMap").ok()).and_then(|o| match o {
+        Object::Reference(id) => doc.get_object(*id).ok().and_then(|o| o.as_dict().ok()),
+        Object::Dictionary(d) => Some(d),
+        _ => None,
+    });
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut stack = vec![root];
+    while let Some(id) = stack.pop() {
+        if !seen.insert(id) {
+            continue;
+        }
+        let Some(d) = doc.get_object(id).ok().and_then(|o| o.as_dict().ok()) else { continue };
+        if id != root && elem_role(doc, role_map, id).as_deref() == Some(b"Formula") {
+            out.push(id);
+        }
+        // Kinder in umgekehrter Reihenfolge auf den Stapel, damit sie der Reihe nach drankommen
+        for k in kids_of(d).into_iter().rev() {
+            if let Object::Reference(kid) = k {
+                stack.push(kid);
+            }
+        }
+    }
+    out
+}
+
+/// PDF-Textzeichenkette (UTF-16BE mit BOM).
+fn text_string(s: &str) -> Object {
+    let mut b = vec![0xFE, 0xFF];
+    for u in s.encode_utf16() {
+        b.extend_from_slice(&u.to_be_bytes());
+    }
+    Object::String(b, lopdf::StringFormat::Hexadecimal)
+}
+
+/// Setzt `Alt` an den Formeln, wenn ihre Anzahl zur Word-Datei passt.
+/// Rückgabe: (gesetzt, Formeln im PDF). Passt die Anzahl nicht, wird nichts gesetzt –
+/// lieber eine Meldung als ein falsch zugeordneter Text.
+pub fn set_formula_alts(doc: &mut Document, alts: &[String]) -> (usize, usize) {
+    let ids = formula_elements(doc);
+    if ids.is_empty() || ids.len() != alts.len() {
+        return (0, ids.len());
+    }
+    let mut set = 0;
+    for (id, alt) in ids.iter().zip(alts) {
+        if alt.trim().is_empty() {
+            continue;
+        }
+        if let Ok(Object::Dictionary(d)) = doc.get_object_mut(*id) {
+            let has = d.get(b"Alt").is_ok() || d.get(b"ActualText").is_ok();
+            if !has {
+                d.set("Alt", text_string(alt.trim()));
+                set += 1;
+            }
+        }
+    }
+    (set, ids.len())
+}
+
 /// Ergebnis der Nachbearbeitung.
 #[derive(Default, Debug)]
 pub struct FixResult {
@@ -335,19 +399,26 @@ pub struct FixResult {
     pub moved: usize,
     /// dekorative Formen, die zu Artefakten wurden
     pub artifacts: usize,
+    /// Formeln, die einen Alternativtext bekommen haben
+    pub formulas: usize,
+    /// Formeln im PDF, wenn ihre Anzahl nicht zur Word-Datei passt (dann ohne Alternativtext)
+    pub formula_mismatch: Option<usize>,
 }
 
 /// Korrigiert das PDF an Ort und Stelle. Wird nichts gefunden, bleibt die Datei unberührt.
-pub fn fix_structure(path: &Path) -> Result<FixResult> {
+/// `formula_alts`: Alternativtexte der Formeln in der Reihenfolge der Word-Datei.
+pub fn fix_structure(path: &Path, formula_alts: &[String]) -> Result<FixResult> {
     let mut doc = Document::load(path).context("PDF konnte nicht gelesen werden")?;
     let artifacts = artifact_decorative(&mut doc)?;
     let moved = fix_document(&mut doc)?;
-    if moved > 0 || artifacts > 0 {
+    let (formulas, in_pdf) = set_formula_alts(&mut doc, formula_alts);
+    let formula_mismatch = (in_pdf != formula_alts.len()).then_some(in_pdf);
+    if moved > 0 || artifacts > 0 || formulas > 0 {
         let tmp = path.with_extension("pdf.tmp");
         doc.save(&tmp).context("Korrigiertes PDF konnte nicht geschrieben werden")?;
         std::fs::rename(&tmp, path)?;
     }
-    Ok(FixResult { moved, artifacts })
+    Ok(FixResult { moved, artifacts, formulas, formula_mismatch })
 }
 
 #[cfg(test)]
@@ -397,14 +468,14 @@ mod tests {
         let (prep, _) = crate::docx::prepare_for_pdf(&crate::docx::tests::fixture()).unwrap();
         let pdf = soffice_pdf(&prep, &dir);
         let (_, before) = pdfcheck::basic_checks(&pdf).unwrap();
-        let moved = fix_structure(&pdf).unwrap().moved;
+        let moved = fix_structure(&pdf, &[]).unwrap().moved;
         let (_, after) = pdfcheck::basic_checks(&pdf).unwrap();
         println!("LibreOffice-Ausgabe: {:?}", check(&before, "Falsch verschachtelte Struktur").map(|c| &c.detail));
         println!("verschoben: {moved}");
         assert!(check(&after, "Verschachtelung").is_some_and(|c| c.ok), "{:?}", after.iter().filter(|c| !c.ok).map(|c| &c.title).collect::<Vec<_>>());
         assert!(check(&after, "Standard-Tags").is_some_and(|c| c.ok));
         // zweiter Lauf darf nichts mehr finden
-        assert_eq!(fix_structure(&pdf).unwrap().moved, 0);
+        assert_eq!(fix_structure(&pdf, &[]).unwrap().moved, 0);
     }
 
     /// Beliebiges PDF korrigieren: `RAMPE_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture`
@@ -416,7 +487,9 @@ mod tests {
         let src = std::path::PathBuf::from(p);
         let out = src.with_extension("fixed.pdf");
         std::fs::copy(&src, &out).unwrap();
-        println!("{:?}", fix_structure(&out).unwrap());
+        // Alternativtexte der Formeln aus der passenden DOCX: RAMPE_TEST_DOCX=a.docx
+        let alts = std::env::var("RAMPE_TEST_DOCX").ok().map(|d| crate::formula::pdf_alts(&std::fs::read(d).unwrap()).unwrap()).unwrap_or_default();
+        println!("{:?}", fix_structure(&out, &alts).unwrap());
         let (_, checks) = pdfcheck::basic_checks(&out).unwrap();
         for c in checks.iter().filter(|c| !c.ok) {
             println!("offen: {} – {}", c.title, c.detail);

@@ -24,6 +24,7 @@ All you need is a browser. Address: **<https://leo.example.org>**
 | Area | Leo detects … | … and fixes it like this |
 |---|---|---|
 | Images, graphics, charts | missing or meaningless alt texts (“Bild 3”, file name) | you type the text, take over the caption, or mark the image as “decorative” |
+| Equations | equations from Word's equation editor need an alt text | Leo suggests the linear format (e.g. `E=mc^2`), you can enter your own text |
 | Tables | first row not marked as header row | tick a checkbox |
 | Document title | title missing | fill in the field |
 | Language | main language missing | choose from a list (e.g. German – Austria) |
@@ -128,7 +129,7 @@ The colour looks almost the same afterwards but is easier to read.
 Coloured text **inside inserted graphics** (diagrams, charts as images) cannot be checked
 by Leo. Please recreate such graphics in the source file with darker colours.
 
-## 4. Tab “Bilder” (Images)
+## 4. Tab “Bilder” (Images) or “Bilder & Formeln” (Images & equations)
 
 Every image needs either an **alt text** or the mark **dekorativ** (decorative).
 
@@ -168,6 +169,20 @@ text next to it, a reference is enough (“data see table 4”).
 **Graphics with text:** Leo marks graphics that contain labels. Include these labels in
 the alt text. If there is a lot of text, it is probably a **table pasted as an image** –
 please insert it in Word as a real table.
+
+### Formeln (Equations)
+
+If the report contains equations from Word's equation editor, the tab is called
+**Bilder & Formeln** (Images & equations), and the section **Formeln** appears below the
+images. Every equation needs an alt text in the PDF that the screen reader reads out.
+
+- Without input, Leo uses the **linear format** as Word shows it under “Linear”,
+  e.g. `E=mc^2`. That is enough for a compliant PDF.
+- A **spoken text** is often easier to understand, e.g. “E equals m times c squared”.
+  This is especially worthwhile for long equations.
+- **Linearform übernehmen** (Use linear format) puts the suggestion back.
+- Your text is stored in the Word file. If you change the equation in Word later, Leo
+  asks again.
 
 ## 5. Tab “Tabellen” (Tables)
 
@@ -261,6 +276,14 @@ If there are problems, go back to the relevant tab, fix them and create the PDF 
 | **Korrigierte Word-Datei (.docx)** (Corrected Word file) | your report with all corrections from Leo (alt texts, header rows, colours …). Use this file for later changes so you don't have to re-enter anything. |
 | **OpenDocument (.odt)** | the same version for LibreOffice |
 
+### Deleting the report
+
+Your reports are **deleted automatically**: 30 days after their last use, older reports one
+day after you uploaded a new one. The date is shown in the overview at the top. **Bericht
+jetzt löschen** (Delete report now, at the bottom of the “PDF & Download” tab) removes
+everything from the server immediately. Download what you need first. With the corrected
+Word file you can start again at any time.
+
 ## 9. Finally: check with PAC
 
 Open the PDF in **PAC** (PDF Accessibility Checker, Windows) and submit the check result
@@ -287,6 +310,10 @@ Leo then shows the type of graphic. Use the caption and section to find it.
 **The PDF looks slightly different from Word.**
 The PDF is created with LibreOffice. Small differences (line breaks, page count) are
 possible. If they are very noticeable, please report this to the administrator.
+
+**My report is gone.**
+Reports are deleted 30 days after their last use, older ones one day after a new one was
+uploaded. Upload the corrected Word file and everything is back.
 
 **My session has expired.**
 Log in again. Saved changes are kept, unsaved ones are lost.

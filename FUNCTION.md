@@ -31,9 +31,11 @@ Schritt 3 und ohne die Anpassungen aus Schritt 4. Sie bleibt eine normale Word-D
 | Datei | Aufgabe |
 |---|---|
 | `src/main.rs` | Webserver (axum): Routen, Anmeldung, Ablage, Aufruf von LibreOffice |
+| `src/cleanup.rs` | Automatisches Löschen der Berichte |
 | `src/auth.rs` | Benutzer, Passwörter (Argon2id), Sitzungen, Kommandozeilenbefehle |
 | `src/docx.rs` | Lesen, Korrigieren und Vorbereiten der Word-Datei |
 | `src/pdffix.rs` | Nachbearbeitung des PDFs: falsch verschachtelte Struktur geradeziehen |
+| `src/formula.rs` | Formeln: finden, Linearform, eigene Alternativtexte speichern |
 | `src/pdfcheck.rs` | Basisprüfung des PDFs, Aufruf von veraPDF |
 | `static/index.html` | Die gesamte Oberfläche (eine Seite, ohne externe Abhängigkeiten) |
 | `static/admin.html` | Benutzerverwaltung |
@@ -52,6 +54,7 @@ was Leo nicht versteht (Diagramme, Makros, Erweiterungen von Word), Byte für By
 | Bereich | Erkennung | Korrektur in Leo |
 |---|---|---|
 | Bilder, Formen, Diagramme | fehlender oder nichtssagender Alternativtext („Bild 3“, Dateiname) | Text eingeben, Bildunterschrift übernehmen oder „dekorativ“ |
+| Formeln (`m:oMath`) | brauchen im PDF einen Alternativtext (veraPDF 7.7-1) | Linearform als Vorschlag oder eigener Text → `docProps/custom.xml`, beim Export `Alt` am `Formula`-Element |
 | Tabellen | erste Zeile nicht als Kopfzeile markiert | Häkchen → `w:tblHeader` |
 | Dokument | Titel und Hauptsprache fehlen | Felder → `docProps/core.xml`, Standardsprache in `styles.xml` |
 | Links | Link ohne QuickInfo (v. a. in Verzeichnissen) | QuickInfo aus dem Linktext. LibreOffice macht daraus die Linkbeschreibung `/Contents` |
@@ -112,12 +115,39 @@ Alternativtext `rampe:dekorativ`. Die Nachbearbeitung macht aus ihrem markierten
 `/Artifact BMC`, leert den Eintrag im ParentTree und entfernt das Strukturelement
 (`artifact_decorative`). Das Seitenbild bleibt gleich.
 
+**Formeln:** LibreOffice taggt Word-Formeln als `Formula`, aber ohne Alternativtext. Word hat
+für Formeln kein Feld dafür. Leo erzeugt die Linearform (wie Word sie unter „Linear“ zeigt,
+z. B. `E=mc^2`) und schlägt sie vor. Einen eigenen Text speichert Leo als benutzerdefinierte
+Dokumenteigenschaft `Leo-Formel-<Prüfsumme der Linearform>` in `docProps/custom.xml`. Sie
+bleibt in Word und LibreOffice erhalten; ändert sich die Formel, wird neu gefragt. Die
+Nachbearbeitung setzt die Texte der Reihe nach als `Alt` an die `Formula`-Elemente (Text,
+dann Fußnoten, dann Endnoten; `set_formula_alts`). Stimmt die Anzahl der Formeln in Word und
+PDF nicht überein, setzt sie keinen Text und meldet das im Prüfbericht. Lieber eine Meldung
+als ein falsch zugeordneter Text.
+
 **Unabhängig von LibreOffice-Versionen:** Die Korrektur sucht nach der Regel („Blockelement
 in Absatz“), nicht nach einem bestimmten Muster von LibreOffice. Macht eine spätere Version
 den Baum selbst richtig, findet sie nichts und lässt das PDF unverändert. Macht sie es
 anders falsch, meldet die Basisprüfung „Falsch verschachtelte Struktur“. Ein Fehler wird
 also nie still durchgereicht. Nach einem LibreOffice-Update zeigt der Regressionstest
 (siehe [Testen](#testen)), ob alles noch passt.
+
+## Automatisches Löschen
+
+Die Oberfläche zeigt immer nur den zuletzt bearbeiteten Bericht. Ältere Berichte könnte der
+Benutzer gar nicht mehr öffnen. Deshalb gilt (`cleanup.rs`):
+
+| Fall | gelöscht nach |
+|---|---|
+| zuletzt bearbeiteter Bericht eines Benutzers | `JOB_TTL_DAYS` Tagen ohne Nutzung (Standard 30) |
+| ältere Berichte desselben Benutzers | 1 Tag ohne Nutzung (Puffer für zwei Browser-Tabs) |
+| Reste abgebrochener Uploads (ohne `owner.txt`) | 1 Tag |
+| alle Berichte eines Benutzers | sofort, wenn der Benutzer gelöscht wird |
+| ein einzelner Bericht | sofort mit „Bericht jetzt löschen“ (`DELETE /api/job/{id}`) |
+
+Nutzung ist jeder Zugriff auf den Bericht (Öffnen, Speichern, Export, Download). Leo schreibt
+den Zeitpunkt in `last_used`. Ein Bericht, der gerade exportiert wird, bleibt stehen. Leo
+räumt beim Start und danach stündlich auf. `JOB_TTL_DAYS=0` schaltet das Löschen ab.
 
 ## Prüfung des PDFs
 

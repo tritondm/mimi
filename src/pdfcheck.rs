@@ -93,6 +93,8 @@ pub(crate) fn text_string(o: &Object) -> String {
 struct StructStats {
     figures: usize,
     figures_no_alt: usize,
+    formulas: usize,
+    formulas_no_alt: usize,
     tables: usize,
     tables_no_th: usize,
     headings: usize,
@@ -144,6 +146,14 @@ fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut S
                         || get(doc, d, b"ActualText").is_some();
                     if !has_alt {
                         stats.figures_no_alt += 1;
+                    }
+                }
+                b"Formula" => {
+                    stats.formulas += 1;
+                    let has_alt = get(doc, d, b"Alt").map(|a| !text_string(a).trim().is_empty()).unwrap_or(false)
+                        || get(doc, d, b"ActualText").is_some();
+                    if !has_alt {
+                        stats.formulas_no_alt += 1;
                     }
                 }
                 b"H" => stats.headings += 1,
@@ -278,6 +288,13 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
             checks.push(ok("Alternativtexte", format!("alle {} Abbildungen haben einen Alternativtext", stats.figures)));
         } else {
             checks.push(bad("fehler", "Abbildungen ohne Alternativtext", format!("{} von {} Abbildungen", stats.figures_no_alt, stats.figures)));
+        }
+        if stats.formulas > 0 {
+            if stats.formulas_no_alt == 0 {
+                checks.push(ok("Formeln", format!("alle {} Formeln haben einen Alternativtext", stats.formulas)));
+            } else {
+                checks.push(bad("fehler", "Formeln ohne Alternativtext", format!("{} von {} Formeln (veraPDF 7.7-1)", stats.formulas_no_alt, stats.formulas)));
+            }
         }
         if stats.headings > 0 {
             checks.push(ok("Überschriften", format!("{} Überschriften im Strukturbaum", stats.headings)));

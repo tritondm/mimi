@@ -11,6 +11,8 @@ Environment=ADDR=0.0.0.0:8080
 Environment=COOKIE_SECURE=1
 Environment=USERS_FILE=/var/lib/rampe/users.txt
 Environment=DATA_DIR=/var/lib/rampe/data
+# Berichte 30 Tage nach der letzten Nutzung löschen, ersetzte nach 1 Tag (0 = aus)
+Environment=JOB_TTL_DAYS=30
 Environment=VERAPDF=/opt/verapdf/verapdf
 # LibreOffice von The Document Foundation (26.2 aus Ubuntu lässt die Links der Verzeichnisse weg)
 Environment=SOFFICE=/opt/libreoffice26.8/program/soffice

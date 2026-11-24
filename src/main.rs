@@ -5,7 +5,9 @@
 //! als PDF/UA (plus DOCX/ODT) exportieren und das PDF prüfen.
 
 mod auth;
+mod cleanup;
 mod docx;
+mod formula;
 mod pdfcheck;
 mod pdffix;
 
@@ -35,6 +37,27 @@ struct AppState {
     auth: auth::Auth,
     /// Cookie nur über HTTPS senden (hinter einem Reverse-Proxy mit TLS: COOKIE_SECURE=1)
     secure_cookie: bool,
+    /// automatisches Löschen (JOB_TTL_DAYS)
+    policy: cleanup::Policy,
+    /// Berichte, die gerade exportiert werden – nicht löschen
+    busy: std::sync::Mutex<std::collections::HashSet<String>>,
+}
+
+impl AppState {
+    fn busy_ids(&self) -> std::collections::HashSet<String> {
+        self.busy.lock().map(|b| b.clone()).unwrap_or_default()
+    }
+}
+
+/// Markiert einen Bericht für die Dauer des Exports als belegt.
+struct BusyGuard<'a>(&'a AppState, String);
+
+impl Drop for BusyGuard<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut b) = self.0.busy.lock() {
+            b.remove(&self.1);
+        }
+    }
 }
 
 type St = State<Arc<AppState>>;
@@ -72,9 +95,17 @@ fn job_dir(st: &AppState, id: &str, user: &auth::User) -> Result<PathBuf, AppErr
     }
     // Jeder sieht nur seine eigenen Berichte.
     match std::fs::read_to_string(dir.join("owner.txt")) {
-        Ok(owner) if owner == user.name => Ok(dir),
+        Ok(owner) if owner == user.name => {
+            cleanup::touch(&dir);
+            Ok(dir)
+        }
         _ => Err(not_found()),
     }
+}
+
+/// Antwort mit Bericht und Analyse, samt Datum der automatischen Löschung.
+fn job_json(st: &AppState, dir: &Path, id: &str, name: &str, analysis: docx::Analysis) -> Json<serde_json::Value> {
+    Json(json!({ "id": id, "name": name, "analysis": analysis, "delete_after": cleanup::delete_after(dir, &st.policy) }))
 }
 
 fn original_name(dir: &Path) -> String {
@@ -102,11 +133,29 @@ async fn main() -> anyhow::Result<()> {
     let jobs = std::env::var("DATA_DIR").map(PathBuf::from).unwrap_or_else(|_| base.join("data")).join("jobs");
     std::fs::create_dir_all(&jobs)?;
     let soffice = std::env::var("SOFFICE").unwrap_or_else(|_| "soffice".into());
-    let state = Arc::new(AppState { base, jobs, soffice, lo_lock: Mutex::new(()), auth, secure_cookie });
+    let policy = cleanup::Policy::from_env();
+    let state = Arc::new(AppState { base, jobs, soffice, lo_lock: Mutex::new(()), auth, secure_cookie, policy, busy: Default::default() });
+
+    // Aufräumen: beim Start und danach stündlich
+    if policy.ttl.is_some() {
+        let st = state.clone();
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
+            loop {
+                tick.tick().await;
+                let st2 = st.clone();
+                match tokio::task::spawn_blocking(move || cleanup::sweep(&st2.jobs, &st2.policy, &st2.busy_ids())).await {
+                    Ok(Ok(s)) if s.removed > 0 => println!("{}", cleanup::summary(&s, "Löschfrist abgelaufen")),
+                    Ok(Err(e)) => eprintln!("Aufräumen fehlgeschlagen: {e:#}"),
+                    _ => {}
+                }
+            }
+        });
+    }
 
     let protected = Router::new()
         .route("/api/upload", post(upload))
-        .route("/api/job/{id}", get(job))
+        .route("/api/job/{id}", get(job).delete(delete_job))
         .route("/api/job/{id}/media/{*path}", get(media))
         .route("/api/job/{id}/apply", post(apply))
         .route("/api/job/{id}/export", post(export))
@@ -130,6 +179,10 @@ async fn main() -> anyhow::Result<()> {
     let addr = std::env::var("ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     println!("Leo läuft auf http://{addr}  (Benutzerverwaltung: http://{addr}/admin)");
+    match policy.ttl_days() {
+        0 => println!("Automatisches Löschen: aus (JOB_TTL_DAYS=0)."),
+        d => println!("Automatisches Löschen: {d} Tage nach der letzten Nutzung, ersetzte Berichte nach 1 Tag."),
+    }
     match pdfcheck::find_verapdf(&state.base) {
         Some(p) => println!("veraPDF gefunden: {}", p.display()),
         None => println!("veraPDF nicht gefunden – nur Basisprüfung (siehe README)."),
@@ -224,7 +277,7 @@ async fn logout(State(st): St, headers: HeaderMap) -> Response {
 async fn me(State(st): St, headers: HeaderMap) -> Result<Json<serde_json::Value>, AppError> {
     let t = auth::token_from_headers(&headers).ok_or_else(|| AppError(StatusCode::UNAUTHORIZED, "Bitte anmelden.".into()))?;
     let u = st.auth.user_for(&t).await.ok_or_else(|| AppError(StatusCode::UNAUTHORIZED, "Bitte anmelden.".into()))?;
-    Ok(Json(json!({ "user": u.name, "admin": u.admin })))
+    Ok(Json(json!({ "user": u.name, "admin": u.admin, "ttl_days": st.policy.ttl_days() })))
 }
 
 // ---------------------------------------------------------------------------
@@ -264,6 +317,11 @@ async fn admin_upsert(State(st): St, Extension(user): Extension<auth::User>, hea
 async fn admin_delete(State(st): St, Extension(user): Extension<auth::User>, AxPath(name): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
     require_admin(&user)?;
     st.auth.remove(&user, &name).await.map_err(|e| bad_request(&e.to_string()))?;
+    // seine Berichte gleich mit
+    let s = cleanup::delete_owner(&st.jobs, &name, &st.busy_ids());
+    if s.removed > 0 {
+        println!("{}", cleanup::summary(&s, "Benutzer gelöscht"));
+    }
     Ok(Json(json!({ "users": st.auth.list() })))
 }
 
@@ -290,7 +348,8 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, mut mp: M
         let stem = name.trim_end_matches(".docx").trim_end_matches(".DOCX").to_string();
         tokio::fs::write(dir.join("name.txt"), &stem).await?;
         tokio::fs::write(dir.join("owner.txt"), &user.name).await?;
-        return Ok(Json(json!({ "id": id, "name": stem, "analysis": analysis })));
+        cleanup::touch(&dir);
+        return Ok(job_json(&st, &dir, &id, &stem, analysis));
     }
     Err(bad_request("Keine Datei übermittelt."))
 }
@@ -299,7 +358,7 @@ async fn job(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): 
     let dir = job_dir(&st, &id, &user)?;
     let data = tokio::fs::read(dir.join("current.docx")).await?;
     let analysis = docx::analyze(&data)?;
-    Ok(Json(json!({ "id": id, "name": original_name(&dir), "analysis": analysis })))
+    Ok(job_json(&st, &dir, &id, &original_name(&dir), analysis))
 }
 
 async fn media(State(st): St, Extension(user): Extension<auth::User>, AxPath((id, path)): AxPath<(String, String)>) -> Result<Response, AppError> {
@@ -343,7 +402,7 @@ async fn apply(State(st): St, Extension(user): Extension<auth::User>, AxPath(id)
     let analysis = docx::analyze(&new).map_err(|e| anyhow::anyhow!("Korrigierte Datei ist fehlerhaft, Änderungen nicht gespeichert: {e:#}"))?;
     tokio::fs::write(dir.join("current.docx"), &new).await?;
     let _ = tokio::fs::remove_dir_all(dir.join("out")).await;
-    Ok(Json(json!({ "id": id, "name": original_name(&dir), "analysis": analysis })))
+    Ok(job_json(&st, &dir, &id, &original_name(&dir), analysis))
 }
 
 async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &str) -> Result<(), AppError> {
@@ -371,6 +430,10 @@ async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &st
 async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>, Query(q): Query<std::collections::HashMap<String, String>>) -> Result<Json<serde_json::Value>, AppError> {
     let lossless = q.get("lossless").is_some_and(|v| v == "1");
     let dir = job_dir(&st, &id, &user)?;
+    if let Ok(mut b) = st.busy.lock() {
+        b.insert(id.clone());
+    }
+    let _busy = BusyGuard(&st, id.clone());
     let out = dir.join("out");
     let _ = tokio::fs::remove_dir_all(&out).await;
     tokio::fs::create_dir_all(&out).await?;
@@ -380,7 +443,13 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     let _ = tokio::fs::remove_dir_all(&prep_dir).await;
     tokio::fs::create_dir_all(&prep_dir).await?;
     let src = tokio::fs::read(dir.join("current.docx")).await?;
-    let (prepared, _notes) = tokio::task::spawn_blocking(move || docx::prepare_for_pdf(&src)).await.map_err(|e| anyhow::anyhow!(e))??;
+    let (prepared, formula_alts) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+        // Alternativtexte der Formeln aus der korrigierten Datei (nicht aus der Export-Kopie)
+        let alts = formula::pdf_alts(&src)?;
+        Ok((docx::prepare_for_pdf(&src)?.0, alts))
+    })
+    .await
+    .map_err(|e| anyhow::anyhow!(e))??;
     let input = prep_dir.join("current.docx");
     tokio::fs::write(&input, &prepared).await?;
     drop(prepared);
@@ -404,7 +473,7 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     // Strukturbaum geradeziehen (Rahmen/Textfelder stecken sonst als Div in Absätzen)
     let pdf2 = pdf.clone();
     let (pages, checks) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
-        let fix = pdffix::fix_structure(&pdf2)?;
+        let fix = pdffix::fix_structure(&pdf2, &formula_alts)?;
         let (pages, mut checks) = pdfcheck::basic_checks(&pdf2)?;
         let mut done = Vec::new();
         if fix.moved > 0 {
@@ -413,8 +482,25 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
         if fix.artifacts > 0 {
             done.push(format!("{} dekorative Form(en) (z. B. Zierbalken in Kopf-/Fußzeilen) als Artefakt ausgeblendet – LibreOffice hätte sie als Abbildung getaggt.", fix.artifacts));
         }
+        if fix.formulas > 0 {
+            done.push(format!("{} Formel(n) mit Alternativtext versehen.", fix.formulas));
+        }
         if !done.is_empty() {
             checks.insert(0, pdfcheck::Check { ok: true, severity: String::new(), title: "Strukturbaum korrigiert".into(), detail: done.join(" ") });
+        }
+        if let Some(in_pdf) = fix.formula_mismatch {
+            checks.insert(
+                0,
+                pdfcheck::Check {
+                    ok: false,
+                    severity: "warnung".into(),
+                    title: "Formeln nicht zugeordnet".into(),
+                    detail: format!(
+                        "Im PDF stehen {in_pdf} Formel(n), in der Word-Datei {}. Leo setzt die Alternativtexte nur, wenn die Zuordnung eindeutig ist. Bitte in Acrobat oder axesPDF nachtragen.",
+                        formula_alts.len()
+                    ),
+                },
+            );
         }
         Ok((pages, checks))
     })
@@ -424,6 +510,16 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     let report = pdfcheck::PdfReport { pages, checks, verapdf: vera };
     tokio::fs::write(out.join("report.json"), serde_json::to_vec_pretty(&report).unwrap_or_default()).await?;
     Ok(Json(json!(report)))
+}
+
+/// Bericht sofort löschen (Knopf „Bericht jetzt löschen“).
+async fn delete_job(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
+    let dir = job_dir(&st, &id, &user)?;
+    if st.busy_ids().contains(&id) {
+        return Err(AppError(StatusCode::CONFLICT, "Das PDF wird gerade erzeugt – bitte kurz warten und dann löschen.".into()));
+    }
+    tokio::fs::remove_dir_all(&dir).await?;
+    Ok(Json(json!({ "deleted": id })))
 }
 
 async fn download(State(st): St, Extension(user): Extension<auth::User>, AxPath((id, kind)): AxPath<(String, String)>) -> Result<Response, AppError> {

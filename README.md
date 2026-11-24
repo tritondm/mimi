@@ -27,6 +27,9 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
 
 - Ohne Anmeldung ist nichts außer der Anmeldeseite erreichbar.
 - Jeder Benutzer sieht **nur seine eigenen** hochgeladenen Berichte.
+- Berichte werden 30 Tage nach der letzten Nutzung automatisch gelöscht (`JOB_TTL_DAYS`),
+  ältere Berichte eines Benutzers einen Tag, nachdem er einen neuen hochgeladen hat. Mit
+  „Bericht jetzt löschen“ geht es sofort. Wird ein Benutzer gelöscht, verschwinden auch seine Berichte.
 - **Admins** verwalten Benutzer im Browser unter **`/admin`**: anlegen, Passwort setzen,
   Admin-Rechte vergeben/entziehen, löschen. Sich selbst löschen oder die eigenen
   Admin-Rechte entziehen geht nicht – es bleibt also immer ein Admin.
@@ -50,6 +53,7 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
 | `COOKIE_SECURE` | –                 | `1` = Cookie nur über HTTPS                 |
 | `SOFFICE`       | `soffice`         | Pfad zu LibreOffice                         |
 | `VERAPDF`       | –                 | Pfad zum veraPDF-Startskript                |
+| `JOB_TTL_DAYS`  | `30`              | Berichte so viele Tage nach der letzten Nutzung löschen, ersetzte nach 1 Tag; `0` = aus |
 
 Voraussetzung auf dem Server: **LibreOffice** (läuft unsichtbar im Hintergrund) und die
 passenden **Schriften** (v. a. Carlito als Ersatz für Calibri), siehe [INSTALL.md](INSTALL.md#schriften).
@@ -60,6 +64,7 @@ Die Mitarbeitenden brauchen nur einen Browser.
 | Bereich        | Prüfung                                         | Im Tool behebbar |
 |----------------|-------------------------------------------------|------------------|
 | Bilder         | fehlender oder nichtssagender Alternativtext    | ja (Textfeld, Bildunterschrift übernehmen, „dekorativ“) |
+| Formeln        | Formeln aus dem Formeleditor brauchen einen Alternativtext | ja (Linearform als Vorschlag, eigener Text) |
 | Tabellen       | erste Zeile nicht als Kopfzeile markiert        | ja (Häkchen)     |
 | Dokument       | Titel, Hauptsprache                             | ja               |
 | Links          | fehlende Linkbeschreibung (v. a. Verzeichnisse) | ja (automatisch) |
@@ -119,7 +124,6 @@ Am Server: siehe [INSTALL.md](INSTALL.md#4-verapdf).
 
 ## Bekannte Grenzen des Prototyps
 
-- Hochgeladene Dateien bleiben in `data/jobs/` liegen (noch kein automatisches Löschen).
 - Kein HTTPS eingebaut – für den Netzbetrieb einen Reverse-Proxy (nginx/Caddy) vorschalten.
 - Die Sperre nach Fehlversuchen gilt pro Benutzername; ein Angreifer könnte so einen Benutzer
   vorübergehend aussperren.

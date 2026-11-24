@@ -116,6 +116,8 @@ pub struct Analysis {
     pub colors: Vec<ColorIssue>,
     /// Was beim PDF-Export automatisch vorbereitet wird
     pub pdf_prep: Vec<String>,
+    /// Formeln aus dem Formeleditor (brauchen im PDF einen Alternativtext)
+    pub formulas: Vec<crate::formula::FormulaInfo>,
 }
 
 #[derive(Deserialize, Default)]
@@ -136,6 +138,9 @@ pub struct Changes {
     /// LibreOffice übernimmt diese ins PDF als Linkbeschreibung (/Contents).
     #[serde(default)]
     pub link_descriptions: bool,
+    /// eigene Alternativtexte für Formeln (leer = Linearform)
+    #[serde(default)]
+    pub formulas: Vec<crate::formula::FormulaChange>,
 }
 
 #[derive(Deserialize)]
@@ -944,7 +949,8 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
 
     let links = hyperlink_texts(&doc)?;
     let links_missing = links.iter().filter(|(has, t)| !has && !t.is_empty()).count();
-    Ok(Analysis { title, language: styles.language, images, tables, headings, hints, links_total: links.len(), links_missing, heading_fixes, colors, pdf_prep })
+    let formulas = crate::formula::find(docx)?;
+    Ok(Analysis { title, language: styles.language, images, tables, headings, hints, links_total: links.len(), links_missing, heading_fixes, colors, pdf_prep, formulas })
 }
 
 /// Word-interne englische Namen der eingebauten Vorlagen lesbar machen.
@@ -2006,6 +2012,14 @@ fn rewrite_zip(docx: &[u8], replaced: &HashMap<String, Vec<u8>>) -> Result<Vec<u
             out.raw_copy_file(f)?;
         }
     }
+    // neue Teile (z. B. docProps/custom.xml) anhängen
+    let existing: std::collections::HashSet<String> = zip.file_names().map(str::to_string).collect();
+    let mut added: Vec<&String> = replaced.keys().filter(|n| !existing.contains(*n)).collect();
+    added.sort();
+    for name in added {
+        out.start_file(name.as_str(), opts)?;
+        out.write_all(&replaced[name])?;
+    }
     Ok(out.finish()?.into_inner())
 }
 
@@ -2092,6 +2106,8 @@ pub fn apply(docx: &[u8], changes: &Changes) -> Result<Vec<u8>> {
             replaced.insert(name, new);
         }
     }
+
+    crate::formula::apply_alts(docx, &changes.formulas, &mut replaced)?;
 
     rewrite_zip(docx, &replaced)
 }
@@ -2715,13 +2731,23 @@ pub(crate) mod tests {
 </w:body></w:document>"#;
 
     pub(crate) fn fixture() -> Vec<u8> {
+        fixture_doc(DOC)
+    }
+
+    /// Wie `fixture`, mit einer Formel E=mc² im Text.
+    pub(crate) fn fixture_with_formula() -> Vec<u8> {
+        let formula = r#"<w:p><w:r><w:t xml:space="preserve">Es gilt </w:t></w:r><m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:r><m:t>E=m</m:t></m:r><m:sSup><m:e><m:r><m:t>c</m:t></m:r></m:e><m:sup><m:r><m:t>2</m:t></m:r></m:sup></m:sSup></m:oMath><w:r><w:t>.</w:t></w:r></w:p>"#;
+        fixture_doc(&DOC.replacen("<w:p><w:r><w:t>Ende.</w:t></w:r></w:p>", &format!("{formula}<w:p><w:r><w:t>Ende.</w:t></w:r></w:p>"), 1))
+    }
+
+    fn fixture_doc(doc: &str) -> Vec<u8> {
         let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
         let o = zip::write::SimpleFileOptions::default();
         let parts: [(&str, &str); 5] = [
             ("[Content_Types].xml", r#"<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>"#),
             ("_rels/.rels", r#"<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>"#),
             ("word/_rels/document.xml.rels", r#"<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>"#),
-            ("word/document.xml", DOC),
+            ("word/document.xml", doc),
             ("word/styles.xml", STYLES),
         ];
         for (n, c) in parts {

@@ -204,5 +204,8 @@ lxc exec rampe -- apt-get upgrade                   # Systempakete; LibreOffice 
   (Regressionstest, siehe [FUNCTION.md](FUNCTION.md#testen)). Dazu einen echten Bericht
   exportieren und mit veraPDF prüfen. Die Vorbereitung (`prepare_for_pdf`) und die
   Nachbearbeitung (`pdffix`) gleichen Eigenheiten von LibreOffice aus.
-- Hochgeladene Berichte werden noch nicht automatisch gelöscht (`/var/lib/rampe/data/jobs/`).
+- Berichte (`/var/lib/rampe/data/jobs/`) löscht Leo automatisch: 30 Tage nach der letzten Nutzung
+  (`JOB_TTL_DAYS` in `deploy/rampe.service`), ersetzte Berichte eines Benutzers nach 1 Tag.
+  Leo räumt beim Start und dann stündlich auf. Im Journal steht nur die Anzahl, z. B.
+  „3 Bericht(e) gelöscht (412 MB, Löschfrist abgelaufen)“.
 - Sicherung: `/var/lib/rampe/users.txt` genügt. Berichte lassen sich jederzeit neu hochladen.

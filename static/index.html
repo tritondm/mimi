@@ -59,6 +59,7 @@ nav.tabs button[aria-selected=true] { background: var(--accent); color: var(--ac
 .img-card:first-of-type { border-top: 0; }
 @media (max-width: 700px) { .img-card { grid-template-columns: 1fr; } }
 .preview { width: 100%; max-height: 200px; object-fit: contain; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0/16px 16px; border-radius: 6px; border: 1px solid var(--line); }
+.noprev code { font-size: 1.1rem; color: var(--text); word-break: break-all; }
 .noprev { height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px dashed var(--line); border-radius: 6px; color: var(--muted); padding: 8px; }
 table.list { width: 100%; border-collapse: collapse; }
 table.list th, table.list td { text-align: left; padding: 8px; border-top: 1px solid var(--line); vertical-align: top; }
@@ -108,19 +109,20 @@ ul.hints li:first-child { border-top: 0; }
     <div id="drop" class="drop">
       <p><label for="file" style="display:inline">Datei auswählen (.docx)</label> oder hierher ziehen</p>
       <input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-      <p class="muted">Die Datei bleibt auf diesem Rechner bzw. Server und wird nicht an Dritte weitergegeben.</p>
+      <p class="muted">Die Datei bleibt auf diesem Rechner bzw. Server und wird nicht an Dritte weitergegeben.<span id="ttlinfo"></span></p>
     </div>
   </section>
 
   <div id="workspace" class="hidden">
     <section class="card" aria-labelledby="h-sum">
       <h2 id="h-sum">Übersicht: <span id="docname"></span></h2>
+      <p class="muted hidden" id="delinfo"></p>
       <div class="summary" id="summary"></div>
     </section>
 
     <nav class="tabs" role="tablist" aria-label="Bereiche">
       <button role="tab" id="t-doc" aria-controls="p-doc" aria-selected="true">Dokument</button>
-      <button role="tab" id="t-img" tabindex="-1" aria-controls="p-img" aria-selected="false">Bilder <span id="c-img"></span></button>
+      <button role="tab" id="t-img" tabindex="-1" aria-controls="p-img" aria-selected="false"><span id="l-img">Bilder</span> <span id="c-img"></span></button>
       <button role="tab" id="t-tbl" tabindex="-1" aria-controls="p-tbl" aria-selected="false">Tabellen <span id="c-tbl"></span></button>
       <button role="tab" id="t-str" tabindex="-1" aria-controls="p-str" aria-selected="false">Struktur &amp; Hinweise <span id="c-str"></span></button>
       <button role="tab" id="t-exp" tabindex="-1" aria-controls="p-exp" aria-selected="false">PDF &amp; Download</button>
@@ -161,6 +163,7 @@ ul.hints li:first-child { border-top: 0; }
         <button class="secondary" id="fillcaps">Alle leeren Alternativtexte aus der Bildunterschrift füllen</button>
       </div>
       <div id="images"></div>
+      <div id="formulas"></div>
     </section>
 
     <section id="p-tbl" role="tabpanel" aria-labelledby="t-tbl" class="card hidden">
@@ -199,6 +202,9 @@ ul.hints li:first-child { border-top: 0; }
         <a class="btn secondary" id="dl-docx">Korrigierte Word-Datei (.docx)</a>
         <a class="btn secondary" id="dl-odt">OpenDocument (.odt)</a>
       </div>
+      <h3 style="margin-top:24px">Bericht löschen</h3>
+      <p class="muted">Löscht alles zu diesem Bericht sofort vom Server: Word-Datei, PDF, ODT und Prüfbericht. Laden Sie vorher herunter, was Sie brauchen.<span id="delinfo2"></span></p>
+      <p><button class="secondary" id="deljob">Bericht jetzt löschen</button></p>
     </section>
   </div>
 </main>
@@ -242,6 +248,9 @@ function imgState(img) {
   return {alt, dec, st: 'ok', cls: 'b-ok', open: false};
 }
 function tblHeader(t) { return edits.tables[t.index] ?? t.header; }
+// wirksamer Alternativtext einer Formel: Eingabe, sonst gespeicherter Text, sonst Linearform
+function formulaAlt(f) { return edits.formulas[f.key] ?? (f.alt || f.linear); }
+function formulaChanged(f) { const v = (edits.formulas[f.key] ?? '').trim(); return f.key in edits.formulas && v !== (f.alt || f.linear); }
 function dirty() {
   const a = job.analysis;
   if (edits.title !== undefined && edits.title !== a.title) return true;
@@ -250,6 +259,7 @@ function dirty() {
   for (const t of a.tables) if (tblHeader(t) !== t.header) return true;
   if (edits.links && a.links_missing) return true;
   if (Object.keys(edits.headings).length || Object.keys(edits.colors).length) return true;
+  if (a.formulas.some(formulaChanged)) return true;
   return false;
 }
 function captionText(c) { return (c || '').replace(/^(Abbildung|Abb\.|Figure|Fig\.|Grafik|Tabelle)\s*\d+[.:]?\s*/i, '').trim(); }
@@ -332,6 +342,28 @@ function renderImages() {
   }).join('');
 }
 
+function renderFormulas() {
+  const fs = job.analysis.formulas;
+  $('#l-img').textContent = fs.length ? 'Bilder & Formeln' : 'Bilder';
+  if (!fs.length) { $('#formulas').innerHTML = ''; return; }
+  $('#formulas').innerHTML = `<h2 style="margin-top:24px">Formeln</h2>
+    <p class="muted">Jede Formel braucht im PDF einen Alternativtext, den der Screenreader vorliest. Leo verwendet ohne Eingabe die <strong>Linearform</strong> (wie in Word unter „Linear“). Besser verständlich ist oft ein gesprochener Text, z.&nbsp;B. „E gleich m mal c Quadrat“. Der Text wird in der Word-Datei gespeichert.</p>` +
+    fs.map(f => {
+      const v = (edits.formulas[f.key] ?? '').trim();
+      const own = f.key in edits.formulas ? (v !== '' && v !== f.linear) : !!f.alt;
+      return `<div class="img-card" data-f="${esc(f.key)}">
+      <div class="noprev"><code>${esc(f.linear)}</code></div>
+      <div>
+        <h3>Formel ${f.index + 1} <span class="badge ${own ? 'b-ok' : 'b-info'}">${own ? 'eigener Text' : 'Linearform'}</span></h3>
+        <p class="muted">${esc(f.place)}: ${esc(f.context || '–')}</p>
+        <label for="falt-${f.index}">Alternativtext</label>
+        <textarea id="falt-${f.index}" data-fkey="${esc(f.key)}">${esc(formulaAlt(f))}</textarea>
+        <div class="row" style="margin-top:6px"><button class="secondary" data-flin="${esc(f.key)}">Linearform übernehmen</button></div>
+      </div>
+    </div>`;
+    }).join('');
+}
+
 function renderTables() {
   const a = job.analysis;
   $('#tables').innerHTML = a.tables.length ? a.tables.map(t => {
@@ -364,9 +396,18 @@ function renderPrep() {
   const p = job.analysis.pdf_prep || [];
   $('#prep').innerHTML = p.length ? '<h3>Wird beim PDF-Export automatisch angepasst</h3><ul class="hints">' + p.map(t => `<li><span class="badge b-info">auto</span><div>${esc(t)}</div></li>`).join('') + '</ul><p class="muted">Die herunterladbare Word-Datei bleibt dabei unverändert.</p>' : '';
 }
-function renderAll() { renderPrep(); renderDoc(); renderImages(); renderTables(); renderStructure(); renderSummary(); }
+let ttlDays = 0;
+function fmtDate(iso) { const [y, m, d] = iso.split('-'); return `${+d}.${+m}.${y}`; }
+function renderDelete() {
+  const d = job.delete_after;
+  const txt = d ? `Wird am ${fmtDate(d)} automatisch gelöscht, wenn Sie den Bericht bis dahin nicht mehr öffnen.` : '';
+  $('#delinfo').textContent = txt;
+  $('#delinfo').classList.toggle('hidden', !d);
+  $('#delinfo2').textContent = d ? ' Sonst geschieht das automatisch am ' + fmtDate(d) + '.' : '';
+}
+function renderAll() { renderDelete(); renderPrep(); renderDoc(); renderImages(); renderFormulas(); renderTables(); renderStructure(); renderSummary(); }
 
-function newEdits() { return {images: {}, tables: {}, headings: {}, colors: {}, links: !!(job && job.analysis.links_missing)}; }
+function newEdits() { return {images: {}, tables: {}, headings: {}, colors: {}, formulas: {}, links: !!(job && job.analysis.links_missing)}; }
 function loadJob(j) {
   job = j; edits = newEdits();
   $('#docname').textContent = j.name;
@@ -398,6 +439,8 @@ async function save() {
   if (edits.links && a.links_missing) body.link_descriptions = true;
   body.headings = Object.entries(edits.headings).map(([para, style]) => ({para: +para, style}));
   body.colors = a.colors.filter(c => edits.colors[c.color]).map(c => ({from: c.color, to: c.suggestion}));
+  // leer oder gleich der Linearform = eigenen Text entfernen
+  body.formulas = a.formulas.filter(formulaChanged).map(f => ({key: f.key, alt: edits.formulas[f.key].trim() === f.linear ? '' : edits.formulas[f.key].trim()}));
   status('<span class="spinner"></span> Speichere …');
   try {
     const j = await api(`/api/job/${job.id}/apply`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
@@ -494,6 +537,18 @@ $('#fillcaps').addEventListener('click', () => {
   $('#onlyopen').checked = false; renderImages(); renderSummary();
   status(`${n} Alternativtext(e) aus Bildunterschriften übernommen – bitte kurz kontrollieren und speichern.`);
 });
+$('#formulas').addEventListener('input', e => {
+  const k = e.target.dataset.fkey; if (k === undefined) return;
+  edits.formulas[k] = e.target.value;
+  renderSummary();
+});
+$('#formulas').addEventListener('click', e => {
+  const k = e.target.dataset.flin; if (k === undefined) return;
+  const f = job.analysis.formulas.find(x => x.key === k);
+  edits.formulas[k] = f.linear;
+  renderFormulas(); renderSummary();
+  document.querySelector(`[data-fkey="${CSS.escape(k)}"]`)?.focus();
+});
 $('#tables').addEventListener('change', e => {
   const i = e.target.dataset.tbl; if (i === undefined) return;
   edits.tables[i] = e.target.checked; renderTables(); renderSummary();
@@ -513,6 +568,16 @@ $('#colors').addEventListener('change', e => {
   if (e.target.checked) edits.colors[c] = true; else delete edits.colors[c];
   renderSummary();
 });
+$('#deljob').addEventListener('click', async () => {
+  if (!confirm(`„${job.name}“ jetzt endgültig vom Server löschen? Das lässt sich nicht rückgängig machen.`)) return;
+  showError('');
+  try {
+    await api(`/api/job/${job.id}`, {method: 'DELETE'});
+    job = null;
+    try { localStorage.removeItem('bf-job'); } catch (e) {}
+    location.reload();
+  } catch (e) { showError(e.message); }
+});
 $('#save').addEventListener('click', save);
 $('#export').addEventListener('click', exportPdf);
 $('#export2').addEventListener('click', exportPdf);
@@ -530,6 +595,8 @@ async function afterLogin() {
   let info = {user: '', admin: false};
   try { info = await api('/api/me'); } catch (e) { return; }
   $('#username').textContent = info.user;
+  ttlDays = info.ttl_days || 0;
+  $('#ttlinfo').textContent = ttlDays ? ` Hochgeladene Berichte werden ${ttlDays} Tage nach der letzten Nutzung automatisch gelöscht, ältere Berichte nach einem Tag, sobald Sie einen neuen hochladen.` : '';
   $('#adminlink').classList.toggle('hidden', !info.admin);
   $('#userbox').classList.remove('hidden');
   $('#login').classList.add('hidden');
