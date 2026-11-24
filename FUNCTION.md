@@ -1,5 +1,7 @@
 # Wie Rampe funktioniert
 
+**Deutsch** · [English](FUNCTION.en.md)
+
 Rampe macht aus einem Word-Bericht (.docx) ein barrierefreies PDF nach **PDF/UA-1**.
 Die Mitarbeitenden laden den Bericht im Browser hoch, ergänzen dort, was nur ein Mensch
 wissen kann (z. B. Alternativtexte), und bekommen ein geprüftes PDF zurück.

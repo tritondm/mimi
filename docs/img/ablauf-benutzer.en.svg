@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:lang="en" viewBox="0 0 960 300" width="960" height="300" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">How to work with Rampe</title>
+  <desc id="d">Six steps: You upload the Word file. Rampe looks for problems. You correct and save, then Rampe checks again. Rampe creates the PDF and checks it; if there are problems, you go back to correcting. You download the PDF and the corrected Word file and finally check the PDF with PAC.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="960" height="300" fill="#ffffff"/>
+
+  <!-- Rücksprung 3 -> 2 -->
+  <path d="M 397 72 C 397 22, 235 22, 235 68" fill="none" stroke="#555" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <text x="316" y="20" font-size="12" fill="#333" text-anchor="middle">checked again after every save</text>
+
+  <!-- Rücksprung 4 -> 3 -->
+  <path d="M 563 168 C 563 214, 401 214, 401 172" fill="none" stroke="#555" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <text x="482" y="226" font-size="12" fill="#333" text-anchor="middle">problems left? go back and correct</text>
+
+  <!-- Boxen: x = 4,166,328,490,652,814 (Breite 146) -->
+  <g font-size="12" fill="#1a1a1a">
+    <rect x="4" y="72" width="146" height="96" rx="10" fill="#e3effc" stroke="#2b6cb0" stroke-width="1.5"/>
+    <text x="77" y="98" font-size="15" font-weight="700" text-anchor="middle">1 Upload</text>
+    <text x="77" y="122" text-anchor="middle">Word file (.docx)</text>
+    <text x="77" y="140" text-anchor="middle">in the browser</text>
+
+    <rect x="166" y="72" width="146" height="96" rx="10" fill="#e5f5e8" stroke="#2f855a" stroke-width="1.5"/>
+    <text x="239" y="98" font-size="15" font-weight="700" text-anchor="middle">2 Analyse</text>
+    <text x="239" y="122" text-anchor="middle">finds problems in</text>
+    <text x="239" y="140" text-anchor="middle">images, tables …</text>
+
+    <rect x="328" y="72" width="146" height="96" rx="10" fill="#e3effc" stroke="#2b6cb0" stroke-width="1.5"/>
+    <text x="401" y="98" font-size="15" font-weight="700" text-anchor="middle">3 Correct</text>
+    <text x="401" y="122" text-anchor="middle">alt texts,</text>
+    <text x="401" y="140" text-anchor="middle">checkboxes, save</text>
+
+    <rect x="490" y="72" width="146" height="96" rx="10" fill="#e5f5e8" stroke="#2f855a" stroke-width="1.5"/>
+    <text x="563" y="98" font-size="15" font-weight="700" text-anchor="middle">4 Create PDF</text>
+    <text x="563" y="122" text-anchor="middle">accessible PDF,</text>
+    <text x="563" y="140" text-anchor="middle">created and checked</text>
+
+    <rect x="652" y="72" width="146" height="96" rx="10" fill="#e3effc" stroke="#2b6cb0" stroke-width="1.5"/>
+    <text x="725" y="98" font-size="15" font-weight="700" text-anchor="middle">5 Download</text>
+    <text x="725" y="122" text-anchor="middle">PDF and corrected</text>
+    <text x="725" y="140" text-anchor="middle">Word file</text>
+
+    <rect x="814" y="72" width="142" height="96" rx="10" fill="#e3effc" stroke="#2b6cb0" stroke-width="1.5"/>
+    <text x="885" y="98" font-size="15" font-weight="700" text-anchor="middle">6 PAC</text>
+    <text x="885" y="122" text-anchor="middle">final check</text>
+    <text x="885" y="140" text-anchor="middle">(Windows)</text>
+  </g>
+
+  <!-- Pfeile -->
+  <g stroke="#555" stroke-width="1.6" marker-end="url(#a)">
+    <line x1="150" y1="120" x2="164" y2="120"/>
+    <line x1="312" y1="120" x2="326" y2="120"/>
+    <line x1="474" y1="120" x2="488" y2="120"/>
+    <line x1="636" y1="120" x2="650" y2="120"/>
+    <line x1="798" y1="120" x2="812" y2="120"/>
+  </g>
+
+  <!-- Legende -->
+  <g font-size="13" fill="#1a1a1a">
+    <rect x="4" y="262" width="16" height="16" rx="3" fill="#e3effc" stroke="#2b6cb0"/>
+    <text x="28" y="275">You do this</text>
+    <rect x="160" y="262" width="16" height="16" rx="3" fill="#e5f5e8" stroke="#2f855a"/>
+    <text x="184" y="275">Rampe does this automatically</text>
+  </g>
+</svg>

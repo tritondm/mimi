@@ -1,8 +1,11 @@
 # Rampe – Word-Berichte barrierefrei machen (Prototyp)
 
+**Deutsch** · [English](README.en.md)
+
 Word-Bericht (.docx) hochladen → Probleme anzeigen und direkt beheben → barrierefreies
 PDF (PDF/UA) erzeugen und prüfen → PDF, korrigierte DOCX und ODT herunterladen.
 
+- **Anleitung für Benutzer:** [INSTRUCTION.md](INSTRUCTION.md) (auch als [PDF](INSTRUCTION.pdf))
 - **Wie es funktioniert:** [FUNCTION.md](FUNCTION.md) (Ablauf, Vorbereitung für LibreOffice, Praxistest)
 - **Installation am Server, Schriften, Betrieb:** [INSTALL.md](INSTALL.md)
 
