@@ -2,7 +2,7 @@
 
 [Deutsch](INSTRUCTION.md) · **English**
 
-*Leo – **L**eichte **E**rstellung **O**hne Barrieren (easy creation without barriers)*
+*Leo – **L**eichte **E**rstellung **O**hne Barrieren*
 
 Leo turns your Word report (.docx) into an **accessible PDF** (PDF/UA).
 You upload the report in the browser, add what only a human can know

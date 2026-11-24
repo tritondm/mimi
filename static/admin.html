@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Leo – Benutzer</title>
+<title>Leo – Benutzerverwaltung</title>
 <style>
 :root {
   --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;
@@ -23,6 +23,7 @@ body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, s
 header { background: var(--card); border-bottom: 1px solid var(--line); padding: 16px; }
 header .bar { max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
 header h1 { margin: 0; font-size: 1.3rem; }
+header .claim { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); }
 main { max-width: 900px; margin: 0 auto; padding: 16px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
 h2 { font-size: 1.15rem; margin: 0 0 12px; }
@@ -50,7 +51,7 @@ form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align
 <body>
 <header>
   <div class="bar">
-    <h1>Leo – Benutzerverwaltung</h1>
+    <div><h1>Leo – Benutzerverwaltung</h1><p class="claim">Leichte Erstellung Ohne Barrieren</p></div>
     <div><a class="btn secondary" href="/">Zurück zum Tool</a></div>
   </div>
 </header>

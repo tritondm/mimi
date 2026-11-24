@@ -1,5 +1,7 @@
 # Installation and operation
 
+*Leo – Leichte Erstellung Ohne Barrieren*
+
 [Deutsch](INSTALL.md) · **English**
 
 How Leo works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings: [README.en.md](README.en.md)

@@ -1,5 +1,7 @@
 # Installation und Betrieb
 
+*Leo – Leichte Erstellung Ohne Barrieren*
+
 **Deutsch** · [English](INSTALL.en.md)
 
 Wie Leo intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellungen: [README.md](README.md)

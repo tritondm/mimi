@@ -1,5 +1,7 @@
 # Wie Leo funktioniert
 
+*Leo – Leichte Erstellung Ohne Barrieren*
+
 **Deutsch** · [English](FUNCTION.en.md)
 
 Leo macht aus einem Word-Bericht (.docx) ein barrierefreies PDF nach **PDF/UA-1**.

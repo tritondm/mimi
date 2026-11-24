@@ -211,7 +211,7 @@ pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
         }
         Some("hilfe") | Some("--help") | Some("-h") => {
             println!(
-                "Leo – Word-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
+                "Leo – Leichte Erstellung Ohne Barrieren\nWord-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
             );
             Ok(true)
         }

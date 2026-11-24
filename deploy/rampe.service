@@ -1,5 +1,5 @@
 [Unit]
-Description=Leo – Word-Berichte barrierefrei machen
+Description=Leo (Leichte Erstellung Ohne Barrieren) – Word-Berichte barrierefrei machen
 After=network.target
 
 [Service]

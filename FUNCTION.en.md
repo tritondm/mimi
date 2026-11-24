@@ -1,5 +1,7 @@
 # How Leo works
 
+*Leo – Leichte Erstellung Ohne Barrieren*
+
 [Deutsch](FUNCTION.md) · **English**
 
 Leo turns a Word report (.docx) into an accessible PDF according to **PDF/UA-1**.
