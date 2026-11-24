@@ -8,6 +8,7 @@ Upload a Word report (.docx) → see problems and fix them right away → create
 accessible PDF (PDF/UA) → download the PDF, the corrected DOCX and an ODT.
 
 - **User guide:** [INSTRUCTION.en.md](INSTRUCTION.en.md) (also as [PDF](INSTRUCTION.en.pdf))
+- **Matterhorn Protocol (PDF/UA-1), what Leo covers:** [MATTERHORN.en.md](MATTERHORN.en.md) (also as [PDF](MATTERHORN.en.pdf))
 - **How it works:** [FUNCTION.en.md](FUNCTION.en.md) (workflow, preparation for LibreOffice, field test)
 - **Server installation, fonts, operation:** [INSTALL.en.md](INSTALL.en.md)
 

@@ -120,10 +120,10 @@ ul.hints li:first-child { border-top: 0; }
 
     <nav class="tabs" role="tablist" aria-label="Bereiche">
       <button role="tab" id="t-doc" aria-controls="p-doc" aria-selected="true">Dokument</button>
-      <button role="tab" id="t-img" aria-controls="p-img" aria-selected="false">Bilder <span id="c-img"></span></button>
-      <button role="tab" id="t-tbl" aria-controls="p-tbl" aria-selected="false">Tabellen <span id="c-tbl"></span></button>
-      <button role="tab" id="t-str" aria-controls="p-str" aria-selected="false">Struktur &amp; Hinweise <span id="c-str"></span></button>
-      <button role="tab" id="t-exp" aria-controls="p-exp" aria-selected="false">PDF &amp; Download</button>
+      <button role="tab" id="t-img" tabindex="-1" aria-controls="p-img" aria-selected="false">Bilder <span id="c-img"></span></button>
+      <button role="tab" id="t-tbl" tabindex="-1" aria-controls="p-tbl" aria-selected="false">Tabellen <span id="c-tbl"></span></button>
+      <button role="tab" id="t-str" tabindex="-1" aria-controls="p-str" aria-selected="false">Struktur &amp; Hinweise <span id="c-str"></span></button>
+      <button role="tab" id="t-exp" tabindex="-1" aria-controls="p-exp" aria-selected="false">PDF &amp; Download</button>
     </nav>
 
     <section id="p-doc" role="tabpanel" aria-labelledby="t-doc" class="card">
@@ -440,12 +440,24 @@ function selectTab(id) {
   document.querySelectorAll('[role=tab]').forEach(t => {
     const on = t.id === id;
     t.setAttribute('aria-selected', on);
+    t.tabIndex = on ? 0 : -1;
     document.getElementById(t.getAttribute('aria-controls')).classList.toggle('hidden', !on);
   });
 }
 
 // --- Ereignisse ---
 document.querySelectorAll('[role=tab]').forEach(t => t.addEventListener('click', () => selectTab(t.id)));
+// Tastatur nach ARIA-Muster „Tabs“: Pfeil links/rechts, Pos1, Ende wechseln den Reiter
+document.querySelector('[role=tablist]').addEventListener('keydown', e => {
+  const tabs = [...document.querySelectorAll('[role=tab]')];
+  const i = tabs.indexOf(document.activeElement);
+  if (i < 0) return;
+  const next = {ArrowRight: (i + 1) % tabs.length, ArrowLeft: (i - 1 + tabs.length) % tabs.length, Home: 0, End: tabs.length - 1}[e.key];
+  if (next === undefined) return;
+  e.preventDefault();
+  selectTab(tabs[next].id);
+  tabs[next].focus();
+});
 $('#file').addEventListener('change', e => upload(e.target.files[0]));
 const drop = $('#drop');
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });

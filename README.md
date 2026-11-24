@@ -8,6 +8,7 @@ Word-Bericht (.docx) hochladen → Probleme anzeigen und direkt beheben → barr
 PDF (PDF/UA) erzeugen und prüfen → PDF, korrigierte DOCX und ODT herunterladen.
 
 - **Anleitung für Benutzer:** [INSTRUCTION.md](INSTRUCTION.md) (auch als [PDF](INSTRUCTION_de.pdf))
+- **Matterhorn-Protokoll (PDF/UA-1), was Leo abdeckt:** [MATTERHORN.md](MATTERHORN.md) (auch als [PDF](MATTERHORN_de.pdf))
 - **Wie es funktioniert:** [FUNCTION.md](FUNCTION.md) (Ablauf, Vorbereitung für LibreOffice, Praxistest)
 - **Installation am Server, Schriften, Betrieb:** [INSTALL.md](INSTALL.md)
 

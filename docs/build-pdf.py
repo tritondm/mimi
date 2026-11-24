@@ -3,7 +3,7 @@
 # dependencies = ["markdown"]
 # ///
 # SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org
-"""Erzeugt INSTRUCTION_de.pdf und INSTRUCTION.en.pdf aus den Markdown-Anleitungen.
+"""Erzeugt die PDFs der Anleitung und der Matterhorn-Übersicht (DE/EN) aus Markdown.
 
 Aufruf im Projektordner:  uv run docs/build-pdf.py
 Benötigt: uv und Chromium (oder Google Chrome) im PATH, Schrift Carlito empfohlen.
@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = [
     ("INSTRUCTION.md", "INSTRUCTION_de.pdf", "de", "Leo – Anleitung"),
     ("INSTRUCTION.en.md", "INSTRUCTION.en.pdf", "en", "Leo – User Guide"),
+    ("MATTERHORN.md", "MATTERHORN_de.pdf", "de", "Leo und das Matterhorn-Protokoll"),
+    ("MATTERHORN.en.md", "MATTERHORN.en.pdf", "en", "Leo and the Matterhorn Protocol"),
 ]
 # Sprachumschalter „Deutsch · English“ gehört nicht ins PDF
 SWITCH = re.compile(r"(?m)^(\*\*Deutsch\*\* · \[English\]|\[Deutsch\]\(.*?\) · \*\*English\*\*).*\n")
@@ -28,7 +30,7 @@ SWITCH = re.compile(r"(?m)^(\*\*Deutsch\*\* · \[English\]|\[Deutsch\]\(.*?\) ·
 CSS = """
 @page { size: A4; margin: 20mm 18mm;
   @bottom-center { content: counter(page) " / " counter(pages); font-size: 9pt; color: #5b6470; } }
-body { font-family: Carlito, "Noto Sans", sans-serif; font-size: 11pt; line-height: 1.45; color: #1b1f24; }
+body { font-family: Carlito, "Noto Sans", "Liberation Sans", sans-serif; font-size: 11pt; line-height: 1.45; color: #1b1f24; }
 h1 { font-size: 22pt; color: #1f5fbf; margin: 0 0 8pt; }
 h2 { font-size: 15pt; color: #1f5fbf; border-bottom: 1px solid #dde1e6; padding-bottom: 3pt; margin-top: 18pt; break-after: avoid; }
 h3 { font-size: 12pt; margin-top: 12pt; break-after: avoid; }
