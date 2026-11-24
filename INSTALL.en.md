@@ -11,7 +11,7 @@ How Leo works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings
 
 ```
 Internet ──https──▶ Host server.example.org (LXD)
-                     ├─ Container rproxy   nginx + Let's Encrypt, leo.example.org → CONTAINER-IP:8080
+                     ├─ Container rproxy   nginx + Let's Encrypt, leo.example.org + leo.hblfa-tirol.at → CONTAINER-IP:8080
                      └─ Container rampe    Ubuntu 26.04: Leo (systemd), LibreOffice, veraPDF, fonts
 ```
 
@@ -122,13 +122,14 @@ Without an admin the service does not start; the journal then points to this com
 
 ```bash
 lxc file push deploy/nginx-rampe.conf rproxy/etc/nginx/conf.d/rampe.conf
-lxc exec rproxy -- certbot certonly --nginx -d leo.example.org   # first time only
+lxc exec rproxy -- certbot certonly --nginx --cert-name leo.example.org -d leo.example.org -d leo.hblfa-tirol.at   # first time only
 lxc exec rproxy -- sh -c 'nginx -t && systemctl reload nginx'
 ```
 
 Important in the configuration: `client_max_body_size 300m` (large reports) and
 `proxy_read_timeout 300s` (export and check of large reports take a while).
 The IP in `upstream` must match the container's address (`lxc list rampe`).
+`leo.example.org` and `leo.hblfa-tirol.at` serve the same site (one certificate for both).
 The old address `rampe.example.org` redirects permanently (301) to `leo.example.org`; certbot keeps
 renewing its certificate. Logins are per address, so users log in once more after the switch.
 
