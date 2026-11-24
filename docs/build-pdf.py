@@ -19,8 +19,8 @@ import markdown
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = [
-    ("INSTRUCTION.md", "INSTRUCTION.pdf", "de", "Rampe – Anleitung"),
-    ("INSTRUCTION.en.md", "INSTRUCTION.en.pdf", "en", "Rampe – User Guide"),
+    ("INSTRUCTION.md", "INSTRUCTION.pdf", "de", "Leo – Anleitung"),
+    ("INSTRUCTION.en.md", "INSTRUCTION.en.pdf", "en", "Leo – User Guide"),
 ]
 # Sprachumschalter „Deutsch · English“ gehört nicht ins PDF
 SWITCH = re.compile(r"(?m)^(\*\*Deutsch\*\* · \[English\]|\[Deutsch\]\(.*?\) · \*\*English\*\*).*\n")

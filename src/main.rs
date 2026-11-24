@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // Copyright (c) 2026 example.org
 
-//! Rampe: Word-Bericht hochladen, prüfen, korrigieren,
+//! Leo: Word-Bericht hochladen, prüfen, korrigieren,
 //! als PDF/UA (plus DOCX/ODT) exportieren und das PDF prüfen.
 
 mod auth;
@@ -129,7 +129,7 @@ async fn main() -> anyhow::Result<()> {
 
     let addr = std::env::var("ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("Rampe läuft auf http://{addr}  (Benutzerverwaltung: http://{addr}/admin)");
+    println!("Leo läuft auf http://{addr}  (Benutzerverwaltung: http://{addr}/admin)");
     match pdfcheck::find_verapdf(&state.base) {
         Some(p) => println!("veraPDF gefunden: {}", p.display()),
         None => println!("veraPDF nicht gefunden – nur Basisprüfung (siehe README)."),

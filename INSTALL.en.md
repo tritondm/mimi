@@ -2,14 +2,17 @@
 
 [Deutsch](INSTALL.md) · **English**
 
-How Rampe works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings: [README.en.md](README.en.md)
+How Leo works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings: [README.en.md](README.en.md)
+
+> **Technical names:** program and command `rampe`, container `rampe`, service `rampe.service`,
+> system user and paths `/opt/rampe`, `/var/lib/rampe`.
 
 ## Server overview
 
 ```
 Internet ──https──▶ Host server.example.org (LXD)
-                     ├─ Container rproxy   nginx + Let's Encrypt, rampe.example.org → CONTAINER-IP:8080
-                     └─ Container rampe    Ubuntu 26.04: Rampe (systemd), LibreOffice, veraPDF, fonts
+                     ├─ Container rproxy   nginx + Let's Encrypt, leo.example.org → CONTAINER-IP:8080
+                     └─ Container rampe    Ubuntu 26.04: Leo (systemd), LibreOffice, veraPDF, fonts
 ```
 
 | What | Where (in the container `rampe`) |
@@ -19,7 +22,7 @@ Internet ──https──▶ Host server.example.org (LXD)
 | User | system user `rampe`, home `/var/lib/rampe` |
 | User file | `/var/lib/rampe/users.txt` (mode 600) |
 | Reports | `/var/lib/rampe/data/jobs/` |
-| LibreOffice profile | `/var/lib/rampe/data/lo-profile` (created by Rampe itself) |
+| LibreOffice profile | `/var/lib/rampe/data/lo-profile` (created by Leo itself) |
 | veraPDF | `/opt/verapdf/verapdf` |
 | nginx configuration | container `rproxy`: `/etc/nginx/conf.d/rampe.conf` (template: `deploy/nginx-rampe.conf`) |
 
@@ -39,7 +42,7 @@ lxc config set rampe limits.memory 1536MiB
 ```
 
 This is how the container is currently configured. LibreOffice only ever runs once at a
-time; Rampe queues further exports.
+time; Leo queues further exports.
 
 ### 2. Packages
 
@@ -54,7 +57,7 @@ lxc exec rampe -- apt-get install -y --no-install-recommends \
 `libreoffice-writer-nogui` is LibreOffice without a user interface (no X11 needed).
 For fonts see [below](#fonts).
 
-**LibreOffice 26.8 from The Document Foundation** (used by Rampe): the LibreOffice
+**LibreOffice 26.8 from The Document Foundation** (used by Leo): the LibreOffice
 26.2 shipped with Ubuntu 26.04 drops all links from the table of contents and the lists of
 figures and tables during PDF export. The official packages install additionally into
 `/opt`; the Ubuntu package remains as a fallback and provides the dependencies.
@@ -119,13 +122,15 @@ Without an admin the service does not start; the journal then points to this com
 
 ```bash
 lxc file push deploy/nginx-rampe.conf rproxy/etc/nginx/conf.d/rampe.conf
-lxc exec rproxy -- certbot certonly --nginx -d rampe.example.org   # first time only
+lxc exec rproxy -- certbot certonly --nginx -d leo.example.org   # first time only
 lxc exec rproxy -- sh -c 'nginx -t && systemctl reload nginx'
 ```
 
 Important in the configuration: `client_max_body_size 300m` (large reports) and
 `proxy_read_timeout 300s` (export and check of large reports take a while).
 The IP in `upstream` must match the container's address (`lxc list rampe`).
+The old address `rampe.example.org` redirects permanently (301) to `leo.example.org`; certbot keeps
+renewing its certificate. Logins are per address, so users log in once more after the switch.
 
 ## Fonts
 
@@ -157,7 +162,7 @@ lxc exec rampe -- fc-match Calibri            # should return "Carlito"
 pdffonts bericht.pdf                          # on your own machine (poppler-utils)
 ```
 
-Rampe's basic check also lists the embedded fonts.
+Leo's basic check also lists the embedded fonts.
 
 **Installing additional fonts** (e.g. the original fonts of the corporate template, provided
 the licence allows use on a server; Microsoft fonts from Windows or Office are usually
@@ -183,7 +188,7 @@ server install the same fonts, on Arch Linux e.g. `pacman -S ttf-carlito ttf-cal
 Without Carlito, Calibri is replaced by Liberation Sans here and the layout differs.
 
 veraPDF locally: installer from <https://verapdf.org/software/> into `tools/verapdf` (found
-automatically by Rampe) or any location referenced in PATH or via `VERAPDF=...`.
+automatically by Leo) or any location referenced in PATH or via `VERAPDF=...`.
 
 ## Operation
 

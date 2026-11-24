@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" xml:lang="en" viewBox="0 0 960 300" width="960" height="300" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" role="img" aria-labelledby="t d">
-  <title id="t">How to work with Rampe</title>
-  <desc id="d">Six steps: You upload the Word file. Rampe looks for problems. You correct and save, then Rampe checks again. Rampe creates the PDF and checks it; if there are problems, you go back to correcting. You download the PDF and the corrected Word file and finally check the PDF with PAC.</desc>
+  <title id="t">How to work with Leo</title>
+  <desc id="d">Six steps: You upload the Word file. Leo looks for problems. You correct and save, then Leo checks again. Leo creates the PDF and checks it; if there are problems, you go back to correcting. You download the PDF and the corrected Word file and finally check the PDF with PAC.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
@@ -63,6 +63,6 @@
     <rect x="4" y="262" width="16" height="16" rx="3" fill="#e3effc" stroke="#2b6cb0"/>
     <text x="28" y="275">You do this</text>
     <rect x="160" y="262" width="16" height="16" rx="3" fill="#e5f5e8" stroke="#2f855a"/>
-    <text x="184" y="275">Rampe does this automatically</text>
+    <text x="184" y="275">Leo does this automatically</text>
   </g>
 </svg>

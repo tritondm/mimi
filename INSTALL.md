@@ -2,14 +2,17 @@
 
 **Deutsch** · [English](INSTALL.en.md)
 
-Wie Rampe intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellungen: [README.md](README.md)
+Wie Leo intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellungen: [README.md](README.md)
+
+> **Technische Namen:** Programm und Befehl `rampe`, Container `rampe`, Dienst `rampe.service`,
+> Systembenutzer und Pfade `/opt/rampe`, `/var/lib/rampe`.
 
 ## Überblick Server
 
 ```
 Internet ──https──▶ Host server.example.org (LXD)
-                     ├─ Container rproxy   nginx + Let's Encrypt, rampe.example.org → CONTAINER-IP:8080
-                     └─ Container rampe    Ubuntu 26.04: Rampe (systemd), LibreOffice, veraPDF, Schriften
+                     ├─ Container rproxy   nginx + Let's Encrypt, leo.example.org → CONTAINER-IP:8080
+                     └─ Container rampe    Ubuntu 26.04: Leo (systemd), LibreOffice, veraPDF, Schriften
 ```
 
 | Was | Wo (im Container `rampe`) |
@@ -19,7 +22,7 @@ Internet ──https──▶ Host server.example.org (LXD)
 | Benutzer | Systembenutzer `rampe`, Home `/var/lib/rampe` |
 | Benutzerdatei | `/var/lib/rampe/users.txt` (Rechte 600) |
 | Berichte | `/var/lib/rampe/data/jobs/` |
-| LibreOffice-Profil | `/var/lib/rampe/data/lo-profile` (legt Rampe selbst an) |
+| LibreOffice-Profil | `/var/lib/rampe/data/lo-profile` (legt Leo selbst an) |
 | veraPDF | `/opt/verapdf/verapdf` |
 | nginx-Konfiguration | Container `rproxy`: `/etc/nginx/conf.d/rampe.conf` (Vorlage: `deploy/nginx-rampe.conf`) |
 
@@ -39,7 +42,7 @@ lxc config set rampe limits.memory 1536MiB
 ```
 
 So ist der Container derzeit eingestellt. LibreOffice läuft immer nur einmal gleichzeitig,
-Rampe stellt weitere Exporte hinten an.
+Leo stellt weitere Exporte hinten an.
 
 ### 2. Pakete
 
@@ -54,7 +57,7 @@ lxc exec rampe -- apt-get install -y --no-install-recommends \
 `libreoffice-writer-nogui` ist LibreOffice ohne Oberfläche (kein X11 nötig).
 Zu den Schriften siehe [unten](#schriften).
 
-**LibreOffice 26.8 von The Document Foundation** (wird von Rampe verwendet): Das LibreOffice
+**LibreOffice 26.8 von The Document Foundation** (wird von Leo verwendet): Das LibreOffice
 26.2 aus Ubuntu 26.04 lässt beim PDF-Export alle Links aus Inhalts-, Abbildungs- und
 Tabellenverzeichnis weg. Die offiziellen Pakete installieren sich zusätzlich nach `/opt`;
 das Ubuntu-Paket bleibt als Rückfall und liefert die Abhängigkeiten.
@@ -118,13 +121,15 @@ Ohne Admin startet der Dienst nicht. Im Journal steht dann der Hinweis auf diese
 
 ```bash
 lxc file push deploy/nginx-rampe.conf rproxy/etc/nginx/conf.d/rampe.conf
-lxc exec rproxy -- certbot certonly --nginx -d rampe.example.org   # nur beim ersten Mal
+lxc exec rproxy -- certbot certonly --nginx -d leo.example.org   # nur beim ersten Mal
 lxc exec rproxy -- sh -c 'nginx -t && systemctl reload nginx'
 ```
 
 Wichtig in der Konfiguration: `client_max_body_size 300m` (große Berichte) und
 `proxy_read_timeout 300s` (Export und Prüfung großer Berichte dauern eine Weile).
 Die IP in `upstream` muss zur Adresse des Containers passen (`lxc list rampe`).
+Die alte Adresse `rampe.example.org` leitet dauerhaft (301) auf `leo.example.org` weiter; ihr Zertifikat
+erneuert certbot weiter. Anmeldungen gelten pro Adresse, nach dem Wechsel also einmal neu anmelden.
 
 ## Schriften
 
@@ -156,7 +161,7 @@ lxc exec rampe -- fc-match Calibri            # sollte "Carlito" liefern
 pdffonts bericht.pdf                          # auf dem eigenen Rechner (poppler-utils)
 ```
 
-Auch die Basisprüfung von Rampe listet die eingebetteten Schriften auf.
+Auch die Basisprüfung von Leo listet die eingebetteten Schriften auf.
 
 **Eigene Schriften nachinstallieren** (z. B. die Original-Schriften der Hausvorlage, sofern die
 Lizenz den Einsatz auf einem Server erlaubt; Microsoft-Schriften aus Windows oder Office sind
@@ -182,7 +187,7 @@ Server dieselben Schriften installieren, unter Arch Linux z. B. `pacman -S ttf-c
 Ohne Carlito wird Calibri hier durch Liberation Sans ersetzt, und das Layout weicht ab.
 
 veraPDF lokal: Installer von <https://verapdf.org/software/> nach `tools/verapdf` (wird von
-Rampe automatisch gefunden) oder an einen beliebigen Ort mit Verweis im PATH bzw. `VERAPDF=...`.
+Leo automatisch gefunden) oder an einen beliebigen Ort mit Verweis im PATH bzw. `VERAPDF=...`.
 
 ## Betrieb
 

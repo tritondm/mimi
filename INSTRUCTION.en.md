@@ -1,14 +1,16 @@
-# Rampe – User Guide
+# Leo – User Guide
 
 [Deutsch](INSTRUCTION.md) · **English**
 
-Rampe turns your Word report (.docx) into an **accessible PDF** (PDF/UA).
+*Leo – **L**eichte **E**rstellung **O**hne Barrieren (easy creation without barriers)*
+
+Leo turns your Word report (.docx) into an **accessible PDF** (PDF/UA).
 You upload the report in the browser, add what only a human can know
 (above all, descriptions for images), and get a checked PDF back.
 
-All you need is a browser. Address: **<https://rampe.example.org>**
+All you need is a browser. Address: **<https://leo.example.org>**
 
-> **Note:** Rampe's interface is in German. In this guide, button and field names are
+> **Note:** Leo's interface is in German. In this guide, button and field names are
 > given in German as they appear on screen, with an English translation in brackets.
 
 ---
@@ -17,9 +19,9 @@ All you need is a browser. Address: **<https://rampe.example.org>**
 
 ![Workflow: 1 Upload, 2 Analyse, 3 Correct, 4 Create and check PDF, 5 Download, 6 Check with PAC](docs/img/ablauf-benutzer.en.svg)
 
-## What Rampe can do
+## What Leo can do
 
-| Area | Rampe detects … | … and fixes it like this |
+| Area | Leo detects … | … and fixes it like this |
 |---|---|---|
 | Images, graphics, charts | missing or meaningless alt texts (“Bild 3”, file name) | you type the text, take over the caption, or mark the image as “decorative” |
 | Tables | first row not marked as header row | tick a checkbox |
@@ -34,21 +36,21 @@ All you need is a browser. Address: **<https://rampe.example.org>**
 You also get the **corrected Word file** back, so you don't have to re-enter anything
 when you make changes later.
 
-## What Rampe cannot do
+## What Leo cannot do
 
 | What | Why / what to do |
 |---|---|
-| **Edit text** (typos, paragraphs, layout) | Rampe only changes accessibility settings. Change the text in Word and upload again. |
-| **Write good alt texts** | Only a human knows whether a description makes sense. Rampe only notices when one is missing or obviously meaningless. |
-| **Repair the structure**: missing headings, bold text instead of headings, typed bullet points, empty paragraphs used as spacing | Rampe shows these places as hints. Please fix them in Word using styles. |
-| Convert **tables pasted as images** into real tables | Rampe points them out. Insert them in Word as real tables. |
+| **Edit text** (typos, paragraphs, layout) | Leo only changes accessibility settings. Change the text in Word and upload again. |
+| **Write good alt texts** | Only a human knows whether a description makes sense. Leo only notices when one is missing or obviously meaningless. |
+| **Repair the structure**: missing headings, bold text instead of headings, typed bullet points, empty paragraphs used as spacing | Leo shows these places as hints. Please fix them in Word using styles. |
+| Convert **tables pasted as images** into real tables | Leo points them out. Insert them in Word as real tables. |
 | Check **colours inside graphics** (diagrams, pasted charts) | Only text colours are checked. Recreate such graphics in the source file with darker colours. |
 | Check **contrast on coloured backgrounds** | Only contrast against white is checked. Check text on coloured areas yourself. |
 | Detect **passages in other languages** | Set the language of the passage in Word. |
 | Judge the **reading order** | Check it yourself in the PDF or with PAC. |
-| **Preview** EMF/WMF graphics, Word charts, SmartArt | Rampe only shows the type of graphic. Use the caption and section to find it. |
+| **Preview** EMF/WMF graphics, Word charts, SmartArt | Leo only shows the type of graphic. Use the caption and section to find it. |
 | Read **old .doc files** or PDFs | Save as .docx in Word. |
-| **Replace PAC** | You do the final check with PAC yourself. After Rampe it is usually a formality. |
+| **Replace PAC** | You do the final check with PAC yourself. After Leo it is usually a formality. |
 | **Layout exactly as in Word** | The PDF is created with LibreOffice. Small differences (line breaks, page count) are possible. |
 
 ---
@@ -84,17 +86,17 @@ At the top right you find **Abmelden** (Log out). Admins also see
 ## 2. Upload the Word file
 
 Click **Datei auswählen (.docx)** (Choose file) or drag the file into the box.
-Rampe reads the report and then shows the overview.
+Leo reads the report and then shows the overview.
 
 - Only **.docx** is accepted (no old .doc files, no PDF).
   Convert old files in Word with *File → Save As → Word Document (.docx)*.
 - The file stays on the server and is not passed on to third parties.
-- Rampe remembers the report you last worked on. If you reload the page or come back
+- Leo remembers the report you last worked on. If you reload the page or come back
   later, it is open again.
 - **Andere Datei** (Other file, bar at the bottom) closes the report and brings back the upload.
 
 > **Tip:** Fix structural problems (headings, lists, empty paragraphs) **in Word first**
-> and only then upload. Rampe cannot edit the text itself.
+> and only then upload. Leo cannot edit the text itself.
 
 ## 3. Tab “Dokument” (Document)
 
@@ -119,12 +121,12 @@ already preselected.
 ### Schriftfarben (Font colours – contrast)
 
 Text must stand out clearly from the white background (at least 4.5 : 1).
-Rampe lists colours that are too light, shows where they are used and suggests a darker
+Leo lists colours that are too light, shows where they are used and suggests a darker
 shade. Tick **„abdunkeln auf …“** (darken to …) to apply the suggestion.
 The colour looks almost the same afterwards but is easier to read.
 
 Coloured text **inside inserted graphics** (diagrams, charts as images) cannot be checked
-by Rampe. Please recreate such graphics in the source file with darker colours.
+by Leo. Please recreate such graphics in the source file with darker colours.
 
 ## 4. Tab “Bilder” (Images)
 
@@ -163,7 +165,7 @@ For each image you see a preview, the caption, the section it is in, and its sta
 For charts, state the **key message**, not every number. If everything is already in the
 text next to it, a reference is enough (“data see table 4”).
 
-**Graphics with text:** Rampe marks graphics that contain labels. Include these labels in
+**Graphics with text:** Leo marks graphics that contain labels. Include these labels in
 the alt text. If there is a lot of text, it is probably a **table pasted as an image** –
 please insert it in Word as a real table.
 
@@ -174,7 +176,7 @@ do not recognise the column headings.
 
 - For every table with column headings, tick **„erste Zeile ist Kopfzeile“**
   (first row is header row).
-- For orientation, Rampe shows the content of the first row and the section.
+- For orientation, Leo shows the content of the first row and the section.
 - Tables with **only one row** are usually layout tables. Better design them in Word
   without a table.
 
@@ -186,13 +188,13 @@ each page”*.
 ### Übersprungene Überschriftenebenen (Skipped heading levels)
 
 Headings must not skip a level (e.g. level 4 directly after level 2).
-Rampe can move the affected headings to the correct level – one by one with a checkbox or
+Leo can move the affected headings to the correct level – one by one with a checkbox or
 with **Alle korrigieren** (Correct all). This may change the chapter numbering; please check
 it in the PDF afterwards.
 
 ### Hinweise (Hints)
 
-Rampe **cannot** fix these items itself. Please correct them in Word and upload the
+Leo **cannot** fix these items itself. Please correct them in Word and upload the
 report again:
 
 | Hint | What to do in Word |
@@ -216,7 +218,7 @@ check whether the outline is right. This outline becomes the bookmarks in the PD
 ## 7. Saving
 
 The bar at the bottom shows **Ungespeicherte Änderungen** (Unsaved changes) as soon as you
-have changed something. Then click **Änderungen speichern** (Save changes). Rampe writes the
+have changed something. Then click **Änderungen speichern** (Save changes). Leo writes the
 corrections into the Word file and reads it in again straight away.
 
 Clicking **PDF erzeugen und prüfen** (Create and check PDF) saves automatically first.
@@ -226,7 +228,7 @@ If you try to leave the page with unsaved changes, the browser asks you to confi
 
 ### Automatic adjustments
 
-At the top, Rampe lists what is adjusted **automatically** during PDF export
+At the top, Leo lists what is adjusted **automatically** during PDF export
 (e.g. captions, bibliography, links in headers and footers). You don't have to do anything
 for this. The downloadable Word file is not affected.
 
@@ -244,7 +246,7 @@ people are working at the same time, it may take a little longer.
 
 Then you see two checks:
 
-1. **Basisprüfung** (Basic check) – Rampe's own check (title, language, alt texts,
+1. **Basisprüfung** (Basic check) – Leo's own check (title, language, alt texts,
    headings, table headers, fonts, links …). Every item has a ✓ or ✗ with an explanation.
 2. **veraPDF** – complete automated check against PDF/UA-1, on the same basis as PAC.
    Goal: **„konform“** (compliant).
@@ -256,13 +258,13 @@ If there are problems, go back to the relevant tab, fix them and create the PDF 
 | Button | What you get |
 |---|---|
 | **PDF herunterladen** (Download PDF) | the accessible PDF |
-| **Korrigierte Word-Datei (.docx)** (Corrected Word file) | your report with all corrections from Rampe (alt texts, header rows, colours …). Use this file for later changes so you don't have to re-enter anything. |
+| **Korrigierte Word-Datei (.docx)** (Corrected Word file) | your report with all corrections from Leo (alt texts, header rows, colours …). Use this file for later changes so you don't have to re-enter anything. |
 | **OpenDocument (.odt)** | the same version for LibreOffice |
 
 ## 9. Finally: check with PAC
 
 Open the PDF in **PAC** (PDF Accessibility Checker, Windows) and submit the check result
-together with the report. After Rampe this should only be a formality.
+together with the report. After Leo this should only be a formality.
 
 What no software can check remains your job:
 
@@ -275,12 +277,12 @@ What no software can check remains your job:
 ## Frequently asked questions
 
 **Do I have to re-enter everything after a change in Word?**
-No, as long as you continue working in Word with the **corrected Word file** from Rampe.
+No, as long as you continue working in Word with the **corrected Word file** from Leo.
 The alt texts and header rows are already in it.
 
 **I don't see a preview for an image.**
 There is no preview for certain formats (EMF/WMF, Word charts, shapes, SmartArt).
-Rampe then shows the type of graphic. Use the caption and section to find it.
+Leo then shows the type of graphic. Use the caption and section to find it.
 
 **The PDF looks slightly different from Word.**
 The PDF is created with LibreOffice. Small differences (line breaks, page count) are

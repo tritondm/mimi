@@ -890,7 +890,7 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
             if texts.len() > 3 {
                 ex.push("…".into());
             }
-            hints.push(Hint { severity: "warnung".into(), kind: "link".into(), text: format!("{} Link(s) zeigen auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…\\Downloads) und führen ins Leere: {}. Im PDF macht Rampe normalen Text daraus; in Word den Link entfernen (Rechtsklick → Link entfernen).", texts.len(), ex.join(", ")), section: String::new() });
+            hints.push(Hint { severity: "warnung".into(), kind: "link".into(), text: format!("{} Link(s) zeigen auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…\\Downloads) und führen ins Leere: {}. Im PDF macht Leo normalen Text daraus; in Word den Link entfernen (Rechtsklick → Link entfernen).", texts.len(), ex.join(", ")), section: String::new() });
         }
     }
 
@@ -1695,7 +1695,7 @@ fn rename_caption_style(xml: &[u8]) -> Result<(Vec<u8>, bool)> {
     Ok((w.into_inner().into_inner(), done))
 }
 
-const CAPTION_NEW_NAME: &str = "Bildunterschrift (Rampe)";
+const CAPTION_NEW_NAME: &str = "Bildunterschrift (Leo)";
 
 /// Feldbefehle für Literaturverzeichnisse: Word (BIBLIOGRAPHY), Citavi, Zotero, EndNote.
 fn is_bibliography_instr(instr: &str) -> bool {
@@ -1924,7 +1924,7 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
     if let Some(doc) = read_entry(docx, "word/document.xml")? {
         let frames = count_frames(&doc)?;
         if frames > 0 {
-            notes.push(format!("{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Rampe löst ihn nach dem Export dort heraus – das Layout bleibt unverändert."));
+            notes.push(format!("{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Leo löst ihn nach dem Export dort heraus – das Layout bleibt unverändert."));
         }
         let mut doc_changed = false;
         let (mut doc, n) = unlink_bibliography(&doc)?;

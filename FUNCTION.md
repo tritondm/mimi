@@ -1,8 +1,8 @@
-# Wie Rampe funktioniert
+# Wie Leo funktioniert
 
 **Deutsch** · [English](FUNCTION.en.md)
 
-Rampe macht aus einem Word-Bericht (.docx) ein barrierefreies PDF nach **PDF/UA-1**.
+Leo macht aus einem Word-Bericht (.docx) ein barrierefreies PDF nach **PDF/UA-1**.
 Die Mitarbeitenden laden den Bericht im Browser hoch, ergänzen dort, was nur ein Mensch
 wissen kann (z. B. Alternativtexte), und bekommen ein geprüftes PDF zurück.
 
@@ -18,7 +18,7 @@ Installation und Betrieb: [INSTALL.md](INSTALL.md) · Bedienung und Einstellunge
 | 2 Analysieren | `docx::analyze` | Bilder, Tabellen, Links, Überschriften, Farben, Titel und Sprache werden gelesen und als Liste von Befunden an den Browser geschickt. |
 | 3 Korrigieren | Browser → `POST /api/job/{id}/apply` | Die Änderungen werden mit `docx::apply` in `current.docx` geschrieben. Danach wird die Datei sofort neu analysiert. Ist sie nicht mehr lesbar, wird nicht gespeichert. |
 | 4 Vorbereiten | `docx::prepare_for_pdf` | Für den Export entsteht eine **Kopie** mit Anpassungen, die nur LibreOffice betreffen (siehe unten). |
-| 5 PDF erzeugen | LibreOffice ohne Oberfläche, danach `pdffix::fix_structure` | Aus der Kopie entstehen `out/current.pdf` (PDF/UA, getaggt) und `out/current.odt`. Anschließend richtet Rampe den Strukturbaum des PDFs (siehe [Nachbearbeitung](#nachbearbeitung-des-pdfs)). |
+| 5 PDF erzeugen | LibreOffice ohne Oberfläche, danach `pdffix::fix_structure` | Aus der Kopie entstehen `out/current.pdf` (PDF/UA, getaggt) und `out/current.odt`. Anschließend richtet Leo den Strukturbaum des PDFs (siehe [Nachbearbeitung](#nachbearbeitung-des-pdfs)). |
 | 6 Prüfen | `pdfcheck::basic_checks` + veraPDF | Basisprüfung und, falls installiert, die vollständige PDF/UA-1-Prüfung. Das Ergebnis liegt in `out/report.json`. |
 
 Die herunterladbare DOCX ist immer `current.docx`, also die Fassung mit den Korrekturen aus
@@ -40,14 +40,14 @@ Schritt 3 und ohne die Anpassungen aus Schritt 4. Sie bleibt eine normale Word-D
 ### Wie die Word-Datei bearbeitet wird
 
 Eine DOCX ist ein ZIP-Archiv mit XML-Dateien (`word/document.xml`, `word/styles.xml`,
-Kopf- und Fußzeilen …). Rampe liest das XML **ereignisbasiert** (quick-xml) und reicht alles
+Kopf- und Fußzeilen …). Leo liest das XML **ereignisbasiert** (quick-xml) und reicht alles
 unverändert durch. Neu geschrieben werden nur die Elemente, die sich tatsächlich ändern.
 Alle anderen ZIP-Einträge werden roh kopiert, ohne sie neu zu packen. So bleibt alles,
-was Rampe nicht versteht (Diagramme, Makros, Erweiterungen von Word), Byte für Byte erhalten.
+was Leo nicht versteht (Diagramme, Makros, Erweiterungen von Word), Byte für Byte erhalten.
 
 ## Was geprüft und korrigiert wird
 
-| Bereich | Erkennung | Korrektur in Rampe |
+| Bereich | Erkennung | Korrektur in Leo |
 |---|---|---|
 | Bilder, Formen, Diagramme | fehlender oder nichtssagender Alternativtext („Bild 3“, Dateiname) | Text eingeben, Bildunterschrift übernehmen oder „dekorativ“ |
 | Tabellen | erste Zeile nicht als Kopfzeile markiert | Häkchen → `w:tblHeader` |
@@ -60,7 +60,7 @@ was Rampe nicht versteht (Diagramme, Makros, Erweiterungen von Word), Byte für 
 ## Vorbereitung für LibreOffice
 
 LibreOffice erzeugt das PDF. Ein paar Eigenheiten beim Umwandeln von Word-Dateien würden
-aber zu PDF/UA-Fehlern führen, auch wenn das Word-Dokument selbst in Ordnung ist. Rampe
+aber zu PDF/UA-Fehlern führen, auch wenn das Word-Dokument selbst in Ordnung ist. Leo
 behebt sie in einer Kopie, die nur für den Export entsteht:
 
 ![Vergleich der PDF-Tags ohne und mit Vorbereitung](docs/img/vorbereitung.svg)
@@ -68,14 +68,14 @@ behebt sie in einer Kopie, die nur für den Export entsteht:
 | Anpassung | Warum | Funktion |
 |---|---|---|
 | Eigene Vorlagen mit dem Namen eines PDF-Standard-Tags (z. B. „TD“, „Quote“) bekommen den Zusatz „Vorlage“ | LibreOffice macht aus jedem Vorlagennamen einen Tag und leitet ihn per RoleMap um. Eine Vorlage „TD“ würde so **alle** Tabellenzellen zu Absätzen machen (veraPDF 7.1-7, 7.2-10, 7.2-43). | `rename_std_styles` |
-| Die Vorlage „Beschriftung“ (`caption`) heißt in der Kopie „Bildunterschrift (Rampe)“ | LibreOffice taggt Beschriftungen als `Caption`, aber frei stehend statt innerhalb von `Figure`/`Table`. PAC bemängelt das. Als normaler Absatz ist es korrekt. Nummerierung (SEQ-Felder) und Verzeichnisse bleiben gleich. | `rename_caption_style` |
+| Die Vorlage „Beschriftung“ (`caption`) heißt in der Kopie „Bildunterschrift (Leo)“ | LibreOffice taggt Beschriftungen als `Caption`, aber frei stehend statt innerhalb von `Figure`/`Table`. PAC bemängelt das. Als normaler Absatz ist es korrekt. Nummerierung (SEQ-Felder) und Verzeichnisse bleiben gleich. | `rename_caption_style` |
 | Links und Verweis-Felder (`STYLEREF`, `REF`, `PAGEREF` …) in Kopf- und Fußzeilen werden zu Text | Kopf- und Fußzeilen sind im PDF Artefakte. Ein Link darin ist ungetaggt, und zwar auf jeder Seite (veraPDF 7.18.5-1). | `unlink_header_footer` |
 | Literaturverzeichnis-Felder (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) werden zu Text | LibreOffice baut sonst ein geschütztes Verzeichnis, das anders aussieht als in Word und als Inhaltsverzeichnis (`TOC`) getaggt wird. | `unlink_bibliography` |
 | Absatzabstände der Tabellenvorlage werden direkt an die Zellabsätze geschrieben, soweit Absatzvorlage (außer „Standard“) oder direkte Formatierung sie nicht festlegen | So rechnet Word. LibreOffice nimmt stattdessen die Dokument-Standardwerte (z. B. Zeilenabstand 1,25 statt 1,1 aus „Tabellenraster“). Die Zeilen werden höher. Beim Praxistest-Bericht: 65 statt 57 Seiten. Bedingte Formate (erste Zeile usw.) werden nicht berücksichtigt. | `apply_table_spacing` |
-| Links auf lokale Dateien (`file://`, `C:\…`, `\\server\…`) werden zu Text | Sie führen im PDF ins Leere. Rampe meldet sie auch in der Analyse. | `unlink_local` |
+| Links auf lokale Dateien (`file://`, `C:\…`, `\\server\…`) werden zu Text | Sie führen im PDF ins Leere. Leo meldet sie auch in der Analyse. | `unlink_local` |
 | Bilder und Formen in Kopf-/Fußzeilen werden dekorativ, mit Alternativtext `rampe:dekorativ` | Kopf-/Fußzeilen sind Artefakte, verankerte Grafiken darin taggt LibreOffice aber als `Figure` (PAC: „Possibly inappropriate use of a Figure“). Bei Bildern genügt die Word-Markierung „dekorativ“. Formen (Zierbalken) taggt LibreOffice trotzdem; die Nachbearbeitung erkennt sie am Alternativtext. Dasselbe gilt für Formen, die im Text als dekorativ markiert sind. | `decorate_all`, `mark_decorative_alt` |
 
-Welche Anpassungen ein Bericht bekommt, zeigt Rampe vor dem Export im Reiter
+Welche Anpassungen ein Bericht bekommt, zeigt Leo vor dem Export im Reiter
 „PDF erzeugen“ an (`pdf_prep` in der Analyse).
 
 ## Nachbearbeitung des PDFs
@@ -99,7 +99,7 @@ PDF/UA-1 und veraPDF prüfen das nicht, PDF/UA-2 und PAC schon.
 
 Ein Umbau der Word-Datei (Rahmen auflösen) würde das Layout verändern. Vor allem
 „unten an der Seite verankert“ lässt sich mit normalem Text nicht nachbauen. Deshalb
-korrigiert Rampe stattdessen das fertige PDF: Jedes Blockelement, das in einem Absatz
+korrigiert Leo stattdessen das fertige PDF: Jedes Blockelement, das in einem Absatz
 steckt, wird eine Ebene höher direkt hinter diesen Absatz gehängt. Ein dadurch leerer Absatz
 fällt weg. Geändert werden nur Eltern-Verweise im Strukturbaum. Seiteninhalt, Zuordnung
 der Inhalte (MCID) und Layout bleiben unberührt.
@@ -133,7 +133,7 @@ macht die Mitarbeiterin bzw. der Mitarbeiter.
 
 100 Seiten, 64 Bilder, 12 Tabellen, 113 Links in den Verzeichnissen. Prüfung mit veraPDF 1.30.4 (PDF/UA-1):
 
-| | Word-Datei direkt | nur Vorbereitung | Vorbereitung + Korrekturen in Rampe |
+| | Word-Datei direkt | nur Vorbereitung | Vorbereitung + Korrekturen in Leo |
 |---|---|---|---|
 | Vorlage „TD“ umgeleitet (7.1-7, 7.2-10, 7.2-43) | ✗ | ✓ | ✓ |
 | Links in Fußzeilen (7.18.5-1) | ✗ | ✓ | ✓ |
@@ -176,7 +176,7 @@ RAMPE_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture
 ```
 
 Einen echten Bericht ohne Oberfläche durchspielen: Mit `RAMPE_TEST_APPLY=1` wird vorher
-alles angewendet, was man in Rampe anklicken kann. Alternativtexte werden dabei Platzhalter.
+alles angewendet, was man in Leo anklicken kann. Alternativtexte werden dabei Platzhalter.
 
 ```bash
 RAMPE_TEST_APPLY=1 RAMPE_TEST_IN=bericht.docx RAMPE_TEST_OUT=/tmp/rt \

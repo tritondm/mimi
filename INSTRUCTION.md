@@ -1,12 +1,14 @@
-# Rampe – Anleitung für Benutzerinnen und Benutzer
+# Leo – Anleitung für Benutzerinnen und Benutzer
 
 **Deutsch** · [English](INSTRUCTION.en.md)
 
-Rampe macht aus Ihrem Word-Bericht (.docx) ein **barrierefreies PDF** (PDF/UA).
+*Leo – **L**eichte **E**rstellung **O**hne Barrieren*
+
+Leo macht aus Ihrem Word-Bericht (.docx) ein **barrierefreies PDF** (PDF/UA).
 Sie laden den Bericht im Browser hoch, ergänzen, was nur ein Mensch wissen kann
 (vor allem Beschreibungen für Bilder), und bekommen ein geprüftes PDF zurück.
 
-Sie brauchen dafür nur einen Browser. Adresse: **<https://rampe.example.org>**
+Sie brauchen dafür nur einen Browser. Adresse: **<https://leo.example.org>**
 
 ---
 
@@ -14,9 +16,9 @@ Sie brauchen dafür nur einen Browser. Adresse: **<https://rampe.example.org>**
 
 ![Ablauf: 1 Hochladen, 2 Analysieren, 3 Korrigieren, 4 PDF erzeugen und prüfen, 5 Herunterladen, 6 mit PAC prüfen](docs/img/ablauf-benutzer.svg)
 
-## Was Rampe kann
+## Was Leo kann
 
-| Bereich | Rampe erkennt … | … und behebt es so |
+| Bereich | Leo erkennt … | … und behebt es so |
 |---|---|---|
 | Bilder, Grafiken, Diagramme | fehlende oder nichtssagende Alternativtexte („Bild 3“, Dateiname) | Sie tippen den Text ein, übernehmen die Bildunterschrift oder markieren das Bild als „dekorativ“ |
 | Tabellen | erste Zeile nicht als Kopfzeile markiert | Häkchen setzen |
@@ -31,21 +33,21 @@ Sie brauchen dafür nur einen Browser. Adresse: **<https://rampe.example.org>**
 Außerdem bekommen Sie die **korrigierte Word-Datei** zurück. Damit müssen Sie bei
 späteren Änderungen nichts neu eingeben.
 
-## Was Rampe nicht kann
+## Was Leo nicht kann
 
 | Was | Warum / was tun |
 |---|---|
-| **Text bearbeiten** (Tippfehler, Absätze, Layout) | Rampe ändert nur Barrierefreiheits-Einstellungen. Text in Word ändern und neu hochladen. |
-| **Gute Alternativtexte schreiben** | Ob eine Beschreibung sinnvoll ist, weiß nur ein Mensch. Rampe merkt nur, ob einer fehlt oder offensichtlich nichtssagend ist. |
-| **Struktur reparieren**: fehlende Überschriften, fett statt Überschrift, getippte Aufzählungen, leere Absätze als Abstand | Rampe zeigt diese Stellen als Hinweis an. Bitte in Word mit den Formatvorlagen beheben. |
-| **Tabellen als Bild** in echte Tabellen umwandeln | Rampe weist darauf hin. In Word als echte Tabelle einfügen. |
+| **Text bearbeiten** (Tippfehler, Absätze, Layout) | Leo ändert nur Barrierefreiheits-Einstellungen. Text in Word ändern und neu hochladen. |
+| **Gute Alternativtexte schreiben** | Ob eine Beschreibung sinnvoll ist, weiß nur ein Mensch. Leo merkt nur, ob einer fehlt oder offensichtlich nichtssagend ist. |
+| **Struktur reparieren**: fehlende Überschriften, fett statt Überschrift, getippte Aufzählungen, leere Absätze als Abstand | Leo zeigt diese Stellen als Hinweis an. Bitte in Word mit den Formatvorlagen beheben. |
+| **Tabellen als Bild** in echte Tabellen umwandeln | Leo weist darauf hin. In Word als echte Tabelle einfügen. |
 | **Farben in Grafiken** prüfen (Schemata, eingefügte Diagramme) | Nur Schrift im Text wird geprüft. Grafiken in der Ursprungsdatei mit dunkleren Farben neu erstellen. |
 | **Kontrast auf farbigem Hintergrund** prüfen | Geprüft wird nur gegen Weiß. Text auf farbigen Flächen selbst kontrollieren. |
 | **Fremdsprachige Passagen** erkennen | In Word die Sprache der Passage eigens festlegen. |
 | **Lesereihenfolge** beurteilen | Selbst im PDF bzw. mit PAC kontrollieren. |
-| **Vorschau** für EMF/WMF-Grafiken, Word-Diagramme, SmartArt | Rampe zeigt nur die Art der Grafik. An Bildunterschrift und Abschnitt orientieren. |
+| **Vorschau** für EMF/WMF-Grafiken, Word-Diagramme, SmartArt | Leo zeigt nur die Art der Grafik. An Bildunterschrift und Abschnitt orientieren. |
 | **Alte .doc-Dateien** oder PDFs einlesen | In Word als .docx speichern. |
-| **PAC ersetzen** | Den abschließenden Test mit PAC machen Sie selbst. Nach Rampe ist er meist eine Formsache. |
+| **PAC ersetzen** | Den abschließenden Test mit PAC machen Sie selbst. Nach Leo ist er meist eine Formsache. |
 | **Layout exakt wie in Word** | Das PDF wird mit LibreOffice erzeugt. Kleine Abweichungen (Zeilenumbrüche, Seitenzahl) sind möglich. |
 
 ---
@@ -82,17 +84,17 @@ Rechts oben finden Sie **Abmelden**. Admins sehen dort zusätzlich die
 ## 2. Word-Datei hochladen
 
 Klicken Sie auf **Datei auswählen (.docx)** oder ziehen Sie die Datei in das Feld.
-Rampe liest den Bericht ein und zeigt danach die Übersicht.
+Leo liest den Bericht ein und zeigt danach die Übersicht.
 
 - Nur **.docx** wird angenommen (keine alten .doc-Dateien, kein PDF).
   Alte Dateien in Word mit *Datei → Speichern unter → Word-Dokument (.docx)* umwandeln.
 - Die Datei bleibt auf dem Server und wird nicht an Dritte weitergegeben.
-- Rampe merkt sich den zuletzt bearbeiteten Bericht. Wenn Sie die Seite neu laden oder
+- Leo merkt sich den zuletzt bearbeiteten Bericht. Wenn Sie die Seite neu laden oder
   später wiederkommen, ist er wieder offen.
 - **Andere Datei** (Leiste unten) schließt den Bericht und öffnet wieder das Hochladen.
 
 > **Tipp:** Beheben Sie Strukturprobleme (Überschriften, Aufzählungen, leere Absätze)
-> am besten **zuerst in Word** und laden Sie erst dann hoch. Rampe kann den Text selbst
+> am besten **zuerst in Word** und laden Sie erst dann hoch. Leo kann den Text selbst
 > nicht bearbeiten.
 
 ## 3. Reiter „Dokument“
@@ -118,11 +120,11 @@ ergänzen“** gesetzt – es ist schon vorausgewählt.
 ### Schriftfarben (Kontrast)
 
 Text muss sich deutlich vom weißen Hintergrund abheben (mindestens 4,5 : 1).
-Rampe listet zu helle Farben auf, zeigt, wo sie vorkommen, und schlägt einen
+Leo listet zu helle Farben auf, zeigt, wo sie vorkommen, und schlägt einen
 dunkleren Farbton vor. Mit dem Häkchen **„abdunkeln auf …“** übernehmen Sie den Vorschlag.
 Die Farbe sieht danach fast gleich aus, ist aber besser lesbar.
 
-Farbige Schrift **in eingefügten Grafiken** (Schemata, Diagramme als Bild) kann Rampe
+Farbige Schrift **in eingefügten Grafiken** (Schemata, Diagramme als Bild) kann Leo
 nicht prüfen. Solche Grafiken bitte in der Ursprungsdatei mit dunkleren Farben neu erstellen.
 
 ## 4. Reiter „Bilder“
@@ -163,7 +165,7 @@ steht, und den Status:
 Bei Diagrammen die **Kernaussage** nennen, nicht jede Zahl. Steht alles schon im Text
 daneben, genügt ein Verweis („Daten siehe Tabelle 4“).
 
-**Grafiken mit Text:** Rampe kennzeichnet Grafiken, die Beschriftungen enthalten.
+**Grafiken mit Text:** Leo kennzeichnet Grafiken, die Beschriftungen enthalten.
 Nehmen Sie diese Beschriftungen in den Alternativtext auf. Bei sehr viel Text ist es
 vermutlich eine **Tabelle als Bild** – diese bitte in Word als echte Tabelle einfügen.
 
@@ -174,7 +176,7 @@ der Screenreader die Spaltenüberschriften nicht.
 
 - Setzen Sie bei jeder Tabelle mit Spaltenüberschriften das Häkchen
   **„erste Zeile ist Kopfzeile“**.
-- Zur Orientierung zeigt Rampe den Inhalt der ersten Zeile und den Abschnitt.
+- Zur Orientierung zeigt Leo den Inhalt der ersten Zeile und den Abschnitt.
 - Tabellen mit **nur einer Zeile** sind meist Layout-Tabellen. Besser in Word ohne
   Tabelle gestalten.
 
@@ -186,13 +188,13 @@ jeder Seite wiederholen“*.
 ### Übersprungene Überschriftenebenen
 
 Überschriften dürfen keine Ebene auslassen (z. B. Ebene 4 direkt nach Ebene 2).
-Rampe kann die betroffenen Überschriften auf die richtige Ebene setzen – einzeln per
+Leo kann die betroffenen Überschriften auf die richtige Ebene setzen – einzeln per
 Häkchen oder mit **Alle korrigieren**. Dabei kann sich die Nummerierung der Kapitel
 ändern; bitte danach im PDF kontrollieren.
 
 ### Hinweise
 
-Diese Punkte kann Rampe **nicht** selbst beheben. Bitte in Word korrigieren und den
+Diese Punkte kann Leo **nicht** selbst beheben. Bitte in Word korrigieren und den
 Bericht neu hochladen:
 
 | Hinweis | Was tun in Word |
@@ -215,7 +217,7 @@ ob die Gliederung stimmt. Diese Gliederung wird im PDF zu den Lesezeichen.
 ## 7. Speichern
 
 Die Leiste unten zeigt **Ungespeicherte Änderungen**, sobald Sie etwas geändert haben.
-Klicken Sie dann auf **Änderungen speichern**. Rampe schreibt die Korrekturen in die
+Klicken Sie dann auf **Änderungen speichern**. Leo schreibt die Korrekturen in die
 Word-Datei und liest sie sofort neu ein.
 
 Beim Klick auf **PDF erzeugen und prüfen** wird automatisch vorher gespeichert.
@@ -225,7 +227,7 @@ Wenn Sie die Seite mit ungespeicherten Änderungen verlassen wollen, fragt der B
 
 ### Automatische Anpassungen
 
-Oben listet Rampe auf, was beim PDF-Export **automatisch** angepasst wird
+Oben listet Leo auf, was beim PDF-Export **automatisch** angepasst wird
 (z. B. Beschriftungen, Literaturverzeichnis, Links in Kopf- und Fußzeilen). Sie müssen
 dafür nichts tun. Die herunterladbare Word-Datei bleibt davon unberührt.
 
@@ -243,7 +245,7 @@ Klicken Sie auf **PDF erzeugen und prüfen**. Bei großen Berichten dauert das
 
 Danach sehen Sie zwei Prüfungen:
 
-1. **Basisprüfung** – Rampes eigene Prüfung (Titel, Sprache, Alternativtexte,
+1. **Basisprüfung** – Leos eigene Prüfung (Titel, Sprache, Alternativtexte,
    Überschriften, Tabellenköpfe, Schriften, Links …). Jeder Punkt hat ein ✓ oder ✗
    mit Erklärung.
 2. **veraPDF** – vollständige maschinelle Prüfung nach PDF/UA-1, auf derselben Grundlage
@@ -257,13 +259,13 @@ PDF erneut.
 | Knopf | Was Sie bekommen |
 |---|---|
 | **PDF herunterladen** | das barrierefreie PDF |
-| **Korrigierte Word-Datei (.docx)** | Ihr Bericht mit allen Korrekturen aus Rampe (Alternativtexte, Kopfzeilen, Farben …). Verwenden Sie diese Datei für spätere Änderungen, dann müssen Sie nicht alles neu eingeben. |
+| **Korrigierte Word-Datei (.docx)** | Ihr Bericht mit allen Korrekturen aus Leo (Alternativtexte, Kopfzeilen, Farben …). Verwenden Sie diese Datei für spätere Änderungen, dann müssen Sie nicht alles neu eingeben. |
 | **OpenDocument (.odt)** | dieselbe Fassung für LibreOffice |
 
 ## 9. Abschließend: Prüfung mit PAC
 
 Öffnen Sie das PDF in **PAC** (PDF Accessibility Checker, Windows) und übermitteln Sie das
-Prüfergebnis zusammen mit dem Bericht. Nach Rampe sollte das nur noch eine Formsache sein.
+Prüfergebnis zusammen mit dem Bericht. Nach Leo sollte das nur noch eine Formsache sein.
 
 Was keine Software prüfen kann, bleibt bei Ihnen:
 
@@ -276,12 +278,12 @@ Was keine Software prüfen kann, bleibt bei Ihnen:
 ## Häufige Fragen
 
 **Muss ich nach einer Änderung in Word wieder alles neu eingeben?**
-Nein, wenn Sie in Word mit der **korrigierten Word-Datei** aus Rampe weiterarbeiten.
+Nein, wenn Sie in Word mit der **korrigierten Word-Datei** aus Leo weiterarbeiten.
 Die Alternativtexte und Kopfzeilen stecken dann schon darin.
 
 **Ich sehe bei einem Bild keine Vorschau.**
 Für bestimmte Formate (EMF/WMF, Word-Diagramme, Formen, SmartArt) gibt es keine Vorschau.
-Rampe zeigt dann die Art der Grafik an. Orientieren Sie sich an Bildunterschrift und Abschnitt.
+Leo zeigt dann die Art der Grafik an. Orientieren Sie sich an Bildunterschrift und Abschnitt.
 
 **Das PDF sieht etwas anders aus als in Word.**
 Das PDF wird mit LibreOffice erzeugt. Kleine Abweichungen (Zeilenumbrüche, Seitenzahl)

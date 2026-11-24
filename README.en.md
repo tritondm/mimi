@@ -1,6 +1,8 @@
-# Rampe – making Word reports accessible (prototype)
+# Leo – making Word reports accessible (prototype)
 
 [Deutsch](README.md) · **English**
+
+**Leo** stands for **L**eichte **E**rstellung **O**hne Barrieren (German for “easy creation without barriers”).
 
 Upload a Word report (.docx) → see problems and fix them right away → create and check an
 accessible PDF (PDF/UA) → download the PDF, the corrected DOCX and an ODT.
@@ -67,7 +69,7 @@ Staff only need a browser.
 | Font colours   | contrast below 4.5 : 1 against white (styles, bullets, direct formatting) | yes (darken shade) |
 | Structure      | no headings, level jumps, bold instead of heading, typed lists, empty paragraphs as spacing | no – hint, fix in Word |
 
-During PDF export Rampe automatically adjusts a **copy** of the document (the downloadable
+During PDF export Leo automatically adjusts a **copy** of the document (the downloadable
 DOCX stays unchanged):
 
 - Custom styles named like a standard PDF tag (e.g. “TD”, “TH”, “Quote”) are renamed.
@@ -90,7 +92,7 @@ Images are embedded at full resolution with JPEG quality 95. Optionally this can
 losslessly via a checkbox before export: better quality and no fringes on transparent
 backgrounds, but a considerably larger file.
 
-After export Rampe fixes the PDF's structure tree: contents of Word frames and text boxes
+After export Leo fixes the PDF's structure tree: contents of Word frames and text boxes
 (title block, imprint) that LibreOffice puts inside a paragraph are moved out of it. The
 layout stays unchanged, see [FUNCTION.en.md](FUNCTION.en.md#post-processing-of-the-pdf).
 
@@ -103,7 +105,7 @@ After export the tool checks the PDF:
    (Matterhorn Protocol – the same basis as PAC).
 
 The final test with **PAC** remains with the staff member (PAC is Windows-only and has no
-command line). After Rampe it should only be a formality.
+command line). After Leo it should only be a formality.
 
 ## Installing veraPDF (once, recommended)
 
@@ -114,7 +116,7 @@ Download veraPDF (Java) from <https://verapdf.org/software/>, run the installer 
 java -jar verapdf-izpack-installer-*.jar
 ```
 
-Rampe then finds veraPDF automatically (or set the path with `VERAPDF=...`).
+Leo then finds veraPDF automatically (or set the path with `VERAPDF=...`).
 On the server: see [INSTALL.en.md](INSTALL.en.md#4-verapdf).
 
 ## Known limitations of the prototype
@@ -128,7 +130,7 @@ On the server: see [INSTALL.en.md](INSTALL.en.md#4-verapdf).
 - Old VML graphics (very old Word files) are not detected.
 - Preview only for PNG/JPG/GIF/SVG, not for EMF/WMF.
 - Font colours inside inserted graphics (EMF/WMF, images) are not checked; PAC does check
-  text in vector graphics, though. Rampe points out EMF/WMF and SmartArt graphics with text.
+  text in vector graphics, though. Leo points out EMF/WMF and SmartArt graphics with text.
 - Contrast is only checked against white, not against shaded paragraphs/cells.
 - Reference fields in headers/footers are only recognised as simple fields (`w:fldSimple`),
   not as complex fields.

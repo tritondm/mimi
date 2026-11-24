@@ -1,6 +1,8 @@
-# Rampe – Word-Berichte barrierefrei machen (Prototyp)
+# Leo – Word-Berichte barrierefrei machen (Prototyp)
 
 **Deutsch** · [English](README.en.md)
+
+**Leo** steht für **L**eichte **E**rstellung **O**hne Barrieren.
 
 Word-Bericht (.docx) hochladen → Probleme anzeigen und direkt beheben → barrierefreies
 PDF (PDF/UA) erzeugen und prüfen → PDF, korrigierte DOCX und ODT herunterladen.
@@ -64,7 +66,7 @@ Die Mitarbeitenden brauchen nur einen Browser.
 | Schriftfarben  | Kontrast unter 4,5 : 1 zu Weiß (Vorlagen, Aufzählungszeichen, direkt) | ja (Farbton abdunkeln) |
 | Struktur       | keine Überschriften, Sprünge in den Ebenen, fett statt Überschrift, getippte Aufzählungen, leere Absätze als Abstand | nein – Hinweis, in Word korrigieren |
 
-Beim PDF-Export passt Rampe eine **Kopie** des Dokuments automatisch an (die herunterladbare
+Beim PDF-Export passt Leo eine **Kopie** des Dokuments automatisch an (die herunterladbare
 DOCX bleibt unverändert):
 
 - Eigene Formatvorlagen, die wie ein PDF-Standard-Tag heißen (z. B. „TD“, „TH“, „Quote“),
@@ -87,7 +89,7 @@ Hintergrund, aber deutlich größere Datei.
   LibreOffice macht daraus sonst ein geschütztes Verzeichnis mit anderer Formatierung, getaggt
   als Inhaltsverzeichnis (`TOC`).
 
-Nach dem Export richtet Rampe den Strukturbaum des PDFs: Inhalte von Word-Rahmen und
+Nach dem Export richtet Leo den Strukturbaum des PDFs: Inhalte von Word-Rahmen und
 Textfeldern (Titelblock, Impressum), die LibreOffice in einen Absatz hängt, werden dort
 herausgelöst. Das Layout bleibt unverändert, siehe [FUNCTION.md](FUNCTION.md#nachbearbeitung-des-pdfs).
 
@@ -111,7 +113,7 @@ Zielordner `tools/verapdf` (in diesem Projekt) wählen:
 java -jar verapdf-izpack-installer-*.jar
 ```
 
-Rampe findet veraPDF dann automatisch (oder Pfad über `VERAPDF=...` angeben).
+Leo findet veraPDF dann automatisch (oder Pfad über `VERAPDF=...` angeben).
 Am Server: siehe [INSTALL.md](INSTALL.md#4-verapdf).
 
 ## Bekannte Grenzen des Prototyps
@@ -125,7 +127,7 @@ Am Server: siehe [INSTALL.md](INSTALL.md#4-verapdf).
 - Alte VML-Grafiken (sehr alte Word-Dateien) werden nicht erkannt.
 - Vorschau nur für PNG/JPG/GIF/SVG, nicht für EMF/WMF.
 - Schriftfarben in eingefügten Grafiken (EMF/WMF, Bilder) werden nicht geprüft; PAC prüft
-  Text in Vektorgrafiken aber mit. Rampe weist auf EMF/WMF- und SmartArt-Grafiken mit Text hin.
+  Text in Vektorgrafiken aber mit. Leo weist auf EMF/WMF- und SmartArt-Grafiken mit Text hin.
 - Kontrast wird nur gegen Weiß geprüft, nicht gegen farbig hinterlegte Absätze/Zellen.
 - Verweis-Felder in Kopf-/Fußzeilen werden nur als einfaches Feld (`w:fldSimple`) erkannt,
   nicht als zusammengesetztes Feld.

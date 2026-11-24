@@ -7,7 +7,7 @@
   <rect x="4" y="4" width="470" height="44" rx="10" fill="#fde8e8" stroke="#c53030"/>
   <text x="239" y="32" font-size="16" font-weight="700" text-anchor="middle" fill="#1a1a1a">LibreOffice direkt (Word-Datei unverändert)</text>
   <rect x="486" y="4" width="470" height="44" rx="10" fill="#e5f5e8" stroke="#2f855a"/>
-  <text x="721" y="32" font-size="16" font-weight="700" text-anchor="middle" fill="#1a1a1a">Mit Rampe-Vorbereitung (Kopie)</text>
+  <text x="721" y="32" font-size="16" font-weight="700" text-anchor="middle" fill="#1a1a1a">Mit Leo-Vorbereitung (Kopie)</text>
 
   <g font-size="13" fill="#1a1a1a">
     <!-- Zeile 1: Beschriftung -->
@@ -15,7 +15,7 @@
     <rect x="14" y="96" width="74" height="24" rx="5" fill="#c53030"/>
     <text x="51" y="113" text-anchor="middle" fill="#fff" font-weight="700">Caption</text>
     <text x="98" y="113">frei stehend, nicht in Figure/Table → PAC-Fehler</text>
-    <text x="496" y="86" font-weight="700">Vorlage heißt „Bildunterschrift (Rampe)“</text>
+    <text x="496" y="86" font-weight="700">Vorlage heißt „Bildunterschrift (Leo)“</text>
     <rect x="496" y="96" width="34" height="24" rx="5" fill="#2f855a"/>
     <text x="513" y="113" text-anchor="middle" fill="#fff" font-weight="700">P</text>
     <text x="540" y="113">normaler Absatz, sieht gleich aus</text>
