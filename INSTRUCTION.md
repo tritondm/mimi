@@ -9,7 +9,7 @@ Mimi macht aus Ihrem Word-Bericht (.docx) oder Ihrer OpenDocument-Datei (.odt, L
 Sie laden den Bericht im Browser hoch, ergänzen, was nur ein Mensch wissen kann
 (vor allem Beschreibungen für Bilder), und bekommen ein geprüftes PDF zurück.
 
-Sie brauchen dafür nur einen Browser. Adresse: **<https://mimi.example.org>**
+Sie brauchen dafür nur einen Browser und die Adresse von Mimi, die Sie von Ihrem Admin bekommen.
 
 ---
 

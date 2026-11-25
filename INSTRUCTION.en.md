@@ -9,7 +9,7 @@ Mimi turns your Word report (.docx) or OpenDocument file (.odt, LibreOffice) int
 You upload the report in the browser, add what only a human can know
 (above all, descriptions for images), and get a checked PDF back.
 
-All you need is a browser. Address: **<https://mimi.example.org>**
+All you need is a browser and the address of Mimi, which you get from your admin.
 
 > **Note:** Mimi's interface is in German. In this guide, button and field names are
 > given in German as they appear on screen, with an English translation in brackets.
