@@ -45,7 +45,7 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
   Lost phone: admins reset it under `/admin`.
 - **Audit log:** logins, user management, two-factor and actions on reports (uploaded, PDF
   created, downloaded, deleted) with time, user and IP address. Without file names and contents.
-  Admins see it under `/admin` (“Protokoll”). Entries are deleted after 90 days (`AUDIT_DAYS`).
+  Admins see it under `/protokoll`, with filters by period and action. Entries are deleted after 90 days (`AUDIT_DAYS`).
 - Passwords are stored hashed with Argon2id in `users.txt` (file mode 600), together with the
   two-factor secrets.
 - Sessions: cookie `HttpOnly`, `SameSite=Strict`, 8 hours from the last activity.
@@ -53,6 +53,7 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
 - After 5 failed attempts the user name is locked for 5 minutes.
 - Write requests from foreign websites are rejected (origin check).
 - Behind a reverse proxy with HTTPS, set `COOKIE_SECURE=1`.
+- Light, dark or automatic appearance (as in the operating system), switchable in the top bar, stored in the browser.
 
 ## Settings (environment variables)
 

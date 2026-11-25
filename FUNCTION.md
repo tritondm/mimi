@@ -41,6 +41,8 @@ Schritt 3 und ohne die Anpassungen aus Schritt 4. Sie bleibt eine normale Word-D
 | `src/pdfcheck.rs` | Basisprüfung des PDFs, Aufruf von veraPDF |
 | `static/index.html` | Die gesamte Oberfläche (eine Seite, ohne externe Abhängigkeiten) |
 | `static/admin.html` | Benutzerverwaltung |
+| `static/audit.html` | Protokoll (Audit-Log) |
+| `static/menu.css`, `static/menu.js` | gemeinsame Kopfzeile aller Seiten: Navigation, Benutzermenü |
 | `deploy/` | Deploy-Skript, systemd-Dienst, nginx-Konfiguration |
 
 ### Wie die Word-Datei bearbeitet wird

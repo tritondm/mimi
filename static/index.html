@@ -5,30 +5,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Leo – Leichte Erstellung Ohne Barrieren</title>
+<script>try { const t = localStorage.getItem('leo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="/menu.css">
 <style>
-:root {
-  --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;
-  --accent: #1f5fbf; --accent-text: #ffffff; --ok: #1d7a3e; --ok-bg: #e6f4ea;
-  --err: #b3261e; --err-bg: #fce8e6; --warn: #8a5a00; --warn-bg: #fff4d6; --info: #3c4a5c; --info-bg: #eef1f5;
-  --focus: #ffb300;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14171b; --card: #1d2127; --text: #e8eaed; --muted: #a2abb6; --line: #343a42;
-    --accent: #7fb0ff; --accent-text: #0d1b33; --ok: #7ed69b; --ok-bg: #173323;
-    --err: #ff9d94; --err-bg: #3d1a17; --warn: #ffd27a; --warn-bg: #3a2d0e; --info: #c3cdd9; --info-bg: #262c34;
-  }
-}
 * { box-sizing: border-box; }
 body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
-header { background: var(--card); border-bottom: 1px solid var(--line); padding: 16px; }
-header h1 { margin: 0; font-size: 1.3rem; }
-header h1 .claim { display: inline-block; font-size: 0.85rem; font-weight: 400; color: var(--muted); margin-left: 6px; }
-header p { margin: 4px 0 0; color: var(--muted); }
-header .bar { max-width: 1100px; margin: 0 auto; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
-#userbox { display: flex; gap: 10px; align-items: center; }
 #login form { max-width: 360px; display: grid; gap: 12px; }
 main { max-width: 1100px; margin: 0 auto; padding: 16px 16px 120px; }
+.intro { margin: 8px 0 16px; }
+.intro h1 { font-size: 1.35rem; margin: 0; }
+.intro p { margin: 2px 0 0; color: var(--muted); }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
 h2 { font-size: 1.15rem; margin: 0 0 12px; }
 h3 { font-size: 1rem; margin: 0 0 6px; }
@@ -86,16 +72,16 @@ ul.hints li:first-child { border-top: 0; }
 </style>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <div>
-      <h1>Leo <span class="claim">Leichte Erstellung Ohne Barrieren</span></h1>
-      <p>Barrierefrei-Prüfung für Berichte: Word-Datei hochladen → Probleme beheben → barrierefreies PDF (PDF/UA) erzeugen und prüfen</p>
-    </div>
-    <div id="userbox" class="hidden"><span class="muted">Angemeldet als <strong id="username"></strong></span><button class="secondary" id="mfabtn" aria-controls="mfa" aria-expanded="false">Zwei-Faktor</button><a class="btn secondary hidden" id="adminlink" href="/admin">Benutzerverwaltung</a><button class="secondary" id="logout">Abmelden</button></div>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/"><span class="logo" aria-hidden="true">L</span><span class="brand-text"><span class="brand-name">Leo</span><span class="brand-claim">Leichte Erstellung Ohne Barrieren</span></span></a>
+    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü"></nav>
+    <button type="button" class="themebtn" id="themebtn"></button>
+    <div class="usermenu hidden" id="usermenu"></div>
   </div>
 </header>
 <main>
+  <div class="intro"><h1>Barrierefrei-Prüfung für Berichte</h1><p>Word-Datei hochladen → Probleme beheben → barrierefreies PDF (PDF/UA) erzeugen und prüfen</p></div>
   <div id="error" class="error-box hidden" role="alert"></div>
 
   <section id="login" class="card hidden" aria-labelledby="h-login">
@@ -229,6 +215,7 @@ ul.hints li:first-child { border-top: 0; }
   </div>
 </div>
 
+<script src="/menu.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -598,20 +585,20 @@ window.addEventListener('beforeunload', e => { if (job && dirty()) { e.preventDe
 // --- Anmeldung ---
 function showLogin() {
   job = null;
-  ['#upload', '#workspace', '#actions', '#userbox'].forEach(s => $(s).classList.add('hidden'));
+  ['#upload', '#workspace', '#actions', '#mfa'].forEach(s => $(s).classList.add('hidden'));
+  leoMenu.hide();
   $('#login').classList.remove('hidden');
   $('#l-user').focus();
 }
 async function afterLogin() {
   let info = {user: '', admin: false};
   try { info = await api('/api/me'); } catch (e) { return; }
-  $('#username').textContent = info.user;
+  leoMenu.show(info, 'bericht');
   mfaOn = !!info.mfa;
   ttlDays = info.ttl_days || 0;
   $('#ttlinfo').textContent = ttlDays ? ` Hochgeladene Berichte werden ${ttlDays} Tage nach der letzten Nutzung automatisch gelöscht, ältere Berichte nach einem Tag, sobald Sie einen neuen hochladen.` : '';
-  $('#adminlink').classList.toggle('hidden', !info.admin);
-  $('#userbox').classList.remove('hidden');
   $('#login').classList.add('hidden');
+  if (new URLSearchParams(location.search).has('zwei-faktor')) { history.replaceState(null, '', '/'); mfaOpen(true); }
   $('#upload').classList.remove('hidden');
   // zuletzt bearbeiteten Bericht wieder öffnen
   let id = null; try { id = localStorage.getItem('bf-job'); } catch (e) {}
@@ -649,7 +636,6 @@ $('#l-user').addEventListener('input', () => $('#l-codewrap').classList.add('hid
 let mfaOn = false;
 function mfaOpen(open) {
   $('#mfa').classList.toggle('hidden', !open);
-  $('#mfabtn').setAttribute('aria-expanded', open);
   $('#mfamsg').textContent = '';
   if (open) { renderMfa(); $('#h-mfa').setAttribute('tabindex', '-1'); $('#h-mfa').focus(); }
 }
@@ -661,8 +647,9 @@ function renderMfa() {
     : `<p>Mit der Zwei-Faktor-Anmeldung braucht man zum Anmelden außer dem Passwort einen Code, den eine App auf Ihrem Handy alle 30 Sekunden neu erzeugt (z.&nbsp;B. Microsoft Authenticator, Google Authenticator, FreeOTP). Ein gestohlenes Passwort allein reicht dann nicht mehr. Freiwillig.</p>
        <p><button id="mfastart">Einrichten</button></p>`;
 }
-$('#mfabtn').addEventListener('click', () => mfaOpen($('#mfa').classList.contains('hidden')));
-$('#mfaclose').addEventListener('click', () => { mfaOpen(false); $('#mfabtn').focus(); });
+// Benutzermenü → „Zwei-Faktor-Anmeldung“: hier auf der Seite öffnen
+document.addEventListener('leo-mfa', e => { e.preventDefault(); mfaOpen(true); });
+$('#mfaclose').addEventListener('click', () => { mfaOpen(false); document.querySelector('#usermenu > button')?.focus(); });
 $('#mfabody').addEventListener('click', async e => {
   if (e.target.id !== 'mfastart') return;
   showError('');
@@ -687,16 +674,15 @@ $('#mfabody').addEventListener('submit', async e => {
   const code = (on ? $('#mfa-on-code') : $('#mfa-off-code')).value;
   try {
     const r = await api(on ? '/api/mfa/enable' : '/api/mfa/disable', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({code})});
-    mfaOn = r.mfa; renderMfa();
+    mfaOn = r.mfa; renderMfa(); leoMenu.setMfa(mfaOn);
     $('#mfamsg').innerHTML = mfaOn ? '<span class="badge b-ok">✓</span> Zwei-Faktor-Anmeldung eingeschaltet.' : 'Zwei-Faktor-Anmeldung ausgeschaltet.';
     $('#h-mfa').focus();
   } catch (err) { showError(err.message); }
 });
-$('#logout').addEventListener('click', async () => {
-  if (job && dirty() && !confirm('Ungespeicherte Änderungen verwerfen?')) return;
-  try { await api('/api/logout', {method: 'POST'}); } catch (e) {}
-  try { localStorage.removeItem('bf-job'); } catch (e) {}
-  location.reload();
+// Benutzermenü → „Abmelden“: bei ungespeicherten Änderungen nachfragen
+document.addEventListener('leo-logout', e => {
+  if (job && dirty() && !confirm('Ungespeicherte Änderungen verwerfen?')) { e.preventDefault(); return; }
+  job = null;
 });
 (async () => {
   try { const r = await fetch('/api/me', {credentials: 'same-origin'}); if (r.ok) { afterLogin(); return; } } catch (e) {}

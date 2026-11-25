@@ -43,7 +43,7 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
   zählt als Fehlversuch. Handy verloren: Admins setzen sie unter `/admin` zurück.
 - **Audit-Log:** Anmeldungen, Benutzerverwaltung, Zwei-Faktor und Aktionen an Berichten
   (hochgeladen, PDF erzeugt, heruntergeladen, gelöscht) mit Zeit, Benutzer und IP-Adresse.
-  Ohne Dateinamen und Inhalte. Admins sehen es unter `/admin` („Protokoll“). Einträge werden
+  Ohne Dateinamen und Inhalte. Admins sehen es unter `/protokoll`, mit Filtern nach Zeitraum und Aktion. Einträge werden
   nach 90 Tagen gelöscht (`AUDIT_DAYS`).
 - Passwörter werden mit Argon2id gehasht in `users.txt` gespeichert (Dateirechte 600),
   dort auch die Geheimnisse der Zwei-Faktor-Anmeldung.
@@ -52,6 +52,7 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
 - Nach 5 Fehlversuchen wird der Benutzername 5 Minuten gesperrt.
 - Schreibende Anfragen von fremden Webseiten werden abgewiesen (Origin-Prüfung).
 - Hinter einem Reverse-Proxy mit HTTPS `COOKIE_SECURE=1` setzen.
+- Darstellung hell, dunkel oder automatisch (wie im Betriebssystem), umschaltbar in der Kopfzeile, gespeichert im Browser.
 
 ## Einstellungen (Umgebungsvariablen)
 

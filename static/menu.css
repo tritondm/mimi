@@ -1,0 +1,65 @@
+/* SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org */
+/* Farben aller Seiten. Darstellung: <html data-theme="light|dark">, ohne Angabe wie das System. */
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;
+  --accent: #1f5fbf; --accent-text: #ffffff; --ok: #1d7a3e; --ok-bg: #e6f4ea;
+  --err: #b3261e; --err-bg: #fce8e6; --warn: #8a5a00; --warn-bg: #fff4d6; --info: #3c4a5c; --info-bg: #eef1f5;
+  --focus: #ffb300;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #14171b; --card: #1d2127; --text: #e8eaed; --muted: #a2abb6; --line: #343a42;
+  --accent: #7fb0ff; --accent-text: #0d1b33; --ok: #7ed69b; --ok-bg: #173323;
+  --err: #ff9d94; --err-bg: #3d1a17; --warn: #ffd27a; --warn-bg: #3a2d0e; --info: #c3cdd9; --info-bg: #262c34;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --bg: #14171b; --card: #1d2127; --text: #e8eaed; --muted: #a2abb6; --line: #343a42;
+  --accent: #7fb0ff; --accent-text: #0d1b33; --ok: #7ed69b; --ok-bg: #173323;
+  --err: #ff9d94; --err-bg: #3d1a17; --warn: #ffd27a; --warn-bg: #3a2d0e; --info: #c3cdd9; --info-bg: #262c34;
+    color-scheme: dark;
+  }
+}
+
+/* Gemeinsame Kopfzeile aller Seiten. Sie bleibt oben stehen: fokussierte Elemente nicht darunter verstecken (WCAG 2.4.11) */
+html { scroll-padding-top: 90px; }
+.topbar { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+.topbar-in { max-width: 1100px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px 24px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; margin-right: auto; border-radius: 8px; }
+.brand .logo { width: 36px; height: 36px; border-radius: 9px; background: var(--accent); color: var(--accent-text); display: grid; place-items: center; font-weight: 800; font-size: 1.15rem; flex: none; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-name { font-weight: 700; font-size: 1.15rem; }
+.brand-claim { font-size: .8rem; color: var(--muted); }
+
+.mainnav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; flex-wrap: wrap; }
+.mainnav a { display: block; padding: 7px 12px; border-radius: 6px; color: var(--text); text-decoration: none; font-weight: 500; }
+.mainnav a:hover { background: var(--info-bg); }
+.mainnav a[aria-current="page"] { background: var(--info-bg); color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
+
+.usermenu { position: relative; }
+.usermenu > button { display: flex; align-items: center; gap: 8px; background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 4px; font: inherit; cursor: pointer; }
+.usermenu > button:hover { background: var(--info-bg); }
+.usermenu .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--info-bg); color: var(--accent); display: grid; place-items: center; font-weight: 700; text-transform: uppercase; }
+.usermenu .caret { font-size: .7rem; color: var(--muted); }
+.usermenu .panel { position: absolute; right: 0; top: calc(100% + 6px); min-width: 240px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 6px; }
+.usermenu .panel .who { padding: 8px 10px 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; font-size: .9rem; color: var(--muted); }
+.usermenu .panel .who strong { color: var(--text); display: block; font-size: 1rem; }
+.usermenu .panel a, .usermenu .panel button { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; text-align: left; padding: 8px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font: inherit; text-decoration: none; cursor: pointer; }
+.usermenu .panel a:hover, .usermenu .panel button:hover { background: var(--info-bg); }
+.usermenu .panel .state { font-size: .8rem; color: var(--muted); }
+.usermenu .panel .state.on { color: var(--ok); font-weight: 600; }
+.topbar .hidden { display: none !important; }
+
+@media (max-width: 640px) {
+  .brand-claim { display: none; }
+  .mainnav { order: 3; width: 100%; }
+  .usermenu .name { display: none; }
+  .usermenu > button { padding-right: 8px; }
+}
+
+/* Umschalter Darstellung */
+.themebtn { display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .9rem; cursor: pointer; }
+.themebtn:hover { background: var(--info-bg); }
+.themebtn .ico { display: flex; }
+@media (max-width: 640px) { .themebtn .lbl { display: none; } }

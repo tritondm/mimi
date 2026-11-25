@@ -85,7 +85,7 @@ Mit der Zwei-Faktor-Anmeldung braucht man außer dem Passwort einen Code, den ei
 Ihrem Handy alle 30 Sekunden neu erzeugt, z. B. Microsoft Authenticator, Google Authenticator
 oder FreeOTP. Ein gestohlenes Passwort allein reicht dann nicht mehr.
 
-1. Rechts oben auf **Zwei-Faktor** klicken, dann auf **Einrichten**.
+1. Rechts oben auf Ihren **Namen** klicken, dann auf **Zwei-Faktor-Anmeldung** und **Einrichten**.
 2. In der App ein Konto hinzufügen und den **QR-Code** scannen. Ohne Kamera: den angezeigten
    Schlüssel eintippen.
 3. Den Code aus der App eingeben und **Aktivieren**.
@@ -95,8 +95,17 @@ Jeder Code gilt nur einmal. Kommt die Meldung „schon verwendet“, warten Sie 
 Code. Ausschalten können Sie die Zwei-Faktor-Anmeldung an derselben Stelle mit einem gültigen
 Code. **Handy verloren oder gewechselt?** Die Administration setzt sie zurück.
 
-Rechts oben finden Sie **Abmelden**. Admins sehen dort zusätzlich die
-**Benutzerverwaltung** (siehe [Für Admins](#für-admins)).
+### Das Menü oben
+
+| Wo | Was |
+|---|---|
+| links | **Leo** – führt zurück zur Startseite |
+| Mitte | **Bericht** (die Prüfung); Admins sehen zusätzlich **Benutzer** und **Protokoll** (siehe [Für Admins](#für-admins)) |
+| rechts | **Darstellung**: wechselt bei jedem Klick zwischen **Automatisch** (wie im Betriebssystem eingestellt), **Hell** und **Dunkel**. Die Wahl merkt sich der Browser. |
+| ganz rechts | Ihr **Name**: klappt ein Menü auf mit **Zwei-Faktor-Anmeldung** (zeigt „ein“ oder „aus“) und **Abmelden** |
+
+Das Menü lässt sich auch mit der Tastatur bedienen: Mit der Tab-Taste zum Namen, Eingabetaste
+öffnet, **Esc** schließt.
 
 ## 2. Word-Datei hochladen
 
@@ -342,7 +351,7 @@ Prüfen Sie, ob es wirklich eine .docx-Datei ist und ob sie sich in Word öffnen
 
 ## Für Admins
 
-Unter **Benutzerverwaltung** (rechts oben, Adresse `/admin`) können Admins:
+Unter **Benutzer** im Menü oben (Adresse `/admin`) können Admins:
 
 - **Benutzer anlegen** – Benutzername (Buchstaben, Ziffern und `. _ - @`) und Passwort
   (mindestens 12 Zeichen). Häkchen für Admin-Rechte.
@@ -352,10 +361,13 @@ Unter **Benutzerverwaltung** (rechts oben, Adresse `/admin`) können Admins:
 - **Zwei-Faktor zurücksetzen** – wenn jemand das Handy verloren hat. Die Person meldet sich
   danach nur mit Passwort an und kann die App neu einrichten.
 - **Benutzer löschen.** Seine Berichte werden mitgelöscht.
-- Das **Protokoll** ansehen: wer wann was getan hat (Anmeldungen, auch fehlgeschlagene,
-  Benutzerverwaltung, Berichte hochgeladen, erzeugt, heruntergeladen, gelöscht). Mit Suche und
-  „nur Fehlschläge“. Dateinamen und Inhalte stehen nicht darin. Einträge werden nach 90 Tagen
-  gelöscht.
+
+Unter **Protokoll** im Menü oben (Adresse `/protokoll`) sehen Admins, wer wann was getan hat:
+Anmeldungen (auch fehlgeschlagene), Benutzerverwaltung, Zwei-Faktor, Berichte hochgeladen,
+erzeugt, heruntergeladen und gelöscht. Oben stehen Zahlen für den gewählten Zeitraum, darunter
+die Einträge. Filtern lässt sich nach Suchbegriff, **Zeitraum**, **Aktion** und „nur
+Fehlschläge“. Dateinamen und Inhalte der Berichte stehen nicht darin. Einträge werden nach
+90 Tagen gelöscht.
 
 Sich selbst löschen oder die eigenen Admin-Rechte entziehen geht nicht, so bleibt immer
 mindestens ein Admin. Teilen Sie Passwörter bitte auf sicherem Weg mit (nicht im selben

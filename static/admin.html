@@ -4,27 +4,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Leo – Benutzerverwaltung</title>
+<title>Benutzerverwaltung – Leo</title>
+<script>try { const t = localStorage.getItem('leo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="/menu.css">
 <style>
-:root {
-  --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;
-  --accent: #1f5fbf; --accent-text: #ffffff; --ok: #1d7a3e; --ok-bg: #e6f4ea;
-  --err: #b3261e; --err-bg: #fce8e6; --info: #3c4a5c; --info-bg: #eef1f5; --focus: #ffb300;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14171b; --card: #1d2127; --text: #e8eaed; --muted: #a2abb6; --line: #343a42;
-    --accent: #7fb0ff; --accent-text: #0d1b33; --ok: #7ed69b; --ok-bg: #173323;
-    --err: #ff9d94; --err-bg: #3d1a17; --info: #c3cdd9; --info-bg: #262c34;
-  }
-}
 * { box-sizing: border-box; }
 body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
-header { background: var(--card); border-bottom: 1px solid var(--line); padding: 16px; }
-header .bar { max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
-header h1 { margin: 0; font-size: 1.3rem; }
-header .claim { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); }
-main { max-width: 900px; margin: 0 auto; padding: 16px; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
 h2 { font-size: 1.15rem; margin: 0 0 12px; }
 button, .btn { font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text); border-radius: 6px; padding: 6px 12px; cursor: pointer; text-decoration: none; display: inline-block; }
@@ -42,13 +28,9 @@ th { border-top: 0; color: var(--muted); font-size: .9rem; }
 td.actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
 @media (max-width: 700px) { form.grid { grid-template-columns: 1fr; } }
+.pagetitle { font-size: 1.35rem; margin: 8px 0 16px; }
 .badge.ok { background: var(--ok-bg); color: var(--ok); }
 .badge.err { background: var(--err-bg); color: var(--err); }
-.filter { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 8px; }
-.filter input[type=search] { min-width: 240px; }
-.scroll { overflow-x: auto; }
-#audit td { font-size: .9rem; vertical-align: top; }
-#audit td.nowrap, #audit .nowrap { white-space: nowrap; }
 .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
 .msg.err { background: var(--err-bg); color: var(--err); }
 .msg.ok { background: var(--ok-bg); color: var(--ok); }
@@ -56,13 +38,16 @@ form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align
 </style>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <div><h1>Leo – Benutzerverwaltung</h1><p class="claim">Leichte Erstellung Ohne Barrieren</p></div>
-    <div><a class="btn secondary" href="/">Zurück zum Tool</a></div>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/"><span class="logo" aria-hidden="true">L</span><span class="brand-text"><span class="brand-name">Leo</span><span class="brand-claim">Leichte Erstellung Ohne Barrieren</span></span></a>
+    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü"></nav>
+    <button type="button" class="themebtn" id="themebtn"></button>
+    <div class="usermenu hidden" id="usermenu"></div>
   </div>
 </header>
 <main>
+  <h1 class="pagetitle">Benutzerverwaltung</h1>
   <div id="msg" class="msg hidden" role="status" aria-live="polite"></div>
 
   <section class="card hidden" id="noaccess">
@@ -90,24 +75,9 @@ form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align
       </table>
     </section>
 
-    <section class="card" aria-labelledby="h-audit">
-      <h2 id="h-audit">Protokoll</h2>
-      <p class="muted" id="audit-info">Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte.</p>
-      <div class="filter">
-        <div><label for="a-q">Suchen</label><input id="a-q" type="search" placeholder="Name, Aktion, IP …"></div>
-        <label class="inline"><input type="checkbox" id="a-fail"> nur Fehlschläge</label>
-        <button class="secondary" id="a-reload">Neu laden</button>
-        <span class="muted" id="a-count" role="status" aria-live="polite"></span>
-      </div>
-      <div class="scroll">
-        <table>
-          <thead><tr><th scope="col">Zeit</th><th scope="col">Wer</th><th scope="col">Aktion</th><th scope="col">Betrifft</th><th scope="col">Info</th><th scope="col">IP</th></tr></thead>
-          <tbody id="audit"></tbody>
-        </table>
-      </div>
-    </section>
   </div>
 </main>
+<script src="/menu.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -174,47 +144,21 @@ $('#users').addEventListener('click', async e => {
       msg(`Benutzer „${b.dataset.del}“ gelöscht.`, true);
     }
     window.__users = r.users; render(r.users);
-    loadAudit();
   } catch (err) { msg(err.message); }
 });
 
-// --- Protokoll ---
-let auditEntries = [];
-function renderAudit() {
-  const q = $('#a-q').value.trim().toLowerCase(), onlyFail = $('#a-fail').checked;
-  const rows = auditEntries.filter(e => (!onlyFail || !e.ok) && (!q || [e.actor, e.action, e.target, e.detail, e.ip].join(' ').toLowerCase().includes(q)));
-  $('#audit').innerHTML = rows.slice(0, 1000).map(e => `<tr>
-    <td class="nowrap">${esc(new Date(e.ts * 1000).toLocaleString('de-AT'))}</td>
-    <td>${esc(e.actor)}</td>
-    <td>${e.ok ? '' : '<span class="badge err">fehlgeschlagen</span> '}${esc(e.action)}</td>
-    <td>${/^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(e.target) ? `<span class="nowrap" title="${esc(e.target)}">Bericht ${esc(e.target.slice(0, 8))}</span>` : esc(e.target)}</td>
-    <td>${esc(e.detail)}</td>
-    <td class="nowrap">${esc(e.ip)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Keine Einträge.</td></tr>';
-  $('#a-count').textContent = `${rows.length} von ${auditEntries.length} Einträgen${rows.length > 1000 ? ' (die neuesten 1000 angezeigt)' : ''}`;
-}
-async function loadAudit() {
-  try {
-    const r = await api('/api/admin/audit');
-    auditEntries = r.entries;
-    if (r.days) $('#audit-info').textContent = `Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte. Einträge werden nach ${r.days} Tagen gelöscht.`;
-    renderAudit();
-  } catch (err) { msg(err.message); }
-}
-$('#a-q').addEventListener('input', renderAudit);
-$('#a-fail').addEventListener('change', renderAudit);
-$('#a-reload').addEventListener('click', loadAudit);
 
 (async () => {
   try {
     const r = await fetch('/api/me', {credentials: 'same-origin'});
     if (!r.ok) throw 0;
     const j = await r.json(); me = j.user;
+    leoMenu.show(j, 'benutzer');
     if (!j.admin) throw 0;
     const l = await api('/api/admin/users');
     minPw = l.min_password; $('#minpw').textContent = `(mind. ${minPw} Zeichen)`;
     window.__users = l.users; render(l.users);
     $('#content').classList.remove('hidden');
-    loadAudit();
   } catch (e) { $('#noaccess').classList.remove('hidden'); }
 })();
 </script>

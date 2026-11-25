@@ -41,6 +41,8 @@ step 3 and without the adjustments from step 4. It remains a normal Word file.
 | `src/pdfcheck.rs` | Basic check of the PDF, calling veraPDF |
 | `static/index.html` | The entire user interface (one page, no external dependencies) |
 | `static/admin.html` | User management |
+| `static/audit.html` | Audit log page |
+| `static/menu.css`, `static/menu.js` | shared top bar of all pages: navigation, user menu |
 | `deploy/` | Deploy script, systemd service, nginx configuration |
 
 ### How the Word file is edited

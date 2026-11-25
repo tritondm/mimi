@@ -29,6 +29,9 @@ use tokio::sync::Mutex;
 
 const INDEX: &str = include_str!("../static/index.html");
 const ADMIN: &str = include_str!("../static/admin.html");
+const AUDIT_PAGE: &str = include_str!("../static/audit.html");
+const MENU_CSS: &str = include_str!("../static/menu.css");
+const MENU_JS: &str = include_str!("../static/menu.js");
 
 struct AppState {
     base: PathBuf,
@@ -204,6 +207,9 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(|| async { Html(INDEX) }))
         .route("/admin", get(|| async { Html(ADMIN) }))
+        .route("/protokoll", get(|| async { Html(AUDIT_PAGE) }))
+        .route("/menu.css", get(|| async { ([(header::CONTENT_TYPE, "text/css; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], MENU_CSS) }))
+        .route("/menu.js", get(|| async { ([(header::CONTENT_TYPE, "text/javascript; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], MENU_JS) }))
         .route("/api/login", post(login))
         .route("/api/logout", post(logout))
         .route("/api/me", get(me))

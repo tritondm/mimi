@@ -87,7 +87,7 @@ With two-factor login you need, in addition to your password, a code that an app
 phone generates every 30 seconds, e.g. Microsoft Authenticator, Google Authenticator or
 FreeOTP. A stolen password alone is then no longer enough.
 
-1. Click **Zwei-Faktor** (Two-factor) at the top right, then **Einrichten** (Set up).
+1. Click your **name** at the top right, then **Zwei-Faktor-Anmeldung** (Two-factor login) and **Einrichten** (Set up).
 2. Add an account in the app and scan the **QR code**. Without a camera: type in the key shown.
 3. Enter the code from the app and click **Aktivieren** (Activate).
 
@@ -96,8 +96,16 @@ code is valid only once. If you see “schon verwendet” (already used), wait f
 You can switch two-factor login off in the same place with a valid code. **Lost or changed
 your phone?** The administrator resets it.
 
-At the top right you find **Abmelden** (Log out). Admins also see
-**Benutzerverwaltung** (User management) there (see [For admins](#for-admins)).
+### The menu at the top
+
+| Where | What |
+|---|---|
+| left | **Leo** – takes you back to the start page |
+| centre | **Bericht** (Report, the check); admins also see **Benutzer** (Users) and **Protokoll** (Audit log) (see [For admins](#for-admins)) |
+| right | **Darstellung** (appearance): each click switches between **Automatisch** (automatic, as set in the operating system), **Hell** (light) and **Dunkel** (dark). The browser remembers the choice. |
+| far right | your **name**: opens a menu with **Zwei-Faktor-Anmeldung** (Two-factor login, shows “ein”/on or “aus”/off) and **Abmelden** (Log out) |
+
+The menu also works with the keyboard: Tab to your name, Enter opens it, **Esc** closes it.
 
 ## 2. Upload the Word file
 
@@ -340,7 +348,7 @@ Check that it really is a .docx file and that it opens in Word.
 
 ## For admins
 
-Under **Benutzerverwaltung** (User management, top right, address `/admin`) admins can:
+Under **Benutzer** (Users) in the menu at the top (address `/admin`) admins can:
 
 - **Create users** – user name (letters, digits and `. _ - @`) and password
   (at least 12 characters). Checkbox for admin rights.
@@ -350,10 +358,13 @@ Under **Benutzerverwaltung** (User management, top right, address `/admin`) admi
 - **Zwei-Faktor zurücksetzen** (Reset two-factor) – if someone has lost their phone. The
   person then logs in with the password only and can set up the app again.
 - **Delete users.** Their reports are deleted too.
-- View the **Protokoll** (audit log): who did what and when (logins including failed ones,
-  user management, reports uploaded, created, downloaded, deleted). With search and “nur
-  Fehlschläge” (failures only). File names and contents are not included. Entries are deleted
-  after 90 days.
+
+Under **Protokoll** (Audit log) in the menu at the top (address `/protokoll`) admins see who
+did what and when: logins (including failed ones), user management, two-factor, reports
+uploaded, created, downloaded and deleted. Figures for the selected period are shown at the
+top, the entries below. You can filter by search term, **Zeitraum** (period), **Aktion**
+(action) and “nur Fehlschläge” (failures only). File names and contents of reports are not
+included. Entries are deleted after 90 days.
 
 You cannot delete yourself or revoke your own admin rights, so there is always at least
 one admin. Please share passwords securely (not in the same e-mail as the user name).
