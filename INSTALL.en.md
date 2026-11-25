@@ -12,8 +12,8 @@ How Mimi works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and setting
 ## Server overview
 
 ```
-Internet ──https──▶ Host server.example.org (LXD)
-                     ├─ Container rproxy   nginx + Let's Encrypt, mimi.example.org + mimi.hblfa-tirol.at → CONTAINER-IP:8080
+Internet ──https──▶ Host (LXD)
+                     ├─ Container rproxy   nginx + Let's Encrypt, own address(es) → IP of container rampe, port 8080
                      └─ Container rampe    Ubuntu 26.04: Mimi (systemd), LibreOffice, veraPDF, fonts
 ```
 
@@ -101,9 +101,12 @@ The service finds it via `VERAPDF=/opt/verapdf/verapdf`.
 On the development machine (once: `rustup target add x86_64-unknown-linux-musl`):
 
 ```bash
-deploy/deploy.sh                       # default: root@server.example.org, container rampe
-deploy/deploy.sh root@other-host ct    # other host / container
+deploy/deploy.sh root@host              # container rampe
+deploy/deploy.sh root@host ct           # other container
 ```
+
+You can also put the host into `deploy/local/deploy.env` once (`DEPLOY_HOST=root@host`);
+then `deploy/deploy.sh` is enough. The folder `deploy/local/` does not belong in the repository.
 
 The script builds the static program and copies the program and the service file into the
 container. It then restarts the service and checks whether it answers via HTTP inside the
@@ -125,16 +128,16 @@ Without an admin the service does not start; the journal then points to this com
 
 ```bash
 lxc file push deploy/nginx-rampe.conf rproxy/etc/nginx/conf.d/rampe.conf
-lxc exec rproxy -- certbot certonly --nginx --cert-name mimi.example.org -d mimi.example.org -d mimi.hblfa-tirol.at   # first time only
+lxc exec rproxy -- certbot certonly --nginx --cert-name mimi.example.org -d mimi.example.org   # first time only
 lxc exec rproxy -- sh -c 'nginx -t && systemctl reload nginx'
 ```
 
 Important in the configuration: `client_max_body_size 300m` (large reports) and
 `proxy_read_timeout 300s` (export and check of large reports take a while).
-The IP in `upstream` must match the container's address (`lxc list rampe`).
-`mimi.example.org` and `mimi.hblfa-tirol.at` serve the same site (one certificate for both).
-The old addresses `rampe.example.org` and `leo.example.org` redirect permanently (301) to `mimi.example.org`; certbot keeps
-renewing its certificate. Logins are per address, so users log in once more after the switch.
+In the template, replace `mimi.example.org` with your own address and put the container's IP into
+`upstream` (`lxc list rampe`). Several addresses work with one shared certificate (more `-d` for
+certbot, all names in `server_name`). For a former address the template contains a block with a
+permanent redirect (301). Logins are per address, so users log in once more after a switch.
 
 ## Fonts
 

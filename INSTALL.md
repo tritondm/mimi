@@ -12,8 +12,8 @@ Wie Mimi intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellun
 ## Überblick Server
 
 ```
-Internet ──https──▶ Host server.example.org (LXD)
-                     ├─ Container rproxy   nginx + Let's Encrypt, mimi.example.org + mimi.hblfa-tirol.at → CONTAINER-IP:8080
+Internet ──https──▶ Host (LXD)
+                     ├─ Container rproxy   nginx + Let's Encrypt, eigene Adresse(n) → IP des Containers rampe, Port 8080
                      └─ Container rampe    Ubuntu 26.04: Mimi (systemd), LibreOffice, veraPDF, Schriften
 ```
 
@@ -101,9 +101,12 @@ Der Dienst findet es über `VERAPDF=/opt/verapdf/verapdf`.
 Auf dem Entwicklungsrechner (einmalig `rustup target add x86_64-unknown-linux-musl`):
 
 ```bash
-deploy/deploy.sh                       # Standard: root@server.example.org, Container rampe
-deploy/deploy.sh root@anderer-host ct  # anderer Host / Container
+deploy/deploy.sh root@host              # Container rampe
+deploy/deploy.sh root@host ct           # anderer Container
 ```
+
+Den Host kann man auch einmal in `deploy/local/deploy.env` eintragen (`DEPLOY_HOST=root@host`),
+dann genügt `deploy/deploy.sh`. Der Ordner `deploy/local/` gehört nicht ins Repository.
 
 Das Skript baut das statische Programm und kopiert Programm und Dienstdatei in den Container.
 Danach startet es den Dienst neu und prüft, ob er im Container per HTTP antwortet.
@@ -124,16 +127,17 @@ Ohne Admin startet der Dienst nicht. Im Journal steht dann der Hinweis auf diese
 
 ```bash
 lxc file push deploy/nginx-rampe.conf rproxy/etc/nginx/conf.d/rampe.conf
-lxc exec rproxy -- certbot certonly --nginx --cert-name mimi.example.org -d mimi.example.org -d mimi.hblfa-tirol.at   # nur beim ersten Mal
+lxc exec rproxy -- certbot certonly --nginx --cert-name mimi.example.org -d mimi.example.org   # nur beim ersten Mal
 lxc exec rproxy -- sh -c 'nginx -t && systemctl reload nginx'
 ```
 
 Wichtig in der Konfiguration: `client_max_body_size 300m` (große Berichte) und
 `proxy_read_timeout 300s` (Export und Prüfung großer Berichte dauern eine Weile).
-Die IP in `upstream` muss zur Adresse des Containers passen (`lxc list rampe`).
-`mimi.example.org` und `mimi.hblfa-tirol.at` liefern dieselbe Seite aus (ein Zertifikat für beide).
-Die alten Adressen `rampe.example.org` und `leo.example.org` leiten dauerhaft (301) auf `mimi.example.org` weiter; ihr Zertifikat
-erneuert certbot weiter. Anmeldungen gelten pro Adresse, nach dem Wechsel also einmal neu anmelden.
+In der Vorlage `mimi.example.org` durch die eigene Adresse ersetzen und in `upstream` die IP des
+Containers eintragen (`lxc list rampe`). Mehrere Adressen gehen mit einem gemeinsamen Zertifikat
+(weitere `-d` bei certbot, alle Namen in `server_name`). Für eine frühere Adresse enthält die Vorlage
+einen Block mit dauerhafter Weiterleitung (301). Anmeldungen gelten pro Adresse, nach einem Wechsel
+also einmal neu anmelden.
 
 ## Schriften
 
