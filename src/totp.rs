@@ -10,7 +10,7 @@ use sha1::Sha1;
 
 /// Name in der App. Bei einer Umbenennung hier anpassen (bestehende Einträge in den
 /// Apps behalten den alten Namen, funktionieren aber weiter).
-pub const ISSUER: &str = "Leo";
+pub const ISSUER: &str = "Mimi";
 const STEP: u64 = 30;
 const DIGITS: u32 = 6;
 /// Toleranz für Uhrabweichung: ein Zeitschritt davor und danach
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn uri_and_qr() {
         let u = uri("anna maier", "JBSWY3DPEHPK3PXP");
-        assert!(u.starts_with("otpauth://totp/Leo:anna%20maier?secret=JBSWY3DPEHPK3PXP&issuer=Leo"));
+        assert!(u.starts_with("otpauth://totp/Mimi:anna%20maier?secret=JBSWY3DPEHPK3PXP&issuer=Mimi"));
         assert!(qr_svg(&u).contains("<svg"));
         assert_eq!(grouped("JBSWY3DPEHPK3PXP"), "JBSW Y3DP EHPK 3PXP");
     }

@@ -1,10 +1,10 @@
 # Installation and operation
 
-*Leo – Leichte Erstellung Ohne Barrieren*
+*Mimi – Macht Inhalte Mühelos Inklusiv*
 
 [Deutsch](INSTALL.md) · **English**
 
-How Leo works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings: [README.en.md](README.en.md)
+How Mimi works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings: [README.en.md](README.en.md)
 
 > **Technical names:** program and command `rampe`, container `rampe`, service `rampe.service`,
 > system user and paths `/opt/rampe`, `/var/lib/rampe`.
@@ -13,8 +13,8 @@ How Leo works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings
 
 ```
 Internet ──https──▶ Host server.example.org (LXD)
-                     ├─ Container rproxy   nginx + Let's Encrypt, leo.example.org + leo.hblfa-tirol.at → CONTAINER-IP:8080
-                     └─ Container rampe    Ubuntu 26.04: Leo (systemd), LibreOffice, veraPDF, fonts
+                     ├─ Container rproxy   nginx + Let's Encrypt, mimi.example.org + mimi.hblfa-tirol.at → CONTAINER-IP:8080
+                     └─ Container rampe    Ubuntu 26.04: Mimi (systemd), LibreOffice, veraPDF, fonts
 ```
 
 | What | Where (in the container `rampe`) |
@@ -25,7 +25,7 @@ Internet ──https──▶ Host server.example.org (LXD)
 | User file | `/var/lib/rampe/users.txt` (mode 600, with the two-factor secrets) |
 | Audit log | `/var/lib/rampe/data/audit.log` (mode 600, 90 days) |
 | Reports | `/var/lib/rampe/data/jobs/` |
-| LibreOffice profile | `/var/lib/rampe/data/lo-profile` (created by Leo itself) |
+| LibreOffice profile | `/var/lib/rampe/data/lo-profile` (created by Mimi itself) |
 | veraPDF | `/opt/verapdf/verapdf` |
 | nginx configuration | container `rproxy`: `/etc/nginx/conf.d/rampe.conf` (template: `deploy/nginx-rampe.conf`) |
 
@@ -45,7 +45,7 @@ lxc config set rampe limits.memory 1536MiB
 ```
 
 This is how the container is currently configured. LibreOffice only ever runs once at a
-time; Leo queues further exports.
+time; Mimi queues further exports.
 
 ### 2. Packages
 
@@ -60,7 +60,7 @@ lxc exec rampe -- apt-get install -y --no-install-recommends \
 `libreoffice-writer-nogui` is LibreOffice without a user interface (no X11 needed).
 For fonts see [below](#fonts).
 
-**LibreOffice 26.8 from The Document Foundation** (used by Leo): the LibreOffice
+**LibreOffice 26.8 from The Document Foundation** (used by Mimi): the LibreOffice
 26.2 shipped with Ubuntu 26.04 drops all links from the table of contents and the lists of
 figures and tables during PDF export. The official packages install additionally into
 `/opt`; the Ubuntu package remains as a fallback and provides the dependencies.
@@ -125,15 +125,15 @@ Without an admin the service does not start; the journal then points to this com
 
 ```bash
 lxc file push deploy/nginx-rampe.conf rproxy/etc/nginx/conf.d/rampe.conf
-lxc exec rproxy -- certbot certonly --nginx --cert-name leo.example.org -d leo.example.org -d leo.hblfa-tirol.at   # first time only
+lxc exec rproxy -- certbot certonly --nginx --cert-name mimi.example.org -d mimi.example.org -d mimi.hblfa-tirol.at   # first time only
 lxc exec rproxy -- sh -c 'nginx -t && systemctl reload nginx'
 ```
 
 Important in the configuration: `client_max_body_size 300m` (large reports) and
 `proxy_read_timeout 300s` (export and check of large reports take a while).
 The IP in `upstream` must match the container's address (`lxc list rampe`).
-`leo.example.org` and `leo.hblfa-tirol.at` serve the same site (one certificate for both).
-The old address `rampe.example.org` redirects permanently (301) to `leo.example.org`; certbot keeps
+`mimi.example.org` and `mimi.hblfa-tirol.at` serve the same site (one certificate for both).
+The old address `rampe.example.org` redirects permanently (301) to `mimi.example.org`; certbot keeps
 renewing its certificate. Logins are per address, so users log in once more after the switch.
 
 ## Fonts
@@ -166,7 +166,7 @@ lxc exec rampe -- fc-match Calibri            # should return "Carlito"
 pdffonts bericht.pdf                          # on your own machine (poppler-utils)
 ```
 
-Leo's basic check also lists the embedded fonts.
+Mimi's basic check also lists the embedded fonts.
 
 **Installing additional fonts** (e.g. the original fonts of the corporate template, provided
 the licence allows use on a server; Microsoft fonts from Windows or Office are usually
@@ -192,7 +192,7 @@ server install the same fonts, on Arch Linux e.g. `pacman -S ttf-carlito ttf-cal
 Without Carlito, Calibri is replaced by Liberation Sans here and the layout differs.
 
 veraPDF locally: installer from <https://verapdf.org/software/> into `tools/verapdf` (found
-automatically by Leo) or any location referenced in PATH or via `VERAPDF=...`.
+automatically by Mimi) or any location referenced in PATH or via `VERAPDF=...`.
 
 ## Operation
 
@@ -206,9 +206,9 @@ lxc exec rampe -- apt-get upgrade                   # system packages; LibreOffi
   (regression test, see [FUNCTION.en.md](FUNCTION.en.md#testing)). Also export a real report
   and check it with veraPDF. The preparation (`prepare_for_pdf`) and the post-processing
   (`pdffix`) compensate for LibreOffice quirks.
-- Leo deletes reports (`/var/lib/rampe/data/jobs/`) automatically: 30 days after their last use
+- Mimi deletes reports (`/var/lib/rampe/data/jobs/`) automatically: 30 days after their last use
   (`JOB_TTL_DAYS` in `deploy/rampe.service`), a user's superseded reports after 1 day.
-  Leo cleans up at start and then hourly. The journal only shows the count, e.g.
+  Mimi cleans up at start and then hourly. The journal only shows the count, e.g.
   “3 Bericht(e) gelöscht (412 MB, Löschfrist abgelaufen)” (3 reports deleted, deadline expired).
 - Backup: `/var/lib/rampe/users.txt` is sufficient, plus `audit.log` if needed. Reports can be uploaded again at any time.
   `users.txt` contains the two-factor secrets: protect backups just like the file itself.

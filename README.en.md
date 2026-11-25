@@ -1,14 +1,14 @@
-# Leo – making Word reports accessible (prototype)
+# Mimi – making Word reports accessible (prototype)
 
 [Deutsch](README.md) · **English**
 
-**Leo** stands for **L**eichte **E**rstellung **O**hne Barrieren (German for “easy creation without barriers”).
+**Mimi** stands for **M**acht **I**nhalte **M**ühelos **I**nklusiv – in English: **M**aking **I**nformation **M**ore **I**nclusive.
 
-Upload a Word report (.docx) → see problems and fix them right away → create and check an
+Upload a Word report (.docx) or OpenDocument text (.odt) → see problems and fix them right away → create and check an
 accessible PDF (PDF/UA) → download the PDF, the corrected DOCX and an ODT.
 
 - **User guide:** [INSTRUCTION.en.md](INSTRUCTION.en.md) (also as [PDF](INSTRUCTION.en.pdf))
-- **Matterhorn Protocol (PDF/UA-1), what Leo covers:** [MATTERHORN.en.md](MATTERHORN.en.md) (also as [PDF](MATTERHORN.en.pdf))
+- **Matterhorn Protocol (PDF/UA-1), what Mimi covers:** [MATTERHORN.en.md](MATTERHORN.en.md) (also as [PDF](MATTERHORN.en.pdf))
 - **How it works:** [FUNCTION.en.md](FUNCTION.en.md) (workflow, preparation for LibreOffice, field test)
 - **Server installation, fonts, operation:** [INSTALL.en.md](INSTALL.en.md)
 
@@ -40,7 +40,7 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
   (change password, role is kept), `rampe benutzer-entfernen NAME` (remove user),
   `rampe benutzer-liste` (list users), `rampe zwei-faktor-aus NAME` (reset two-factor).
 - **Two-factor login (optional):** everyone can set it up with an authenticator app via the
-  “Zwei-Faktor” button (TOTP according to RFC 6238: 6 digits, 30 seconds). Leo then asks for a
+  “Zwei-Faktor” button (TOTP according to RFC 6238: 6 digits, 30 seconds). Mimi then asks for a
   code after the password; each code is valid only once, a wrong code counts as a failed attempt.
   Lost phone: admins reset it under `/admin`.
 - **Audit log:** logins, user management, two-factor and actions on reports (uploaded, PDF
@@ -86,10 +86,10 @@ Staff only need a browser.
 | Font colours   | contrast below 4.5 : 1 against white (styles, bullets, direct formatting) | yes (darken shade) |
 | Structure      | no headings, level jumps, bold instead of heading, typed lists, empty paragraphs as spacing | no – hint, fix in Word |
 
-During PDF export Leo automatically adjusts a **copy** of the document (the downloadable
+During PDF export Mimi automatically adjusts a **copy** of the document (the downloadable
 DOCX stays unchanged):
 
-- Custom styles named like a standard PDF tag (e.g. “TD”, “TH”, “Quote”) are renamed.
+- Styles named like a standard PDF tag (e.g. “TD”, “TH”, “Quote”) are renamed.
   Otherwise LibreOffice would map them to `P` via RoleMap – which would mis-tag e.g.
   **all table cells** (veraPDF 7.1-7, 7.2-10, 7.2-43).
 - Links and reference fields (e.g. `STYLEREF`) in headers/footers become plain text,
@@ -109,7 +109,7 @@ Images are embedded at full resolution with JPEG quality 95. Optionally this can
 losslessly via a checkbox before export: better quality and no fringes on transparent
 backgrounds, but a considerably larger file.
 
-After export Leo fixes the PDF's structure tree: contents of Word frames and text boxes
+After export Mimi fixes the PDF's structure tree: contents of Word frames and text boxes
 (title block, imprint) that LibreOffice puts inside a paragraph are moved out of it. The
 layout stays unchanged, see [FUNCTION.en.md](FUNCTION.en.md#post-processing-of-the-pdf).
 
@@ -122,7 +122,7 @@ After export the tool checks the PDF:
    (Matterhorn Protocol – the same basis as PAC).
 
 The final test with **PAC** remains with the staff member (PAC is Windows-only and has no
-command line). After Leo it should only be a formality.
+command line). After Mimi it should only be a formality.
 
 ## Installing veraPDF (once, recommended)
 
@@ -133,7 +133,7 @@ Download veraPDF (Java) from <https://verapdf.org/software/>, run the installer 
 java -jar verapdf-izpack-installer-*.jar
 ```
 
-Leo then finds veraPDF automatically (or set the path with `VERAPDF=...`).
+Mimi then finds veraPDF automatically (or set the path with `VERAPDF=...`).
 On the server: see [INSTALL.en.md](INSTALL.en.md#4-verapdf).
 
 ## Known limitations of the prototype
@@ -146,10 +146,10 @@ On the server: see [INSTALL.en.md](INSTALL.en.md#4-verapdf).
 - Old VML graphics (very old Word files) are not detected.
 - Preview only for PNG/JPG/GIF/SVG, not for EMF/WMF.
 - Font colours inside inserted graphics (EMF/WMF, images) are not checked; PAC does check
-  text in vector graphics, though. Leo points out EMF/WMF and SmartArt graphics with text.
+  text in vector graphics, though. Mimi points out EMF/WMF and SmartArt graphics with text.
 - Contrast is only checked against white, not against shaded paragraphs/cells.
-- Reference fields in headers/footers are only recognised as simple fields (`w:fldSimple`),
-  not as complex fields.
+- ODT files are converted to a Word version with LibreOffice and checked that way. Whatever
+  this conversion does not represent may differ in the PDF.
 - Free editing of the text is not supported; Collabora Online could be integrated for that
   later.
 - The corrected DOCX has been tested with LibreOffice, not yet with Microsoft Word.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // Copyright (c) 2026 example.org
 
-//! Leo: Word-Bericht hochladen, prüfen, korrigieren,
+//! Mimi: Word-Bericht hochladen, prüfen, korrigieren,
 //! als PDF/UA (plus DOCX/ODT) exportieren und das PDF prüfen.
 
 mod audit;
@@ -32,6 +32,9 @@ const ADMIN: &str = include_str!("../static/admin.html");
 const AUDIT_PAGE: &str = include_str!("../static/audit.html");
 const MENU_CSS: &str = include_str!("../static/menu.css");
 const MENU_JS: &str = include_str!("../static/menu.js");
+const FAVICON_SVG: &str = include_str!("../static/favicon.svg");
+const FAVICON_ICO: &[u8] = include_bytes!("../static/favicon.ico");
+const TOUCH_ICON: &[u8] = include_bytes!("../static/apple-touch-icon.png");
 
 struct AppState {
     base: PathBuf,
@@ -115,7 +118,8 @@ fn job_dir(st: &AppState, id: &str, user: &auth::User) -> Result<PathBuf, AppErr
 
 /// Antwort mit Bericht und Analyse, samt Datum der automatischen Löschung.
 fn job_json(st: &AppState, dir: &Path, id: &str, name: &str, analysis: docx::Analysis) -> Json<serde_json::Value> {
-    Json(json!({ "id": id, "name": name, "analysis": analysis, "delete_after": cleanup::delete_after(dir, &st.policy) }))
+    let source = if dir.join("source.txt").exists() { "odt" } else { "docx" };
+    Json(json!({ "id": id, "name": name, "analysis": analysis, "delete_after": cleanup::delete_after(dir, &st.policy), "source": source }))
 }
 
 fn original_name(dir: &Path) -> String {
@@ -209,6 +213,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin", get(|| async { Html(ADMIN) }))
         .route("/protokoll", get(|| async { Html(AUDIT_PAGE) }))
         .route("/menu.css", get(|| async { ([(header::CONTENT_TYPE, "text/css; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], MENU_CSS) }))
+        .route("/favicon.svg", get(|| async { ([(header::CONTENT_TYPE, "image/svg+xml"), (header::CACHE_CONTROL, "public, max-age=86400")], FAVICON_SVG) }))
+        .route("/favicon.ico", get(|| async { ([(header::CONTENT_TYPE, "image/x-icon"), (header::CACHE_CONTROL, "public, max-age=86400")], FAVICON_ICO) }))
+        .route("/apple-touch-icon.png", get(|| async { ([(header::CONTENT_TYPE, "image/png"), (header::CACHE_CONTROL, "public, max-age=86400")], TOUCH_ICON) }))
         .route("/menu.js", get(|| async { ([(header::CONTENT_TYPE, "text/javascript; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], MENU_JS) }))
         .route("/api/login", post(login))
         .route("/api/logout", post(logout))
@@ -221,7 +228,7 @@ async fn main() -> anyhow::Result<()> {
 
     let addr = std::env::var("ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("Leo läuft auf http://{addr}  (Benutzerverwaltung: http://{addr}/admin)");
+    println!("Mimi läuft auf http://{addr}  (Benutzerverwaltung: http://{addr}/admin)");
     println!("Audit-Log: {} (Einträge {} Tage)", audit_path_hint(&data_dir), state.audit.days());
     match policy.ttl_days() {
         0 => println!("Automatisches Löschen: aus (JOB_TTL_DAYS=0)."),
@@ -475,25 +482,64 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, headers: 
             continue;
         }
         let name = field.file_name().unwrap_or("Bericht.docx").to_string();
-        if !name.to_lowercase().ends_with(".docx") {
-            return Err(bad_request("Bitte eine Word-Datei (.docx) hochladen."));
+        let lower = name.to_lowercase();
+        let is_odt = lower.ends_with(".odt");
+        if !lower.ends_with(".docx") && !is_odt {
+            return Err(bad_request("Bitte eine Word- oder OpenDocument-Datei (.docx oder .odt) hochladen."));
         }
-        let data = field.bytes().await.map_err(|e| bad_request(&e.to_string()))?;
-        let analysis = docx::analyze(&data).map_err(|e| bad_request(&format!("Datei konnte nicht gelesen werden: {e:#}")))?;
+        let raw = field.bytes().await.map_err(|e| bad_request(&e.to_string()))?;
         let id = uuid::Uuid::new_v4().to_string();
         let dir = st.jobs.join(&id);
         tokio::fs::create_dir_all(&dir).await?;
+        // ODT: mit LibreOffice in eine DOCX umwandeln, danach läuft alles wie bei Word
+        let data = if is_odt {
+            match odt_to_docx(&st, &dir, &raw).await {
+                Ok(d) => d,
+                Err(e) => {
+                    let _ = tokio::fs::remove_dir_all(&dir).await;
+                    return Err(e);
+                }
+            }
+        } else {
+            raw.to_vec()
+        };
+        let analysis = match docx::analyze(&data) {
+            Ok(a) => a,
+            Err(e) => {
+                let _ = tokio::fs::remove_dir_all(&dir).await;
+                return Err(bad_request(&format!("Datei konnte nicht gelesen werden: {e:#}")));
+            }
+        };
         tokio::fs::write(dir.join("original.docx"), &data).await?;
         tokio::fs::write(dir.join("current.docx"), &data).await?;
-        let stem = name.trim_end_matches(".docx").trim_end_matches(".DOCX").to_string();
+        let stem = name[..name.len() - if is_odt { 4 } else { 5 }].to_string();
         tokio::fs::write(dir.join("name.txt"), &stem).await?;
         tokio::fs::write(dir.join("owner.txt"), &user.name).await?;
         cleanup::touch(&dir);
-        let size = if data.len() < 1_048_576 { format!("{} KB", data.len().div_ceil(1024)) } else { format!("{:.1} MB", data.len() as f64 / 1_048_576.0) };
-        st.log(&user, &headers, "Bericht hochgeladen", &id, true, &size);
+        let size = if raw.len() < 1_048_576 { format!("{} KB", raw.len().div_ceil(1024)) } else { format!("{:.1} MB", raw.len() as f64 / 1_048_576.0) };
+        st.log(&user, &headers, "Bericht hochgeladen", &id, true, &format!("{}, {size}", if is_odt { "ODT" } else { "DOCX" }));
         return Ok(job_json(&st, &dir, &id, &stem, analysis));
     }
     Err(bad_request("Keine Datei übermittelt."))
+}
+
+const ODT_MIME: &[u8] = b"application/vnd.oasis.opendocument.text";
+
+/// ODT prüfen, aufbewahren (`original.odt`, Merker `source.txt`) und in eine DOCX umwandeln.
+async fn odt_to_docx(st: &AppState, dir: &Path, odt: &[u8]) -> Result<Vec<u8>, AppError> {
+    // Nur echte OpenDocument-Textdokumente an LibreOffice geben
+    let mime = docx::read_entry(odt, "mimetype").ok().flatten();
+    if mime.as_deref().map(|m| m.trim_ascii()) != Some(ODT_MIME) {
+        return Err(bad_request("Die Datei ist kein OpenDocument-Textdokument (.odt)."));
+    }
+    let conv = dir.join("conv");
+    tokio::fs::create_dir_all(&conv).await?;
+    tokio::fs::write(dir.join("original.odt"), odt).await?;
+    soffice_convert(st, &dir.join("original.odt"), &conv, "docx:MS Word 2007 XML").await?;
+    let docx = tokio::fs::read(conv.join("original.docx")).await.map_err(|_| bad_request("LibreOffice konnte die ODT-Datei nicht umwandeln."))?;
+    let _ = tokio::fs::remove_dir_all(&conv).await;
+    tokio::fs::write(dir.join("source.txt"), "odt").await?;
+    Ok(docx)
 }
 
 async fn job(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
@@ -605,7 +651,9 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
         r#"pdf:writer_pdf_Export:{{"UseTaggedPDF":{{"type":"boolean","value":"true"}},"PDFUACompliance":{{"type":"boolean","value":"true"}},"ExportBookmarks":{{"type":"boolean","value":"true"}},"ExportNotes":{{"type":"boolean","value":"false"}},"ReduceImageResolution":{{"type":"boolean","value":"false"}},{images}}}"#
     );
     soffice_convert(&st, &input, &out, &pdf_filter).await?;
-    soffice_convert(&st, &input, &out, "odt").await?;
+    // ODT aus der korrigierten Datei, nicht aus der Export-Kopie: Vorlagennamen und Felder
+    // (z. B. in Fußzeilen) bleiben so, wie sie sind – wer mit der ODT weiterarbeitet, braucht sie.
+    soffice_convert(&st, &dir.join("current.docx"), &out, "odt").await?;
 
     let _ = tokio::fs::remove_dir_all(&prep_dir).await;
 
@@ -639,7 +687,7 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
                     severity: "warnung".into(),
                     title: "Formeln nicht zugeordnet".into(),
                     detail: format!(
-                        "Im PDF stehen {in_pdf} Formel(n), in der Word-Datei {}. Leo setzt die Alternativtexte nur, wenn die Zuordnung eindeutig ist. Bitte in Acrobat oder axesPDF nachtragen.",
+                        "Im PDF stehen {in_pdf} Formel(n), in der Word-Datei {}. Mimi setzt die Alternativtexte nur, wenn die Zuordnung eindeutig ist. Bitte in Acrobat oder axesPDF nachtragen.",
                         formula_alts.len()
                     ),
                 },

@@ -4,8 +4,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Leo – Leichte Erstellung Ohne Barrieren</title>
+<title>Mimi – Macht Inhalte Mühelos Inklusiv</title>
 <script>try { const t = localStorage.getItem('leo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/menu.css">
 <style>
 * { box-sizing: border-box; }
@@ -74,7 +77,7 @@ ul.hints li:first-child { border-top: 0; }
 <body>
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="/"><span class="logo" aria-hidden="true">L</span><span class="brand-text"><span class="brand-name">Leo</span><span class="brand-claim">Leichte Erstellung Ohne Barrieren</span></span></a>
+    <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="36" height="36" focusable="false"><polyline points="17,46 17,18 32,35 47,18 47,46" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-text"><span class="brand-name">Mimi</span><span class="brand-claim">Macht Inhalte Mühelos Inklusiv</span></span></a>
     <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü"></nav>
     <button type="button" class="themebtn" id="themebtn"></button>
     <div class="usermenu hidden" id="usermenu"></div>
@@ -89,7 +92,7 @@ ul.hints li:first-child { border-top: 0; }
     <form id="loginform">
       <div><label for="l-user">Benutzername</label><input id="l-user" type="text" autocomplete="username" required></div>
       <div><label for="l-pw">Passwort</label><input id="l-pw" type="password" autocomplete="current-password" required></div>
-      <div id="l-codewrap" class="hidden"><label for="l-code">Code aus der Authenticator-App</label><input id="l-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" aria-describedby="l-codehelp"><p class="muted" id="l-codehelp">Die 6 Ziffern, die Ihre App gerade für „Leo“ anzeigt.</p></div>
+      <div id="l-codewrap" class="hidden"><label for="l-code">Code aus der Authenticator-App</label><input id="l-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" aria-describedby="l-codehelp"><p class="muted" id="l-codehelp">Die 6 Ziffern, die Ihre App gerade für „Mimi“ anzeigt (bei früher eingerichteten Konten „Leo“).</p></div>
       <div><button type="submit" id="l-btn">Anmelden</button></div>
     </form>
   </section>
@@ -104,8 +107,9 @@ ul.hints li:first-child { border-top: 0; }
   <section id="upload" class="card hidden" aria-labelledby="h-upload">
     <h2 id="h-upload">1. Word-Datei hochladen</h2>
     <div id="drop" class="drop">
-      <p><label for="file" style="display:inline">Datei auswählen (.docx)</label> oder hierher ziehen</p>
-      <input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+      <p><label for="file" style="display:inline">Datei auswählen (.docx oder .odt)</label> oder hierher ziehen</p>
+      <input id="file" type="file" accept=".docx,.odt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.oasis.opendocument.text">
+      <p class="muted">Word (.docx) oder LibreOffice/OpenOffice (.odt).</p>
       <p class="muted">Die Datei bleibt auf diesem Rechner bzw. Server und wird nicht an Dritte weitergegeben.<span id="ttlinfo"></span></p>
     </div>
   </section>
@@ -114,6 +118,7 @@ ul.hints li:first-child { border-top: 0; }
     <section class="card" aria-labelledby="h-sum">
       <h2 id="h-sum">Übersicht: <span id="docname"></span></h2>
       <p class="muted hidden" id="delinfo"></p>
+      <p class="hidden" id="odtinfo"><span class="badge b-info">ODT</span> Aus einer OpenDocument-Datei umgewandelt. Mimi prüft und korrigiert eine Word-Fassung davon. Am Ende bekommen Sie wieder eine <strong>OpenDocument-Datei (.odt)</strong> mit allen Korrekturen. Wo Mimi „in Word korrigieren“ schreibt, gilt das genauso für LibreOffice Writer. Bitte prüfen Sie das Layout im PDF.</p>
       <div class="summary" id="summary"></div>
     </section>
 
@@ -345,7 +350,7 @@ function renderFormulas() {
   $('#l-img').textContent = fs.length ? 'Bilder & Formeln' : 'Bilder';
   if (!fs.length) { $('#formulas').innerHTML = ''; return; }
   $('#formulas').innerHTML = `<h2 style="margin-top:24px">Formeln</h2>
-    <p class="muted">Jede Formel braucht im PDF einen Alternativtext, den der Screenreader vorliest. Leo verwendet ohne Eingabe die <strong>Linearform</strong> (wie in Word unter „Linear“). Besser verständlich ist oft ein gesprochener Text, z.&nbsp;B. „E gleich m mal c Quadrat“. Der Text wird in der Word-Datei gespeichert.</p>` +
+    <p class="muted">Jede Formel braucht im PDF einen Alternativtext, den der Screenreader vorliest. Mimi verwendet ohne Eingabe die <strong>Linearform</strong> (wie in Word unter „Linear“). Besser verständlich ist oft ein gesprochener Text, z.&nbsp;B. „E gleich m mal c Quadrat“. Der Text wird in der Word-Datei gespeichert.</p>` +
     fs.map(f => {
       const v = (edits.formulas[f.key] ?? '').trim();
       const own = f.key in edits.formulas ? (v !== '' && v !== f.linear) : !!f.alt;
@@ -402,6 +407,13 @@ function renderDelete() {
   $('#delinfo').textContent = txt;
   $('#delinfo').classList.toggle('hidden', !d);
   $('#delinfo2').textContent = d ? ' Sonst geschieht das automatisch am ' + fmtDate(d) + '.' : '';
+  // ODT-Berichte: Hinweis, und die ODT ist die Hauptdatei zum Weiterarbeiten
+  const odt = job.source === 'odt';
+  $('#odtinfo').classList.toggle('hidden', !odt);
+  $('#dl-odt').textContent = odt ? 'Korrigierte OpenDocument-Datei (.odt)' : 'OpenDocument (.odt)';
+  $('#dl-docx').textContent = odt ? 'Word-Datei (.docx)' : 'Korrigierte Word-Datei (.docx)';
+  const dl = $('#downloads');
+  if (odt) dl.insertBefore($('#dl-odt'), $('#dl-docx')); else dl.insertBefore($('#dl-docx'), $('#dl-odt'));
 }
 function renderAll() { renderDelete(); renderPrep(); renderDoc(); renderImages(); renderFormulas(); renderTables(); renderStructure(); renderSummary(); }
 
@@ -421,7 +433,7 @@ async function upload(file) {
   showError('');
   if (!file) return;
   const fd = new FormData(); fd.append('file', file);
-  $('#drop').innerHTML = `<p><span class="spinner"></span> „${esc(file.name)}“ wird hochgeladen und analysiert …</p>`;
+  $('#drop').innerHTML = `<p><span class="spinner"></span> „${esc(file.name)}“ wird hochgeladen${/\.odt$/i.test(file.name) ? ', umgewandelt' : ''} und analysiert …</p>`;
   try { loadJob(await api('/api/upload', {method: 'POST', body: fd})); }
   catch (e) { showError(e.message); setTimeout(() => location.reload(), 4000); }
 }
@@ -641,7 +653,7 @@ function mfaOpen(open) {
 }
 function renderMfa() {
   $('#mfabody').innerHTML = mfaOn
-    ? `<p><span class="badge b-ok">eingeschaltet</span> Beim Anmelden fragt Leo nach Ihrem Passwort einen Code aus Ihrer Authenticator-App ab.</p>
+    ? `<p><span class="badge b-ok">eingeschaltet</span> Beim Anmelden fragt Mimi nach Ihrem Passwort einen Code aus Ihrer Authenticator-App ab.</p>
        <p class="muted">Handy verloren oder gewechselt? Die Administration kann die Zwei-Faktor-Anmeldung zurücksetzen.</p>
        <form id="mfaoff" class="row"><div><label for="mfa-off-code">Aktueller Code zum Ausschalten</label><input id="mfa-off-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div><div><button type="submit" class="secondary">Ausschalten</button></div></form>`
     : `<p>Mit der Zwei-Faktor-Anmeldung braucht man zum Anmelden außer dem Passwort einen Code, den eine App auf Ihrem Handy alle 30 Sekunden neu erzeugt (z.&nbsp;B. Microsoft Authenticator, Google Authenticator, FreeOTP). Ein gestohlenes Passwort allein reicht dann nicht mehr. Freiwillig.</p>

@@ -895,7 +895,7 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
             if texts.len() > 3 {
                 ex.push("…".into());
             }
-            hints.push(Hint { severity: "warnung".into(), kind: "link".into(), text: format!("{} Link(s) zeigen auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…\\Downloads) und führen ins Leere: {}. Im PDF macht Leo normalen Text daraus; in Word den Link entfernen (Rechtsklick → Link entfernen).", texts.len(), ex.join(", ")), section: String::new() });
+            hints.push(Hint { severity: "warnung".into(), kind: "link".into(), text: format!("{} Link(s) zeigen auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…\\Downloads) und führen ins Leere: {}. Im PDF macht Mimi normalen Text daraus; in Word den Link entfernen (Rechtsklick → Link entfernen).", texts.len(), ex.join(", ")), section: String::new() });
         }
     }
 
@@ -1591,9 +1591,9 @@ fn rename_std_styles(xml: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
         let ev = r.read_event_into(&mut buf)?;
         match &ev {
             Event::Eof => break,
-            Event::Start(e) if e.name().as_ref() == b"w:style" => {
-                custom = matches!(attr(e, b"w:customStyle").as_deref(), Some("1") | Some("true"));
-            }
+            // auch ohne w:customStyle: LibreOffice lässt die Kennzeichnung beim Umwandeln aus ODT weg,
+            // macht aber trotzdem aus jedem Vorlagennamen einen Tag. Umbenannt wird nur in der Export-Kopie.
+            Event::Start(e) if e.name().as_ref() == b"w:style" => custom = true,
             Event::End(e) if e.name().as_ref() == b"w:style" => custom = false,
             Event::Empty(e) if custom && e.name().as_ref() == b"w:name" => {
                 if let Some(v) = attr(e, b"w:val") {
@@ -1623,6 +1623,122 @@ fn rename_std_styles(xml: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
 /// Entfernt Verknüpfungen (Hyperlinks und Verweis-Felder wie STYLEREF) aus
 /// Kopf- und Fußzeilen. Der angezeigte Text bleibt stehen. Kopf-/Fußzeilen sind
 /// im PDF Artefakte; Links darin verletzen PDF/UA 7.18.5.
+/// Zusammengesetzte Felder (`w:fldChar` begin … `w:instrText` … separate … Ergebnis … end),
+/// deren Befehl `is_target` erfüllt, zu Text machen: Feldmarken und Befehl fallen weg, das
+/// angezeigte Ergebnis bleibt. Rückgabe: Anzahl aufgelöster Felder.
+fn unlink_complex_fields(xml: &[u8], is_target: &dyn Fn(&str) -> bool) -> Result<(Vec<u8>, usize)> {
+    // 1. Durchgang: Befehl jedes Felds (in Reihenfolge seines Beginns) bestimmen
+    let mut targets: Vec<bool> = Vec::new();
+    {
+        let mut r = reader(xml);
+        let mut buf = Vec::new();
+        let mut stack: Vec<(usize, bool, String)> = Vec::new(); // (Feld, im Befehlsteil, Befehl)
+        let mut in_instr = false;
+        loop {
+            match r.read_event_into(&mut buf)? {
+                Event::Eof => break,
+                Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:fldChar" => match attr(&e, b"w:fldCharType").as_deref() {
+                    Some("begin") => {
+                        stack.push((targets.len(), true, String::new()));
+                        targets.push(false);
+                    }
+                    Some("separate") => {
+                        if let Some(top) = stack.last_mut() {
+                            top.1 = false;
+                            targets[top.0] = is_target(&top.2);
+                        }
+                    }
+                    Some("end") => {
+                        if let Some((i, instr_phase, instr)) = stack.pop() {
+                            if instr_phase {
+                                targets[i] = is_target(&instr);
+                            }
+                        }
+                    }
+                    _ => {}
+                },
+                Event::Start(e) if e.name().as_ref() == b"w:instrText" => in_instr = true,
+                Event::End(e) if e.name().as_ref() == b"w:instrText" => in_instr = false,
+                Event::Text(t) if in_instr => {
+                    if let Some(top) = stack.last_mut() {
+                        if top.1 {
+                            top.2.push_str(&t.unescape().unwrap_or_default());
+                        }
+                    }
+                }
+                _ => {}
+            }
+            buf.clear();
+        }
+    }
+    let n = targets.iter().filter(|t| **t).count();
+    if n == 0 {
+        return Ok((xml.to_vec(), 0));
+    }
+    // 2. Durchgang: Feldmarken und Befehl der markierten Felder weglassen
+    let mut r = reader(xml);
+    let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len())));
+    let mut buf = Vec::new();
+    let mut field_no = 0usize;
+    let mut stack: Vec<(bool, bool)> = Vec::new(); // (auflösen, im Befehlsteil)
+    let mut skip_depth = 0usize;
+    loop {
+        let ev = r.read_event_into(&mut buf)?;
+        if skip_depth > 0 {
+            match &ev {
+                Event::Start(_) => skip_depth += 1,
+                Event::End(_) => skip_depth -= 1,
+                Event::Eof => break,
+                _ => {}
+            }
+            buf.clear();
+            continue;
+        }
+        let drop_instr = stack.last().is_some_and(|&(t, instr)| t && instr);
+        let mut drop = false;
+        match &ev {
+            Event::Eof => break,
+            Event::Start(e) | Event::Empty(e) if e.name().as_ref() == b"w:fldChar" => {
+                let is_start = matches!(ev, Event::Start(_));
+                match attr(e, b"w:fldCharType").as_deref() {
+                    Some("begin") => {
+                        let t = targets.get(field_no).copied().unwrap_or(false);
+                        field_no += 1;
+                        stack.push((t, true));
+                        drop = t;
+                    }
+                    Some("separate") => {
+                        if let Some(top) = stack.last_mut() {
+                            top.1 = false;
+                            drop = top.0;
+                        }
+                    }
+                    Some("end") => {
+                        if let Some((t, _)) = stack.pop() {
+                            drop = t;
+                        }
+                    }
+                    _ => drop = drop_instr,
+                }
+                if drop && is_start {
+                    skip_depth = 1;
+                }
+            }
+            Event::Start(e) if drop_instr && e.name().as_ref() == b"w:instrText" => {
+                skip_depth = 1;
+                drop = true;
+            }
+            Event::Empty(e) if drop_instr && e.name().as_ref() == b"w:instrText" => drop = true,
+            _ => {}
+        }
+        if !drop {
+            w.write_event(ev)?;
+        }
+        buf.clear();
+    }
+    Ok((w.into_inner().into_inner(), n))
+}
+
 fn unlink_header_footer(xml: &[u8]) -> Result<(Vec<u8>, usize)> {
     let mut r = reader(xml);
     let mut w = Writer::new(Cursor::new(Vec::with_capacity(xml.len())));
@@ -1701,7 +1817,7 @@ fn rename_caption_style(xml: &[u8]) -> Result<(Vec<u8>, bool)> {
     Ok((w.into_inner().into_inner(), done))
 }
 
-const CAPTION_NEW_NAME: &str = "Bildunterschrift (Leo)";
+const CAPTION_NEW_NAME: &str = "Bildunterschrift (Mimi)";
 
 /// Feldbefehle für Literaturverzeichnisse: Word (BIBLIOGRAPHY), Citavi, Zotero, EndNote.
 fn is_bibliography_instr(instr: &str) -> bool {
@@ -1930,7 +2046,7 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
     if let Some(doc) = read_entry(docx, "word/document.xml")? {
         let frames = count_frames(&doc)?;
         if frames > 0 {
-            notes.push(format!("{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Leo löst ihn nach dem Export dort heraus – das Layout bleibt unverändert."));
+            notes.push(format!("{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Mimi löst ihn nach dem Export dort heraus – das Layout bleibt unverändert."));
         }
         let mut doc_changed = false;
         let (mut doc, n) = unlink_bibliography(&doc)?;
@@ -1971,7 +2087,10 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
     for name in zip_names(docx)? {
         if is_header_footer(&name) {
             if let Some(x) = read_entry(docx, &name)? {
-                let (new, n) = unlink_header_footer(&x)?;
+                let (new, n1) = unlink_header_footer(&x)?;
+                // zusammengesetzte Verweis-Felder (so schreibt sie LibreOffice, je nach Version auch Word)
+                let (new, n2) = unlink_complex_fields(&new, &field_is_link)?;
+                let n = n1 + n2;
                 let (new, d) = decorate_all(&new)?;
                 if n > 0 || d > 0 {
                     links += n;
@@ -2730,6 +2849,10 @@ pub(crate) mod tests {
 <w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1134" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>
 </w:body></w:document>"#;
 
+    pub(crate) fn rewrite_zip_for_tests(docx: &[u8], replaced: &HashMap<String, Vec<u8>>) -> Vec<u8> {
+        rewrite_zip(docx, replaced).unwrap()
+    }
+
     pub(crate) fn fixture() -> Vec<u8> {
         fixture_doc(DOC)
     }
@@ -2755,6 +2878,27 @@ pub(crate) mod tests {
             out.write_all(c.as_bytes()).unwrap();
         }
         out.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn complex_link_fields_in_footer_become_text() {
+        // so schreibt LibreOffice STYLEREF beim Umwandeln aus ODT
+        let xml = r#"<w:ftr xmlns:w="w"><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> STYLEREF &quot;Titel&quot; </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Abschlussbericht</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t xml:space="preserve"> – Seite </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>3</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>"#;
+        let (new, n) = unlink_complex_fields(xml.as_bytes(), &field_is_link).unwrap();
+        let s = String::from_utf8(new).unwrap();
+        assert_eq!(n, 1);
+        assert!(!s.contains("STYLEREF"));
+        assert!(s.contains("Abschlussbericht"));
+        // das Seitenzahl-Feld bleibt ein Feld
+        assert!(s.contains(" PAGE ") && s.matches("w:fldCharType=").count() == 3);
+    }
+
+    #[test]
+    fn std_style_renamed_without_custom_flag() {
+        let xml = r#"<w:styles xmlns:w="w"><w:style w:type="paragraph" w:styleId="TD"><w:name w:val="TD"/></w:style></w:styles>"#;
+        let (new, ren) = rename_std_styles(xml.as_bytes()).unwrap();
+        assert_eq!(ren.len(), 1);
+        assert!(String::from_utf8(new).unwrap().contains(r#"<w:name w:val="TD Vorlage"/>"#));
     }
 
     #[test]

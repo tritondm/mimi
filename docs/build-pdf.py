@@ -20,10 +20,10 @@ import markdown
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = [
-    ("INSTRUCTION.md", "INSTRUCTION_de.pdf", "de", "Leo – Anleitung"),
-    ("INSTRUCTION.en.md", "INSTRUCTION.en.pdf", "en", "Leo – User Guide"),
-    ("MATTERHORN.md", "MATTERHORN_de.pdf", "de", "Leo und das Matterhorn-Protokoll"),
-    ("MATTERHORN.en.md", "MATTERHORN.en.pdf", "en", "Leo and the Matterhorn Protocol"),
+    ("INSTRUCTION.md", "INSTRUCTION_de.pdf", "de", "Mimi – Anleitung"),
+    ("INSTRUCTION.en.md", "INSTRUCTION.en.pdf", "en", "Mimi – User Guide"),
+    ("MATTERHORN.md", "MATTERHORN_de.pdf", "de", "Mimi und das Matterhorn-Protokoll"),
+    ("MATTERHORN.en.md", "MATTERHORN.en.pdf", "en", "Mimi and the Matterhorn Protocol"),
 ]
 # Sprachumschalter „Deutsch · English“ gehört nicht ins PDF
 SWITCH = re.compile(r"(?m)^(\*\*Deutsch\*\* · \[English\]|\[Deutsch\]\(.*?\) · \*\*English\*\*).*\n")

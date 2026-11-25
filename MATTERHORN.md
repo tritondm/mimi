@@ -1,38 +1,38 @@
-# Leo und das Matterhorn-Protokoll
+# Mimi und das Matterhorn-Protokoll
 
 **Deutsch** · [English](MATTERHORN.en.md)
 
-*Leo – Leichte Erstellung Ohne Barrieren*
+*Mimi – Macht Inhalte Mühelos Inklusiv*
 
 Das **Matterhorn-Protokoll** (PDF Association, Version 1.1) beschreibt in 31 Prüfpunkten,
 woran ein PDF scheitert, das nicht PDF/UA-1 (ISO 14289-1) entspricht. Ein Teil der
 Fehlerbedingungen ist maschinell prüfbar (veraPDF, PAC), der Rest nur von Menschen.
 
-Diese Übersicht zeigt für jeden Prüfpunkt, was Leo tut und was beim Menschen bleibt.
-Stand: November 2026, Leo mit LibreOffice 26.8 und veraPDF 1.30.
+Diese Übersicht zeigt für jeden Prüfpunkt, was Mimi tut und was beim Menschen bleibt.
+Stand: November 2026, Mimi mit LibreOffice 26.8 und veraPDF 1.30.
 
 ## Legende
 
 | Wertung | Bedeutung |
 |---|---|
-| **ja** | Leo erkennt und behebt das (in der Word-Datei, der Export-Kopie oder im fertigen PDF) |
-| **teilweise** | Leo behebt einen Teil, gibt Hinweise oder prüft nur; der Rest ist Handarbeit |
+| **ja** | Mimi erkennt und behebt das (in der Word-Datei, der Export-Kopie oder im fertigen PDF) |
+| **teilweise** | Mimi behebt einen Teil, gibt Hinweise oder prüft nur; der Rest ist Handarbeit |
 | **nein** | nicht abgedeckt, nur Handarbeit |
 | **n. z.** | nicht zutreffend für Berichte aus Word (die Funktion kommt im erzeugten PDF nicht vor) |
 
-**Wo Leo eingreift:**
+**Wo Mimi eingreift:**
 
 | Stufe | Was |
 |---|---|
 | **Analyse** | Befunde zur Word-Datei, Korrektur per Klick oder Hinweis zum Beheben in Word |
 | **Vorbereitung** | automatische Anpassungen einer Export-Kopie für LibreOffice (die Word-Datei bleibt unverändert) |
 | **Nachbearbeitung** | Korrekturen am Strukturbaum des fertigen PDFs |
-| **Basisprüfung** | Leos eigene Prüfung des PDFs |
+| **Basisprüfung** | Mimis eigene Prüfung des PDFs |
 | **veraPDF** | vollständige maschinelle Prüfung nach PDF/UA-1 |
 
 ## Übersicht
 
-| Nr. | Prüfpunkt | Leo | Was Leo tut | Bleibt beim Menschen |
+| Nr. | Prüfpunkt | Mimi | Was Mimi tut | Bleibt beim Menschen |
 |---|---|---|---|---|
 | 01 | Echter Inhalt getaggt, Artefakte als Artefakt | **teilweise** | LibreOffice taggt den Inhalt, Kopf- und Fußzeilen werden Artefakte. Vorbereitung: Links und Felder in Kopf-/Fußzeilen werden Text, Bilder und Formen dort dekorativ. Nachbearbeitung: als dekorativ markierte Formen werden Artefakte. veraPDF prüft auf ungetaggten Inhalt. | Ist etwas fälschlich Artefakt, oder ist Schmuck als Inhalt getaggt? |
 | 02 | Rollenzuordnung (RoleMap) | **ja** | Vorbereitung: eigene Formatvorlagen mit dem Namen eines Standard-Tags („TD“, „Quote“ …) werden umbenannt. Basisprüfung „Standard-Tags umgeleitet“, veraPDF. | – |
@@ -41,10 +41,10 @@ Stand: November 2026, Leo mit LibreOffice 26.8 und veraPDF 1.30.
 | 05 | Ton | **n. z.** | – | – |
 | 06 | Metadaten | **ja** | Analyse: Dokumenttitel wird abgefragt und gesetzt. LibreOffice schreibt XMP-Metadaten und PDF/UA-Kennung. Basisprüfung: „XMP-Metadaten fehlen“, „PDF/UA-Kennung fehlt“, „Dokumenttitel fehlt“. | Beschreibt der Titel das Dokument wirklich? |
 | 07 | Dictionary (Anzeige des Titels) | **ja** | LibreOffice setzt `DisplayDocTitle`. Basisprüfung „Fenster zeigt Dateinamen statt Titel“. | – |
-| 08 | OCR-Prüfung | **n. z.** | Leo verarbeitet Word-Dateien, keine Scans. | – |
+| 08 | OCR-Prüfung | **n. z.** | Mimi verarbeitet Word-Dateien, keine Scans. | – |
 | 09 | Passende Tags | **teilweise** | Nachbearbeitung: Bereiche, Absätze und Überschriften, die LibreOffice in einen Absatz hängt (Word-Rahmen, Textfelder), werden herausgelöst (Basisprüfung „Falsch verschachtelte Struktur“). Vorbereitung: Beschriftungen werden Absätze statt frei stehender `Caption`; das Literaturverzeichnis wird Text statt `TOC`. Analyse: Hinweise auf fett gesetzte Schein-Überschriften, getippte Aufzählungen, leere Absätze als Abstand, einzeilige Tabellen (Layout). | **Lesereihenfolge** (mehrspaltig, Textfelder, schwebende Bilder) und ob die Tags die Bedeutung richtig wiedergeben. |
 | 10 | Zeichenzuordnung (Unicode) | **teilweise** | Keine eigene Korrektur. LibreOffice bettet die Schriften mit Unicode-Zuordnung ein. veraPDF prüft das. | Bei Auffälligkeiten: Schrift installieren (siehe INSTALL.md, Schriften). |
-| 11 | Natürliche Sprache | **teilweise** | Analyse: Hauptsprache wird abgefragt und gesetzt. Basisprüfung „Dokumentsprache fehlt“. Sprachwechsel im Text übernimmt LibreOffice nur, wenn sie in Word gesetzt sind. | **Fremdsprachige Passagen** in Word kennzeichnen. Leo erkennt sie nicht. |
+| 11 | Natürliche Sprache | **teilweise** | Analyse: Hauptsprache wird abgefragt und gesetzt. Basisprüfung „Dokumentsprache fehlt“. Sprachwechsel im Text übernimmt LibreOffice nur, wenn sie in Word gesetzt sind. | **Fremdsprachige Passagen** in Word kennzeichnen. Mimi erkennt sie nicht. |
 | 12 | Dehnbare Zeichen | **n. z.** | Betrifft Schriftsysteme wie Arabisch oder Japanisch. | – |
 | 13 | Grafiken | **teilweise** | Analyse: fehlende und nichtssagende Alternativtexte („Bild 3“, Dateiname), Übernahme der Bildunterschrift, „dekorativ“. Hinweise auf Vektorgrafiken und SmartArt mit Text und auf als Bild eingefügte Tabellen. Vorbereitung: Grafiken in Kopf-/Fußzeilen werden dekorativ. Basisprüfung „Abbildungen ohne Alternativtext“. | **Qualität der Alternativtexte.** Text in Grafiken (Bild statt echter Tabelle oder echtem Text). Gruppen von Grafiken, die nur zusammen Sinn ergeben. |
 | 14 | Überschriften | **ja** | Analyse: übersprungene Ebenen werden per Klick korrigiert. Hinweise: keine Überschriften, erste Überschrift nicht Ebene 1, fett statt Überschrift. Basisprüfung „Überschriftenebene übersprungen“, „Keine Überschriften“. | Ist alles, was wie eine Überschrift aussieht, auch eine? |
@@ -56,8 +56,8 @@ Stand: November 2026, Leo mit LibreOffice 26.8 und veraPDF 1.30.
 | 20 | Optionale Inhalte (Ebenen) | **n. z.** | Kommen in Word-Berichten nicht vor. | – |
 | 21 | Eingebettete Dateien | **n. z.** | LibreOffice bettet keine Dateien ein. | – |
 | 22 | Artikelflüsse | **n. z.** | – | – |
-| 23 | Digitale Signaturen | **n. z.** | Leo signiert nicht. | – |
-| 24 | Nicht interaktive Formulare | **n. z.** | Formulare werden nicht unterstützt. | Formulare nicht mit Leo erstellen. |
+| 23 | Digitale Signaturen | **n. z.** | Mimi signiert nicht. | – |
+| 24 | Nicht interaktive Formulare | **n. z.** | Formulare werden nicht unterstützt. | Formulare nicht mit Mimi erstellen. |
 | 25 | XFA | **n. z.** | – | – |
 | 26 | Sicherheit | **n. z.** | LibreOffice verschlüsselt nicht; veraPDF prüft, ob Hilfstechnik Zugriff hat. | Das PDF nachträglich nicht mit Rechte-Einschränkungen versehen. |
 | 27 | Navigation | **ja** | Überschriften werden Lesezeichen. Inhalts-, Abbildungs- und Tabellenverzeichnis bleiben verlinkt (LibreOffice 26.8). Basisprüfung „Keine Überschriften“. | – |
@@ -76,7 +76,7 @@ Stand: November 2026, Leo mit LibreOffice 26.8 und veraPDF 1.30.
 | **n. z.**, nicht zutreffend für Word-Berichte | 03, 05, 08, 12, 20–26, 29 (12) |
 
 **Ergebnis im Praxistest** (Praxistest-Abschlussbericht, 100 Seiten): veraPDF meldet nach
-Vorbereitung und Korrekturen in Leo keine Verstöße mehr gegen PDF/UA-1, siehe
+Vorbereitung und Korrekturen in Mimi keine Verstöße mehr gegen PDF/UA-1, siehe
 [FUNCTION.md](FUNCTION.md#praxistest-Praxistest-abschlussbericht-november-2026).
 
 ## Was Menschen immer prüfen müssen
@@ -90,13 +90,13 @@ Keine Software kann beurteilen:
 5. ob **fremdsprachige Passagen** gekennzeichnet sind,
 6. ob **Linktexte** verständlich sind.
 
-Leo verlangt für jedes Bild eine Entscheidung (Text oder dekorativ). Danach prüft man das
+Mimi verlangt für jedes Bild eine Entscheidung (Text oder dekorativ). Danach prüft man das
 PDF abschließend mit PAC und am besten auch mit einem Screenreader (z. B. NVDA).
 
 ## Am Testbericht geprüft (November 2026)
 
 Ein Testbericht mit Fußnoten, Endnote, Formel, mehrstufiger nummerierter Liste, Tabelle mit
-zweistufigem Kopf und verbundenen Zellen und einem zweispaltigen Abschnitt ging durch Leo
+zweistufigem Kopf und verbundenen Zellen und einem zweispaltigen Abschnitt ging durch Mimi
 (Analyse, Vorbereitung, LibreOffice 26.8, Nachbearbeitung):
 
 | Fall | Ergebnis im PDF |
@@ -110,11 +110,11 @@ zweistufigem Kopf und verbundenen Zellen und einem zweispaltigen Abschnitt ging 
 **veraPDF (PDF/UA-1): konform.**
 
 Der Testbericht wurde mit LibreOffice erzeugt. Deshalb ging zusätzlich ein echter Bericht
-aus Microsoft Word durch Leo.
+aus Microsoft Word durch Mimi.
 
 ## Praxistest mit dem Praxistest-Abschlussbericht (Word, November 2026)
 
-100 Seiten, 64 Bilder, 12 Tabellen, 6 Fußnoten, 3 Word-Rahmen, keine Formeln. Durch Leo mit
+100 Seiten, 64 Bilder, 12 Tabellen, 6 Fußnoten, 3 Word-Rahmen, keine Formeln. Durch Mimi mit
 allen Korrekturen, die man anklicken kann (die Alternativtexte der Bilder waren dabei
 Platzhalter):
 
@@ -126,6 +126,10 @@ Platzhalter):
 | Fußnoten | alle 6 als `Note` mit eindeutiger `ID`, Nummer und Link |
 | Basisprüfung | nichts offen |
 | **veraPDF (PDF/UA-1)** | **konform** |
+
+**Als ODT:** Derselbe Bericht, in LibreOffice als OpenDocument gespeichert und so hochgeladen,
+ist nach Mimi ebenfalls **konform** (100 Seiten, veraPDF PDF/UA-1). Direkt aus LibreOffice
+exportiert verletzt er 8 Regeln. Der Testbericht mit Sonderfällen ist auch als ODT konform.
 
 **Noch offen:** Formeln in einer Datei direkt aus Microsoft Word (der Praxistest-Bericht enthält keine).
 
@@ -142,13 +146,13 @@ Derselbe Praxistest-Bericht, zusätzlich mit veraPDF nach PDF/UA-2 (ISO 14289-2)
 | 8.2.5.25-1 | 2 | `ListNumbering` an Listen |
 
 Das sind fast alles Formatfragen von PDF 2.0, keine inhaltlichen Mängel. LibreOffice erzeugt
-PDF 1.7 nach PDF/UA-1. PDF/UA-2 setzt voraus, dass LibreOffice PDF 2.0 schreibt oder Leo die
-Datei umfassend umbaut. Deshalb ist PDF/UA-1 derzeit das Ziel von Leo. Es ist auch das, was
+PDF 1.7 nach PDF/UA-1. PDF/UA-2 setzt voraus, dass LibreOffice PDF 2.0 schreibt oder Mimi die
+Datei umfassend umbaut. Deshalb ist PDF/UA-1 derzeit das Ziel von Mimi. Es ist auch das, was
 PAC und die meisten Prüfstellen erwarten.
 
-## Die Oberfläche von Leo
+## Die Oberfläche von Mimi
 
-Leo selbst soll barrierefrei bedienbar sein: beschriftete Formularfelder, Fehlermeldungen
+Mimi selbst soll barrierefrei bedienbar sein: beschriftete Formularfelder, Fehlermeldungen
 als `role="alert"`, Statusmeldungen über `aria-live`, sichtbarer Fokus, ausreichende Kontraste
 (auch im dunklen Modus). Die Reiter folgen dem ARIA-Muster „Tabs“ und lassen sich mit
 Pfeil links/rechts, Pos1 und Ende bedienen.

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" xml:lang="en" viewBox="0 0 960 400" width="960" height="400" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" role="img" aria-labelledby="t d">
-  <title id="t">Workflow in Leo</title>
-  <desc id="d">Six steps: upload and correct in the browser; analyse, prepare and check on the Leo server; create the PDF with LibreOffice, after which Leo fixes the structure tree. Every save triggers a new analysis. Finally PDF, DOCX and ODT are ready for download.</desc>
+  <title id="t">Workflow in Mimi</title>
+  <desc id="d">Six steps: upload and correct in the browser; analyse, prepare and check on the Mimi server; create the PDF with LibreOffice, after which Mimi fixes the structure tree. Every save triggers a new analysis. Finally PDF, DOCX and ODT are ready for download.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
@@ -65,7 +65,7 @@
     <rect x="4" y="232" width="16" height="16" rx="3" fill="#e3effc" stroke="#2b6cb0"/>
     <text x="28" y="245">Browser (static/index.html)</text>
     <rect x="4" y="256" width="16" height="16" rx="3" fill="#e5f5e8" stroke="#2f855a"/>
-    <text x="28" y="269">Leo server (Rust: docx.rs, pdfcheck.rs)</text>
+    <text x="28" y="269">Mimi server (Rust: docx.rs, pdfcheck.rs)</text>
     <rect x="4" y="280" width="16" height="16" rx="3" fill="#fdf0e1" stroke="#c05621"/>
     <text x="28" y="293">LibreOffice (headless, no UI)</text>
   </g>

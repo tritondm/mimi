@@ -277,7 +277,7 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         if remapped.is_empty() {
             checks.push(ok("Standard-Tags", "keine Standard-Tags umgeleitet"));
         } else {
-            checks.push(bad("fehler", "Standard-Tags umgeleitet", format!("Formatvorlage(n) mit reserviertem Namen: {} – Leo benennt diese beim Export automatisch um; tritt der Fehler trotzdem auf, Vorlage in Word umbenennen.", remapped.join(", "))));
+            checks.push(bad("fehler", "Standard-Tags umgeleitet", format!("Formatvorlage(n) mit reserviertem Namen: {} – Mimi benennt diese beim Export automatisch um; tritt der Fehler trotzdem auf, Vorlage in Word umbenennen.", remapped.join(", "))));
         }
         let mut stats = StructStats::default();
         let mut seen = HashSet::new();

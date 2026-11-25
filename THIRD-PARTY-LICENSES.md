@@ -1,6 +1,6 @@
 # Verwendete Bibliotheken und ihre Lizenzen
 
-Leo (Leichte Erstellung Ohne Barrieren) steht unter der EUPL-1.2 (siehe `LICENSE`).
+Mimi (Macht Inhalte Mühelos Inklusiv) steht unter der EUPL-1.2 (siehe `LICENSE`).
 Es verwendet die folgenden Open-Source-Bibliotheken; deren Lizenztexte liegen den jeweiligen Paketen bei (https://crates.io).
 
 ## Rust-Bibliotheken

@@ -5,13 +5,13 @@
 //!
 //! PDF/UA-1 verlangt für jede Formel einen Alternativtext (Matterhorn 17, veraPDF 7.7-1).
 //! LibreOffice taggt Word-Formeln als `Formula`, aber ohne `Alt`, und Word selbst hat für
-//! Formeln kein Feld für einen Alternativtext. Leo
+//! Formeln kein Feld für einen Alternativtext. Mimi
 //!
 //! 1. findet die Formeln (Text, Fußnoten, Endnoten – in dieser Reihenfolge, so wie sie im
 //!    Strukturbaum des PDFs stehen),
 //! 2. schlägt die **Linearform** vor (wie Word sie unter „Linear“ zeigt, z. B. `E=mc^2`),
 //! 3. speichert einen eigenen Text als benutzerdefinierte Dokumenteigenschaft
-//!    `Leo-Formel-<Prüfsumme>` (bleibt in der Word-Datei erhalten; die Prüfsumme kommt aus
+//!    `Mimi-Formel-<Prüfsumme>` (bleibt in der Word-Datei erhalten; die Prüfsumme kommt aus
 //!    der Linearform, eine geänderte Formel wird also neu abgefragt),
 //! 4. schreibt beim Export den Text als `Alt` an die `Formula`-Elemente (siehe `pdffix`).
 
@@ -23,7 +23,14 @@ use std::collections::HashMap;
 
 use crate::docx::read_entry;
 
-const PROP_PREFIX: &str = "Leo-Formel-";
+const PROP_PREFIX: &str = "Mimi-Formel-";
+/// frühere Namen der Eigenschaft (vor der Umbenennung in Mimi) – werden weiter gelesen
+const LEGACY_PREFIXES: &[&str] = &["Leo-Formel-"];
+
+/// Schlüssel aus dem Namen einer Eigenschaft (neuer oder früherer Name), sonst `None`.
+fn prop_key(name: &str) -> Option<&str> {
+    std::iter::once(PROP_PREFIX).chain(LEGACY_PREFIXES.iter().copied()).find_map(|p| name.strip_prefix(p))
+}
 const NS_CUSTOM: &str = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties";
 const NS_VT: &str = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes";
 const FMTID: &str = "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}";
@@ -324,7 +331,7 @@ fn stored_alts(docx: &[u8]) -> Result<HashMap<String, String>> {
     loop {
         match r.read_event_into(&mut buf)? {
             Event::Start(e) if e.local_name().as_ref() == b"property" => {
-                cur = e.attributes().flatten().find(|a| a.key.as_ref() == b"name").and_then(|a| a.unescape_value().ok()).and_then(|n| n.strip_prefix(PROP_PREFIX).map(str::to_string));
+                cur = e.attributes().flatten().find(|a| a.key.as_ref() == b"name").and_then(|a| a.unescape_value().ok()).and_then(|n| prop_key(&n).map(str::to_string));
             }
             Event::Start(e) if cur.is_some() && e.local_name().as_ref() == b"lpwstr" => in_val = true,
             Event::Text(t) if in_val => {
@@ -374,7 +381,7 @@ fn xml_escape(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
-/// Vorhandene Eigenschaften, die nicht von Leo stammen, roh übernehmen; höchste `pid`.
+/// Vorhandene Eigenschaften, die nicht von Mimi stammen, roh übernehmen; höchste `pid`.
 fn foreign_properties(xml: &str) -> (Vec<String>, u32) {
     let mut keep = Vec::new();
     let mut max_pid = 1;
@@ -388,7 +395,9 @@ fn foreign_properties(xml: &str) -> (Vec<String>, u32) {
                 max_pid = max_pid.max(n);
             }
         }
-        if !chunk.contains(&format!("name=\"{PROP_PREFIX}")) {
+        // eigene Einträge (auch unter früherem Namen) werden neu geschrieben
+        let ours = std::iter::once(PROP_PREFIX).chain(LEGACY_PREFIXES.iter().copied()).any(|p| chunk.contains(&format!("name=\"{p}")));
+        if !ours {
             keep.push(chunk.to_string());
         }
         rest = &tail[b + "</property>".len()..];
@@ -512,6 +521,24 @@ mod tests {
         let custom = String::from_utf8(read_entry(&docx3, "docProps/custom.xml").unwrap().unwrap()).unwrap();
         assert!(!custom.contains(PROP_PREFIX));
         assert_eq!(pdf_alts(&docx3).unwrap(), vec!["E=mc^2".to_string()]);
+    }
+
+    #[test]
+    fn reads_legacy_leo_properties() {
+        // Datei mit einem Formeltext von vor der Umbenennung (Leo-Formel-…)
+        let docx = crate::docx::tests::fixture_with_formula();
+        let key = find(&docx).unwrap()[0].key.clone();
+        let custom = format!(r#"<?xml version="1.0"?><Properties xmlns="{NS_CUSTOM}" xmlns:vt="{NS_VT}"><property fmtid="{FMTID}" pid="2" name="Leo-Formel-{key}"><vt:lpwstr>alter Text</vt:lpwstr></property></Properties>"#);
+        let mut rep = HashMap::new();
+        rep.insert("docProps/custom.xml".to_string(), custom.into_bytes());
+        let docx = crate::docx::tests::rewrite_zip_for_tests(&docx, &rep);
+        assert_eq!(find(&docx).unwrap()[0].alt, "alter Text");
+        // beim nächsten Speichern unter neuem Namen, alter Eintrag weg
+        let ch = [FormulaChange { key: key.clone(), alt: "neuer Text".into() }];
+        let docx2 = crate::docx::apply(&docx, &crate::docx::Changes { formulas: ch.into(), ..Default::default() }).unwrap();
+        let c = String::from_utf8(read_entry(&docx2, "docProps/custom.xml").unwrap().unwrap()).unwrap();
+        assert!(c.contains(&format!("Mimi-Formel-{key}")) && !c.contains("Leo-Formel-"));
+        assert_eq!(find(&docx2).unwrap()[0].alt, "neuer Text");
     }
 
     #[test]

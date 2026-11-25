@@ -1,10 +1,10 @@
 # Installation und Betrieb
 
-*Leo – Leichte Erstellung Ohne Barrieren*
+*Mimi – Macht Inhalte Mühelos Inklusiv*
 
 **Deutsch** · [English](INSTALL.en.md)
 
-Wie Leo intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellungen: [README.md](README.md)
+Wie Mimi intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellungen: [README.md](README.md)
 
 > **Technische Namen:** Programm und Befehl `rampe`, Container `rampe`, Dienst `rampe.service`,
 > Systembenutzer und Pfade `/opt/rampe`, `/var/lib/rampe`.
@@ -13,8 +13,8 @@ Wie Leo intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellung
 
 ```
 Internet ──https──▶ Host server.example.org (LXD)
-                     ├─ Container rproxy   nginx + Let's Encrypt, leo.example.org + leo.hblfa-tirol.at → CONTAINER-IP:8080
-                     └─ Container rampe    Ubuntu 26.04: Leo (systemd), LibreOffice, veraPDF, Schriften
+                     ├─ Container rproxy   nginx + Let's Encrypt, mimi.example.org + mimi.hblfa-tirol.at → CONTAINER-IP:8080
+                     └─ Container rampe    Ubuntu 26.04: Mimi (systemd), LibreOffice, veraPDF, Schriften
 ```
 
 | Was | Wo (im Container `rampe`) |
@@ -25,7 +25,7 @@ Internet ──https──▶ Host server.example.org (LXD)
 | Benutzerdatei | `/var/lib/rampe/users.txt` (Rechte 600, mit den Geheimnissen der Zwei-Faktor-Anmeldung) |
 | Audit-Log | `/var/lib/rampe/data/audit.log` (Rechte 600, 90 Tage) |
 | Berichte | `/var/lib/rampe/data/jobs/` |
-| LibreOffice-Profil | `/var/lib/rampe/data/lo-profile` (legt Leo selbst an) |
+| LibreOffice-Profil | `/var/lib/rampe/data/lo-profile` (legt Mimi selbst an) |
 | veraPDF | `/opt/verapdf/verapdf` |
 | nginx-Konfiguration | Container `rproxy`: `/etc/nginx/conf.d/rampe.conf` (Vorlage: `deploy/nginx-rampe.conf`) |
 
@@ -45,7 +45,7 @@ lxc config set rampe limits.memory 1536MiB
 ```
 
 So ist der Container derzeit eingestellt. LibreOffice läuft immer nur einmal gleichzeitig,
-Leo stellt weitere Exporte hinten an.
+Mimi stellt weitere Exporte hinten an.
 
 ### 2. Pakete
 
@@ -60,7 +60,7 @@ lxc exec rampe -- apt-get install -y --no-install-recommends \
 `libreoffice-writer-nogui` ist LibreOffice ohne Oberfläche (kein X11 nötig).
 Zu den Schriften siehe [unten](#schriften).
 
-**LibreOffice 26.8 von The Document Foundation** (wird von Leo verwendet): Das LibreOffice
+**LibreOffice 26.8 von The Document Foundation** (wird von Mimi verwendet): Das LibreOffice
 26.2 aus Ubuntu 26.04 lässt beim PDF-Export alle Links aus Inhalts-, Abbildungs- und
 Tabellenverzeichnis weg. Die offiziellen Pakete installieren sich zusätzlich nach `/opt`;
 das Ubuntu-Paket bleibt als Rückfall und liefert die Abhängigkeiten.
@@ -124,15 +124,15 @@ Ohne Admin startet der Dienst nicht. Im Journal steht dann der Hinweis auf diese
 
 ```bash
 lxc file push deploy/nginx-rampe.conf rproxy/etc/nginx/conf.d/rampe.conf
-lxc exec rproxy -- certbot certonly --nginx --cert-name leo.example.org -d leo.example.org -d leo.hblfa-tirol.at   # nur beim ersten Mal
+lxc exec rproxy -- certbot certonly --nginx --cert-name mimi.example.org -d mimi.example.org -d mimi.hblfa-tirol.at   # nur beim ersten Mal
 lxc exec rproxy -- sh -c 'nginx -t && systemctl reload nginx'
 ```
 
 Wichtig in der Konfiguration: `client_max_body_size 300m` (große Berichte) und
 `proxy_read_timeout 300s` (Export und Prüfung großer Berichte dauern eine Weile).
 Die IP in `upstream` muss zur Adresse des Containers passen (`lxc list rampe`).
-`leo.example.org` und `leo.hblfa-tirol.at` liefern dieselbe Seite aus (ein Zertifikat für beide).
-Die alte Adresse `rampe.example.org` leitet dauerhaft (301) auf `leo.example.org` weiter; ihr Zertifikat
+`mimi.example.org` und `mimi.hblfa-tirol.at` liefern dieselbe Seite aus (ein Zertifikat für beide).
+Die alte Adresse `rampe.example.org` leitet dauerhaft (301) auf `mimi.example.org` weiter; ihr Zertifikat
 erneuert certbot weiter. Anmeldungen gelten pro Adresse, nach dem Wechsel also einmal neu anmelden.
 
 ## Schriften
@@ -165,7 +165,7 @@ lxc exec rampe -- fc-match Calibri            # sollte "Carlito" liefern
 pdffonts bericht.pdf                          # auf dem eigenen Rechner (poppler-utils)
 ```
 
-Auch die Basisprüfung von Leo listet die eingebetteten Schriften auf.
+Auch die Basisprüfung von Mimi listet die eingebetteten Schriften auf.
 
 **Eigene Schriften nachinstallieren** (z. B. die Original-Schriften der Hausvorlage, sofern die
 Lizenz den Einsatz auf einem Server erlaubt; Microsoft-Schriften aus Windows oder Office sind
@@ -191,7 +191,7 @@ Server dieselben Schriften installieren, unter Arch Linux z. B. `pacman -S ttf-c
 Ohne Carlito wird Calibri hier durch Liberation Sans ersetzt, und das Layout weicht ab.
 
 veraPDF lokal: Installer von <https://verapdf.org/software/> nach `tools/verapdf` (wird von
-Leo automatisch gefunden) oder an einen beliebigen Ort mit Verweis im PATH bzw. `VERAPDF=...`.
+Mimi automatisch gefunden) oder an einen beliebigen Ort mit Verweis im PATH bzw. `VERAPDF=...`.
 
 ## Betrieb
 
@@ -205,9 +205,9 @@ lxc exec rampe -- apt-get upgrade                   # Systempakete; LibreOffice 
   (Regressionstest, siehe [FUNCTION.md](FUNCTION.md#testen)). Dazu einen echten Bericht
   exportieren und mit veraPDF prüfen. Die Vorbereitung (`prepare_for_pdf`) und die
   Nachbearbeitung (`pdffix`) gleichen Eigenheiten von LibreOffice aus.
-- Berichte (`/var/lib/rampe/data/jobs/`) löscht Leo automatisch: 30 Tage nach der letzten Nutzung
+- Berichte (`/var/lib/rampe/data/jobs/`) löscht Mimi automatisch: 30 Tage nach der letzten Nutzung
   (`JOB_TTL_DAYS` in `deploy/rampe.service`), ersetzte Berichte eines Benutzers nach 1 Tag.
-  Leo räumt beim Start und dann stündlich auf. Im Journal steht nur die Anzahl, z. B.
+  Mimi räumt beim Start und dann stündlich auf. Im Journal steht nur die Anzahl, z. B.
   „3 Bericht(e) gelöscht (412 MB, Löschfrist abgelaufen)“.
 - Sicherung: `/var/lib/rampe/users.txt` genügt, dazu bei Bedarf `audit.log`. Berichte lassen sich jederzeit neu hochladen.
   `users.txt` enthält die Geheimnisse der Zwei-Faktor-Anmeldung: Sicherungen genauso schützen wie die Datei selbst.

@@ -1,14 +1,15 @@
-# Leo – Anleitung für Benutzerinnen und Benutzer
+# Mimi – Anleitung für Benutzerinnen und Benutzer
 
 **Deutsch** · [English](INSTRUCTION.en.md)
 
-*Leo – **L**eichte **E**rstellung **O**hne Barrieren*
+*Mimi – **M**acht **I**nhalte **M**ühelos **I**nklusiv*
 
-Leo macht aus Ihrem Word-Bericht (.docx) ein **barrierefreies PDF** (PDF/UA).
+Mimi macht aus Ihrem Word-Bericht (.docx) oder Ihrer OpenDocument-Datei (.odt, LibreOffice) ein
+**barrierefreies PDF** (PDF/UA).
 Sie laden den Bericht im Browser hoch, ergänzen, was nur ein Mensch wissen kann
 (vor allem Beschreibungen für Bilder), und bekommen ein geprüftes PDF zurück.
 
-Sie brauchen dafür nur einen Browser. Adresse: **<https://leo.example.org>**
+Sie brauchen dafür nur einen Browser. Adresse: **<https://mimi.example.org>**
 
 ---
 
@@ -16,12 +17,12 @@ Sie brauchen dafür nur einen Browser. Adresse: **<https://leo.example.org>**
 
 ![Ablauf: 1 Hochladen, 2 Analysieren, 3 Korrigieren, 4 PDF erzeugen und prüfen, 5 Herunterladen, 6 mit PAC prüfen](docs/img/ablauf-benutzer.svg)
 
-## Was Leo kann
+## Was Mimi kann
 
-| Bereich | Leo erkennt … | … und behebt es so |
+| Bereich | Mimi erkennt … | … und behebt es so |
 |---|---|---|
 | Bilder, Grafiken, Diagramme | fehlende oder nichtssagende Alternativtexte („Bild 3“, Dateiname) | Sie tippen den Text ein, übernehmen die Bildunterschrift oder markieren das Bild als „dekorativ“ |
-| Formeln | Formeln aus dem Formeleditor von Word brauchen einen Alternativtext | Leo schlägt die Linearform vor (z. B. `E=mc^2`), Sie können einen eigenen Text eintragen |
+| Formeln | Formeln aus dem Formeleditor von Word brauchen einen Alternativtext | Mimi schlägt die Linearform vor (z. B. `E=mc^2`), Sie können einen eigenen Text eintragen |
 | Tabellen | erste Zeile nicht als Kopfzeile markiert | Häkchen setzen |
 | Dokumenttitel | Titel fehlt | Feld ausfüllen |
 | Sprache | Hauptsprache fehlt | Auswahl (z. B. Deutsch – Österreich) |
@@ -34,21 +35,21 @@ Sie brauchen dafür nur einen Browser. Adresse: **<https://leo.example.org>**
 Außerdem bekommen Sie die **korrigierte Word-Datei** zurück. Damit müssen Sie bei
 späteren Änderungen nichts neu eingeben.
 
-## Was Leo nicht kann
+## Was Mimi nicht kann
 
 | Was | Warum / was tun |
 |---|---|
-| **Text bearbeiten** (Tippfehler, Absätze, Layout) | Leo ändert nur Barrierefreiheits-Einstellungen. Text in Word ändern und neu hochladen. |
-| **Gute Alternativtexte schreiben** | Ob eine Beschreibung sinnvoll ist, weiß nur ein Mensch. Leo merkt nur, ob einer fehlt oder offensichtlich nichtssagend ist. |
-| **Struktur reparieren**: fehlende Überschriften, fett statt Überschrift, getippte Aufzählungen, leere Absätze als Abstand | Leo zeigt diese Stellen als Hinweis an. Bitte in Word mit den Formatvorlagen beheben. |
-| **Tabellen als Bild** in echte Tabellen umwandeln | Leo weist darauf hin. In Word als echte Tabelle einfügen. |
+| **Text bearbeiten** (Tippfehler, Absätze, Layout) | Mimi ändert nur Barrierefreiheits-Einstellungen. Text in Word ändern und neu hochladen. |
+| **Gute Alternativtexte schreiben** | Ob eine Beschreibung sinnvoll ist, weiß nur ein Mensch. Mimi merkt nur, ob einer fehlt oder offensichtlich nichtssagend ist. |
+| **Struktur reparieren**: fehlende Überschriften, fett statt Überschrift, getippte Aufzählungen, leere Absätze als Abstand | Mimi zeigt diese Stellen als Hinweis an. Bitte in Word mit den Formatvorlagen beheben. |
+| **Tabellen als Bild** in echte Tabellen umwandeln | Mimi weist darauf hin. In Word als echte Tabelle einfügen. |
 | **Farben in Grafiken** prüfen (Schemata, eingefügte Diagramme) | Nur Schrift im Text wird geprüft. Grafiken in der Ursprungsdatei mit dunkleren Farben neu erstellen. |
 | **Kontrast auf farbigem Hintergrund** prüfen | Geprüft wird nur gegen Weiß. Text auf farbigen Flächen selbst kontrollieren. |
 | **Fremdsprachige Passagen** erkennen | In Word die Sprache der Passage eigens festlegen. |
 | **Lesereihenfolge** beurteilen | Selbst im PDF bzw. mit PAC kontrollieren. |
-| **Vorschau** für EMF/WMF-Grafiken, Word-Diagramme, SmartArt | Leo zeigt nur die Art der Grafik. An Bildunterschrift und Abschnitt orientieren. |
+| **Vorschau** für EMF/WMF-Grafiken, Word-Diagramme, SmartArt | Mimi zeigt nur die Art der Grafik. An Bildunterschrift und Abschnitt orientieren. |
 | **Alte .doc-Dateien** oder PDFs einlesen | In Word als .docx speichern. |
-| **PAC ersetzen** | Den abschließenden Test mit PAC machen Sie selbst. Nach Leo ist er meist eine Formsache. |
+| **PAC ersetzen** | Den abschließenden Test mit PAC machen Sie selbst. Nach Mimi ist er meist eine Formsache. |
 | **Layout exakt wie in Word** | Das PDF wird mit LibreOffice erzeugt. Kleine Abweichungen (Zeilenumbrüche, Seitenzahl) sind möglich. |
 
 ---
@@ -90,7 +91,7 @@ oder FreeOTP. Ein gestohlenes Passwort allein reicht dann nicht mehr.
    Schlüssel eintippen.
 3. Den Code aus der App eingeben und **Aktivieren**.
 
-Ab jetzt fragt Leo beim Anmelden nach dem Passwort nach dem **Code aus der Authenticator-App**.
+Ab jetzt fragt Mimi beim Anmelden nach dem Passwort nach dem **Code aus der Authenticator-App**.
 Jeder Code gilt nur einmal. Kommt die Meldung „schon verwendet“, warten Sie auf den nächsten
 Code. Ausschalten können Sie die Zwei-Faktor-Anmeldung an derselben Stelle mit einem gültigen
 Code. **Handy verloren oder gewechselt?** Die Administration setzt sie zurück.
@@ -99,7 +100,7 @@ Code. **Handy verloren oder gewechselt?** Die Administration setzt sie zurück.
 
 | Wo | Was |
 |---|---|
-| links | **Leo** – führt zurück zur Startseite |
+| links | **Mimi** – führt zurück zur Startseite |
 | Mitte | **Bericht** (die Prüfung); Admins sehen zusätzlich **Benutzer** und **Protokoll** (siehe [Für Admins](#für-admins)) |
 | rechts | **Darstellung**: wechselt bei jedem Klick zwischen **Automatisch** (wie im Betriebssystem eingestellt), **Hell** und **Dunkel**. Die Wahl merkt sich der Browser. |
 | ganz rechts | Ihr **Name**: klappt ein Menü auf mit **Zwei-Faktor-Anmeldung** (zeigt „ein“ oder „aus“) und **Abmelden** |
@@ -110,17 +111,22 @@ Das Menü lässt sich auch mit der Tastatur bedienen: Mit der Tab-Taste zum Name
 ## 2. Word-Datei hochladen
 
 Klicken Sie auf **Datei auswählen (.docx)** oder ziehen Sie die Datei in das Feld.
-Leo liest den Bericht ein und zeigt danach die Übersicht.
+Mimi liest den Bericht ein und zeigt danach die Übersicht.
 
-- Nur **.docx** wird angenommen (keine alten .doc-Dateien, kein PDF).
-  Alte Dateien in Word mit *Datei → Speichern unter → Word-Dokument (.docx)* umwandeln.
+- Angenommen werden **.docx** (Word) und **.odt** (LibreOffice, OpenOffice), keine alten
+  .doc-Dateien und kein PDF. Alte Dateien in Word mit *Datei → Speichern unter →
+  Word-Dokument (.docx)* umwandeln.
+- **ODT-Dateien** wandelt Mimi beim Hochladen in eine Word-Fassung um und prüft diese. Am Ende
+  laden Sie wieder eine **OpenDocument-Datei (.odt)** mit allen Korrekturen herunter. Wo Mimi
+  „in Word korrigieren“ schreibt, gilt das genauso für LibreOffice Writer. Prüfen Sie bei ODT
+  bitte das Layout im PDF.
 - Die Datei bleibt auf dem Server und wird nicht an Dritte weitergegeben.
-- Leo merkt sich den zuletzt bearbeiteten Bericht. Wenn Sie die Seite neu laden oder
+- Mimi merkt sich den zuletzt bearbeiteten Bericht. Wenn Sie die Seite neu laden oder
   später wiederkommen, ist er wieder offen.
 - **Andere Datei** (Leiste unten) schließt den Bericht und öffnet wieder das Hochladen.
 
 > **Tipp:** Beheben Sie Strukturprobleme (Überschriften, Aufzählungen, leere Absätze)
-> am besten **zuerst in Word** und laden Sie erst dann hoch. Leo kann den Text selbst
+> am besten **zuerst in Word** und laden Sie erst dann hoch. Mimi kann den Text selbst
 > nicht bearbeiten.
 
 ## 3. Reiter „Dokument“
@@ -146,11 +152,11 @@ ergänzen“** gesetzt – es ist schon vorausgewählt.
 ### Schriftfarben (Kontrast)
 
 Text muss sich deutlich vom weißen Hintergrund abheben (mindestens 4,5 : 1).
-Leo listet zu helle Farben auf, zeigt, wo sie vorkommen, und schlägt einen
+Mimi listet zu helle Farben auf, zeigt, wo sie vorkommen, und schlägt einen
 dunkleren Farbton vor. Mit dem Häkchen **„abdunkeln auf …“** übernehmen Sie den Vorschlag.
 Die Farbe sieht danach fast gleich aus, ist aber besser lesbar.
 
-Farbige Schrift **in eingefügten Grafiken** (Schemata, Diagramme als Bild) kann Leo
+Farbige Schrift **in eingefügten Grafiken** (Schemata, Diagramme als Bild) kann Mimi
 nicht prüfen. Solche Grafiken bitte in der Ursprungsdatei mit dunkleren Farben neu erstellen.
 
 ## 4. Reiter „Bilder“ (bzw. „Bilder & Formeln“)
@@ -191,7 +197,7 @@ steht, und den Status:
 Bei Diagrammen die **Kernaussage** nennen, nicht jede Zahl. Steht alles schon im Text
 daneben, genügt ein Verweis („Daten siehe Tabelle 4“).
 
-**Grafiken mit Text:** Leo kennzeichnet Grafiken, die Beschriftungen enthalten.
+**Grafiken mit Text:** Mimi kennzeichnet Grafiken, die Beschriftungen enthalten.
 Nehmen Sie diese Beschriftungen in den Alternativtext auf. Bei sehr viel Text ist es
 vermutlich eine **Tabelle als Bild** – diese bitte in Word als echte Tabelle einfügen.
 
@@ -201,13 +207,13 @@ Enthält der Bericht Formeln aus dem Formeleditor von Word, heißt der Reiter
 **Bilder & Formeln**, und unter den Bildern steht der Abschnitt **Formeln**. Jede Formel
 braucht im PDF einen Alternativtext, den der Screenreader vorliest.
 
-- Ohne Eingabe verwendet Leo die **Linearform**, wie Word sie unter „Linear“ zeigt,
+- Ohne Eingabe verwendet Mimi die **Linearform**, wie Word sie unter „Linear“ zeigt,
   z. B. `E=mc^2`. Damit ist das PDF in Ordnung.
 - Besser verständlich ist oft ein **gesprochener Text**, z. B. „E gleich m mal c Quadrat“.
   Bei langen Formeln lohnt sich das besonders.
 - **Linearform übernehmen** setzt den Vorschlag wieder ein.
 - Ihr Text wird in der Word-Datei gespeichert. Ändern Sie die Formel später in Word, fragt
-  Leo neu.
+  Mimi neu.
 
 ## 5. Reiter „Tabellen“
 
@@ -216,7 +222,7 @@ der Screenreader die Spaltenüberschriften nicht.
 
 - Setzen Sie bei jeder Tabelle mit Spaltenüberschriften das Häkchen
   **„erste Zeile ist Kopfzeile“**.
-- Zur Orientierung zeigt Leo den Inhalt der ersten Zeile und den Abschnitt.
+- Zur Orientierung zeigt Mimi den Inhalt der ersten Zeile und den Abschnitt.
 - Tabellen mit **nur einer Zeile** sind meist Layout-Tabellen. Besser in Word ohne
   Tabelle gestalten.
 
@@ -228,13 +234,13 @@ jeder Seite wiederholen“*.
 ### Übersprungene Überschriftenebenen
 
 Überschriften dürfen keine Ebene auslassen (z. B. Ebene 4 direkt nach Ebene 2).
-Leo kann die betroffenen Überschriften auf die richtige Ebene setzen – einzeln per
+Mimi kann die betroffenen Überschriften auf die richtige Ebene setzen – einzeln per
 Häkchen oder mit **Alle korrigieren**. Dabei kann sich die Nummerierung der Kapitel
 ändern; bitte danach im PDF kontrollieren.
 
 ### Hinweise
 
-Diese Punkte kann Leo **nicht** selbst beheben. Bitte in Word korrigieren und den
+Diese Punkte kann Mimi **nicht** selbst beheben. Bitte in Word korrigieren und den
 Bericht neu hochladen:
 
 | Hinweis | Was tun in Word |
@@ -257,7 +263,7 @@ ob die Gliederung stimmt. Diese Gliederung wird im PDF zu den Lesezeichen.
 ## 7. Speichern
 
 Die Leiste unten zeigt **Ungespeicherte Änderungen**, sobald Sie etwas geändert haben.
-Klicken Sie dann auf **Änderungen speichern**. Leo schreibt die Korrekturen in die
+Klicken Sie dann auf **Änderungen speichern**. Mimi schreibt die Korrekturen in die
 Word-Datei und liest sie sofort neu ein.
 
 Beim Klick auf **PDF erzeugen und prüfen** wird automatisch vorher gespeichert.
@@ -267,7 +273,7 @@ Wenn Sie die Seite mit ungespeicherten Änderungen verlassen wollen, fragt der B
 
 ### Automatische Anpassungen
 
-Oben listet Leo auf, was beim PDF-Export **automatisch** angepasst wird
+Oben listet Mimi auf, was beim PDF-Export **automatisch** angepasst wird
 (z. B. Beschriftungen, Literaturverzeichnis, Links in Kopf- und Fußzeilen). Sie müssen
 dafür nichts tun. Die herunterladbare Word-Datei bleibt davon unberührt.
 
@@ -285,7 +291,7 @@ Klicken Sie auf **PDF erzeugen und prüfen**. Bei großen Berichten dauert das
 
 Danach sehen Sie zwei Prüfungen:
 
-1. **Basisprüfung** – Leos eigene Prüfung (Titel, Sprache, Alternativtexte,
+1. **Basisprüfung** – Mimis eigene Prüfung (Titel, Sprache, Alternativtexte,
    Überschriften, Tabellenköpfe, Schriften, Links …). Jeder Punkt hat ein ✓ oder ✗
    mit Erklärung.
 2. **veraPDF** – vollständige maschinelle Prüfung nach PDF/UA-1, auf derselben Grundlage
@@ -299,8 +305,8 @@ PDF erneut.
 | Knopf | Was Sie bekommen |
 |---|---|
 | **PDF herunterladen** | das barrierefreie PDF |
-| **Korrigierte Word-Datei (.docx)** | Ihr Bericht mit allen Korrekturen aus Leo (Alternativtexte, Kopfzeilen, Farben …). Verwenden Sie diese Datei für spätere Änderungen, dann müssen Sie nicht alles neu eingeben. |
-| **OpenDocument (.odt)** | dieselbe Fassung für LibreOffice |
+| **Korrigierte Word-Datei (.docx)** | Ihr Bericht mit allen Korrekturen aus Mimi (Alternativtexte, Kopfzeilen, Farben …). Verwenden Sie diese Datei für spätere Änderungen, dann müssen Sie nicht alles neu eingeben. |
+| **OpenDocument (.odt)** | dieselbe Fassung für LibreOffice. Haben Sie eine ODT hochgeladen, steht dieser Knopf vorne: Mit dieser Datei arbeiten Sie weiter. |
 
 ### Bericht löschen
 
@@ -313,7 +319,7 @@ korrigierten Word-Datei können Sie jederzeit neu beginnen.
 ## 9. Abschließend: Prüfung mit PAC
 
 Öffnen Sie das PDF in **PAC** (PDF Accessibility Checker, Windows) und übermitteln Sie das
-Prüfergebnis zusammen mit dem Bericht. Nach Leo sollte das nur noch eine Formsache sein.
+Prüfergebnis zusammen mit dem Bericht. Nach Mimi sollte das nur noch eine Formsache sein.
 
 Was keine Software prüfen kann, bleibt bei Ihnen:
 
@@ -326,12 +332,12 @@ Was keine Software prüfen kann, bleibt bei Ihnen:
 ## Häufige Fragen
 
 **Muss ich nach einer Änderung in Word wieder alles neu eingeben?**
-Nein, wenn Sie in Word mit der **korrigierten Word-Datei** aus Leo weiterarbeiten.
+Nein, wenn Sie in Word mit der **korrigierten Word-Datei** aus Mimi weiterarbeiten.
 Die Alternativtexte und Kopfzeilen stecken dann schon darin.
 
 **Ich sehe bei einem Bild keine Vorschau.**
 Für bestimmte Formate (EMF/WMF, Word-Diagramme, Formen, SmartArt) gibt es keine Vorschau.
-Leo zeigt dann die Art der Grafik an. Orientieren Sie sich an Bildunterschrift und Abschnitt.
+Mimi zeigt dann die Art der Grafik an. Orientieren Sie sich an Bildunterschrift und Abschnitt.
 
 **Das PDF sieht etwas anders aus als in Word.**
 Das PDF wird mit LibreOffice erzeugt. Kleine Abweichungen (Zeilenumbrüche, Seitenzahl)

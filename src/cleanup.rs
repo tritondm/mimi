@@ -4,7 +4,7 @@
 //! Automatisches Löschen hochgeladener Berichte.
 //!
 //! - **Löschfrist:** ein Bericht wird `JOB_TTL_DAYS` Tage (Standard 30) nach seiner letzten
-//!   Nutzung gelöscht. Nutzung = jeder Zugriff (Öffnen, Speichern, Export, Download); Leo
+//!   Nutzung gelöscht. Nutzung = jeder Zugriff (Öffnen, Speichern, Export, Download); Mimi
 //!   schreibt dann den Zeitpunkt in die Datei `last_used` des Berichts.
 //! - **Ersetzte Berichte:** Die Oberfläche zeigt immer nur den zuletzt bearbeiteten Bericht.
 //!   Ältere Berichte desselben Benutzers sind nicht mehr erreichbar und werden nach einem Tag

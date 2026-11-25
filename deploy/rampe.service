@@ -1,5 +1,5 @@
 [Unit]
-Description=Leo (Leichte Erstellung Ohne Barrieren) – Word-Berichte barrierefrei machen
+Description=Mimi (Macht Inhalte Mühelos Inklusiv) – Word-Berichte barrierefrei machen
 After=network.target
 
 [Service]

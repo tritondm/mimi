@@ -147,7 +147,7 @@ pub fn read_users(path: &Path) -> Result<BTreeMap<String, UserRec>> {
 }
 
 fn write_users(path: &Path, users: &BTreeMap<String, UserRec>) -> Result<()> {
-    let mut out = String::from("# Benutzer von Leo – im Browser unter /admin oder über die Unterbefehle bearbeiten\n");
+    let mut out = String::from("# Benutzer von Mimi – im Browser unter /admin oder über die Unterbefehle bearbeiten\n");
     for (n, u) in users {
         let totp = u.totp.as_deref().map(|t| format!(":totp={t}")).unwrap_or_default();
         out.push_str(&format!("{n}:{}:{}{totp}\n", if u.admin { "admin" } else { "benutzer" }, u.hash));
@@ -261,7 +261,7 @@ pub fn cli(args: &[String], users_file: &Path, audit: &Audit) -> Result<bool> {
         }
         Some("hilfe") | Some("--help") | Some("-h") => {
             println!(
-                "Leo – Leichte Erstellung Ohne Barrieren\nWord-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n  rampe zwei-faktor-aus NAME              Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
+                "Mimi – Macht Inhalte Mühelos Inklusiv\nWord-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n  rampe zwei-faktor-aus NAME              Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
             );
             Ok(true)
         }

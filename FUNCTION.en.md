@@ -1,10 +1,10 @@
-# How Leo works
+# How Mimi works
 
-*Leo – Leichte Erstellung Ohne Barrieren*
+*Mimi – Macht Inhalte Mühelos Inklusiv*
 
 [Deutsch](FUNCTION.md) · **English**
 
-Leo turns a Word report (.docx) into an accessible PDF according to **PDF/UA-1**.
+Mimi turns a Word report (.docx) or OpenDocument text (.odt) into an accessible PDF according to **PDF/UA-1**.
 Staff upload the report in the browser, add what only a human can know (e.g. alt texts)
 and get a checked PDF back.
 
@@ -16,12 +16,15 @@ Installation and operation: [INSTALL.en.md](INSTALL.en.md) · Usage and settings
 
 | Step | Where | What happens |
 |---|---|---|
-| 1 Upload | Browser → `POST /api/upload` | The file is stored as `original.docx` and `current.docx`. |
+| 1 Upload | Browser → `POST /api/upload` | The file is stored as `original.docx` and `current.docx`. An ODT is first converted to DOCX by LibreOffice (`original.odt` is kept, marker `source.txt`). |
 | 2 Analyse | `docx::analyze` | Images, tables, links, headings, colours, title and language are read and sent to the browser as a list of findings. |
 | 3 Correct | Browser → `POST /api/job/{id}/apply` | The changes are written into `current.docx` with `docx::apply`. The file is then re-analysed immediately. If it can no longer be read, nothing is saved. |
 | 4 Prepare | `docx::prepare_for_pdf` | For the export a **copy** is made with adjustments that only concern LibreOffice (see below). |
-| 5 Create PDF | headless LibreOffice, then `pdffix::fix_structure` | The copy is turned into `out/current.pdf` (PDF/UA, tagged) and `out/current.odt`. Leo then fixes the PDF's structure tree (see [Post-processing](#post-processing-of-the-pdf)). |
+| 5 Create PDF | headless LibreOffice, then `pdffix::fix_structure` | The copy is turned into `out/current.pdf` (PDF/UA, tagged) and `out/current.odt`. Mimi then fixes the PDF's structure tree (see [Post-processing](#post-processing-of-the-pdf)). |
 | 6 Check | `pdfcheck::basic_checks` + veraPDF | Basic check and, if installed, the full PDF/UA-1 validation. The result is stored in `out/report.json`. |
+
+The downloadable ODT is created from `current.docx`, not from the export copy, so style names and
+fields in it stay unchanged.
 
 The downloadable DOCX is always `current.docx`, i.e. the version with the corrections from
 step 3 and without the adjustments from step 4. It remains a normal Word file.
@@ -48,14 +51,14 @@ step 3 and without the adjustments from step 4. It remains a normal Word file.
 ### How the Word file is edited
 
 A DOCX is a ZIP archive of XML files (`word/document.xml`, `word/styles.xml`,
-headers and footers …). Leo reads the XML **event-based** (quick-xml) and passes
+headers and footers …). Mimi reads the XML **event-based** (quick-xml) and passes
 everything through unchanged. Only the elements that actually change are rewritten.
-All other ZIP entries are copied raw without repacking. This way everything Leo does not
+All other ZIP entries are copied raw without repacking. This way everything Mimi does not
 understand (charts, macros, Word extensions) is preserved byte for byte.
 
 ## What is checked and corrected
 
-| Area | Detection | Correction in Leo |
+| Area | Detection | Correction in Mimi |
 |---|---|---|
 | Images, shapes, charts | missing or meaningless alt text (“Bild 3”, file name) | enter text, use the caption, or “decorative” |
 | Equations (`m:oMath`) | need an alt text in the PDF (veraPDF 7.7-1) | linear format as suggestion or own text → `docProps/custom.xml`, on export `Alt` on the `Formula` element |
@@ -69,22 +72,22 @@ understand (charts, macros, Word extensions) is preserved byte for byte.
 ## Preparation for LibreOffice
 
 LibreOffice creates the PDF. A few quirks when converting Word files would, however, lead to
-PDF/UA errors even if the Word document itself is fine. Leo fixes them in a copy that is
+PDF/UA errors even if the Word document itself is fine. Mimi fixes them in a copy that is
 made only for the export:
 
 ![Comparison of PDF tags without and with preparation](docs/img/vorbereitung.en.svg)
 
 | Adjustment | Why | Function |
 |---|---|---|
-| Custom styles named after a standard PDF tag (e.g. “TD”, “Quote”) get the suffix “Vorlage” | LibreOffice turns every style name into a tag and maps it via RoleMap. A style “TD” would thus turn **all** table cells into paragraphs (veraPDF 7.1-7, 7.2-10, 7.2-43). | `rename_std_styles` |
-| The style “Beschriftung” (`caption`) is called “Bildunterschrift (Leo)” in the copy | LibreOffice tags captions as `Caption`, but free-standing instead of inside `Figure`/`Table`. PAC complains about that. As a normal paragraph it is correct. Numbering (SEQ fields) and indexes stay the same. | `rename_caption_style` |
-| Links and reference fields (`STYLEREF`, `REF`, `PAGEREF` …) in headers and footers become text | Headers and footers are artifacts in the PDF. A link inside them is untagged – on every page (veraPDF 7.18.5-1). | `unlink_header_footer` |
+| Styles named after a standard PDF tag (also without being marked as custom, as LibreOffice writes them when converting from ODT) (e.g. “TD”, “Quote”) get the suffix “Vorlage” | LibreOffice turns every style name into a tag and maps it via RoleMap. A style “TD” would thus turn **all** table cells into paragraphs (veraPDF 7.1-7, 7.2-10, 7.2-43). | `rename_std_styles` |
+| The style “Beschriftung” (`caption`) is called “Bildunterschrift (Mimi)” in the copy | LibreOffice tags captions as `Caption`, but free-standing instead of inside `Figure`/`Table`. PAC complains about that. As a normal paragraph it is correct. Numbering (SEQ fields) and indexes stay the same. | `rename_caption_style` |
+| Links and reference fields (`STYLEREF`, `REF`, `PAGEREF` …) in headers and footers become text, both as simple (`w:fldSimple`) and as complex fields (`w:fldChar`) | Headers and footers are artifacts in the PDF. A link inside them is untagged – on every page (veraPDF 7.18.5-1). | `unlink_header_footer` |
 | Bibliography fields (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) become text | Otherwise LibreOffice builds a protected index that looks different from Word and is tagged as a table of contents (`TOC`). | `unlink_bibliography` |
 | Paragraph spacing from the table style is written directly onto the cell paragraphs, unless the paragraph style (other than “Standard”) or direct formatting sets it | That is how Word calculates it. LibreOffice uses the document defaults instead (e.g. line spacing 1.25 instead of 1.1 from “Table Grid”). The rows get taller. In the Praxistest report: 65 instead of 57 pages. Conditional formats (first row etc.) are not taken into account. | `apply_table_spacing` |
-| Links to local files (`file://`, `C:\…`, `\\server\…`) become text | They lead nowhere in the PDF. Leo also reports them in the analysis. | `unlink_local` |
+| Links to local files (`file://`, `C:\…`, `\\server\…`) become text | They lead nowhere in the PDF. Mimi also reports them in the analysis. | `unlink_local` |
 | Images and shapes in headers/footers become decorative, with alt text `rampe:dekorativ` | Headers/footers are artifacts, but LibreOffice tags anchored graphics in them as `Figure` (PAC: “Possibly inappropriate use of a Figure”). For images the Word “decorative” mark is enough. LibreOffice still tags shapes (decorative bars); post-processing recognises them by their alt text. The same applies to shapes marked as decorative in the body text. | `decorate_all`, `mark_decorative_alt` |
 
-Which adjustments a report gets is shown by Leo before export in the tab
+Which adjustments a report gets is shown by Mimi before export in the tab
 “PDF erzeugen” (`pdf_prep` in the analysis).
 
 ## Post-processing of the PDF
@@ -108,7 +111,7 @@ A paragraph must not contain divisions, paragraphs or headings (ISO 32000-2 Anne
 PDF/UA-1 and veraPDF do not check this, PDF/UA-2 and PAC do.
 
 Restructuring the Word file (dissolving frames) would change the layout. In particular,
-“anchored at the bottom of the page” cannot be reproduced with normal text. So Leo
+“anchored at the bottom of the page” cannot be reproduced with normal text. So Mimi
 corrects the finished PDF instead: every block element inside a paragraph is moved one level
 up, directly after that paragraph. A paragraph that becomes empty as a result is removed.
 Only parent references in the structure tree are changed. Page content, content mapping
@@ -121,10 +124,10 @@ alt text `rampe:dekorativ`. Post-processing turns their marked content into
 (`artifact_decorative`). The page image stays the same.
 
 **Equations:** LibreOffice tags Word equations as `Formula`, but without alt text. Word has no
-field for it. Leo generates the linear format (as Word shows it under “Linear”, e.g.
+field for it. Mimi generates the linear format (as Word shows it under “Linear”, e.g.
 `E=mc^2`) and suggests it. An own text is stored as a custom document property
-`Leo-Formel-<checksum of the linear format>` in `docProps/custom.xml`. It is kept by Word and
-LibreOffice; if the equation changes, Leo asks again. Post-processing sets the texts in order
+`Mimi-Formel-<checksum of the linear format>` in `docProps/custom.xml`. It is kept by Word and
+LibreOffice; if the equation changes, Mimi asks again. Post-processing sets the texts in order
 as `Alt` on the `Formula` elements (body, then footnotes, then endnotes; `set_formula_alts`).
 If the number of equations in Word and PDF does not match, it sets no text and reports this in
 the check report. Better a message than a wrongly assigned text.
@@ -147,8 +150,8 @@ and stripped of control characters so nobody can fake lines. Entries older than 
 
 **Two-factor** (`totp.rs`, `auth.rs`): TOTP according to RFC 6238 (HMAC-SHA1, 6 digits,
 30 seconds, one time step tolerance). The secret (160 bits, Base32) is stored as `:totp=…` in
-`users.txt`. Setup: Leo generates a secret and shows it as a QR code; it is only stored once the
-first code from the app is correct (an open setup expires after 10 minutes). At login Leo first
+`users.txt`. Setup: Mimi generates a secret and shows it as a QR code; it is only stored once the
+first code from the app is correct (an open setup expires after 10 minutes). At login Mimi first
 checks the password, then the code. A code is valid only once (last time step per user). A
 wrong code counts as a failed attempt for the lockout.
 
@@ -165,8 +168,8 @@ opened by the user anyway. Therefore (`cleanup.rs`):
 | all reports of a user | immediately when the user is deleted |
 | a single report | immediately with “Bericht jetzt löschen” (`DELETE /api/job/{id}`) |
 
-Use means any access to the report (open, save, export, download). Leo writes the time to
-`last_used`. A report that is being exported is never deleted. Leo cleans up at start and then
+Use means any access to the report (open, save, export, download). Mimi writes the time to
+`last_used`. A report that is being exported is never deleted. Mimi cleans up at start and then
 hourly. `JOB_TTL_DAYS=0` turns deletion off.
 
 ## Checking the PDF
@@ -185,7 +188,7 @@ the staff member.
 
 100 pages, 64 images, 12 tables, 113 links in the indexes. Checked with veraPDF 1.30.4 (PDF/UA-1):
 
-| | Word file directly | preparation only | preparation + corrections in Leo |
+| | Word file directly | preparation only | preparation + corrections in Mimi |
 |---|---|---|---|
 | Style “TD” remapped (7.1-7, 7.2-10, 7.2-43) | ✗ | ✓ | ✓ |
 | Links in footers (7.18.5-1) | ✗ | ✓ | ✓ |
@@ -228,7 +231,7 @@ RAMPE_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture
 ```
 
 Run a real report without the user interface: with `RAMPE_TEST_APPLY=1` everything you can
-click in Leo is applied first. Alt texts become placeholders.
+click in Mimi is applied first. Alt texts become placeholders.
 
 ```bash
 RAMPE_TEST_APPLY=1 RAMPE_TEST_IN=bericht.docx RAMPE_TEST_OUT=/tmp/rt \
