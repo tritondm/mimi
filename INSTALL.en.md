@@ -133,7 +133,7 @@ Important in the configuration: `client_max_body_size 300m` (large reports) and
 `proxy_read_timeout 300s` (export and check of large reports take a while).
 The IP in `upstream` must match the container's address (`lxc list rampe`).
 `mimi.example.org` and `mimi.hblfa-tirol.at` serve the same site (one certificate for both).
-The old address `rampe.example.org` redirects permanently (301) to `mimi.example.org`; certbot keeps
+The old addresses `rampe.example.org` and `leo.example.org` redirect permanently (301) to `mimi.example.org`; certbot keeps
 renewing its certificate. Logins are per address, so users log in once more after the switch.
 
 ## Fonts
