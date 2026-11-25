@@ -208,7 +208,7 @@ pub fn cli(args: &[String], users_file: &Path, audit: &Audit) -> Result<bool> {
             let name = args.get(1).context("Aufruf: passwort-ändern <name>")?;
             let mut users = read_users(users_file)?;
             if !users.contains_key(name) {
-                bail!("Benutzer „{name}“ gibt es nicht – anlegen mit „rampe benutzer-anlegen {name}“.");
+                bail!("Benutzer „{name}“ gibt es nicht – anlegen mit „mimi benutzer-anlegen {name}“.");
             }
             let pw = read_password(&format!("Neues Passwort für {name}: "))?;
             check_password(&pw)?;
@@ -261,11 +261,11 @@ pub fn cli(args: &[String], users_file: &Path, audit: &Audit) -> Result<bool> {
         }
         Some("hilfe") | Some("--help") | Some("-h") => {
             println!(
-                "Mimi – Macht Inhalte Mühelos Inklusiv\nWord-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n  rampe zwei-faktor-aus NAME              Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
+                "Mimi – Macht Inhalte Mühelos Inklusiv\nWord-Berichte barrierefrei machen\n\n  mimi                                   Server starten\n  mimi benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  mimi passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  mimi benutzer-entfernen NAME\n  mimi benutzer-liste\n  mimi zwei-faktor-aus NAME              Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
             );
             Ok(true)
         }
-        Some(other) => bail!("Unbekannter Befehl „{other}“ – siehe „rampe hilfe“."),
+        Some(other) => bail!("Unbekannter Befehl „{other}“ – siehe „mimi hilfe“."),
         None => Ok(false),
     }
 }

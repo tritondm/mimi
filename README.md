@@ -17,8 +17,8 @@ PDF (PDF/UA) erzeugen und prüfen → PDF, korrigierte DOCX und ODT herunterlade
 ```bash
 cargo build --release
 # einmalig: ersten Admin anlegen (Passwort mind. 12 Zeichen, wird verdeckt abgefragt)
-./target/release/rampe benutzer-anlegen chef --admin
-./target/release/rampe
+./target/release/mimi benutzer-anlegen chef --admin
+./target/release/mimi
 ```
 
 Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
@@ -34,9 +34,9 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
   Admin-Rechte vergeben/entziehen, löschen. Sich selbst löschen oder die eigenen
   Admin-Rechte entziehen geht nicht – es bleibt also immer ein Admin.
 - Alternativ über die Kommandozeile:
-  `rampe benutzer-anlegen NAME [--admin]`, `rampe passwort-ändern NAME` (Rolle bleibt),
-  `rampe benutzer-entfernen NAME`, `rampe benutzer-liste`,
-  `rampe zwei-faktor-aus NAME` (Zwei-Faktor zurücksetzen).
+  `mimi benutzer-anlegen NAME [--admin]`, `mimi passwort-ändern NAME` (Rolle bleibt),
+  `mimi benutzer-entfernen NAME`, `mimi benutzer-liste`,
+  `mimi zwei-faktor-aus NAME` (Zwei-Faktor zurücksetzen).
 - **Zwei-Faktor-Anmeldung (freiwillig):** Jeder kann sie über den Knopf „Zwei-Faktor“ mit
   einer Authenticator-App einrichten (TOTP nach RFC 6238: 6 Ziffern, 30 Sekunden). Danach
   fragt Mimi nach dem Passwort einen Code ab, jeder Code gilt nur einmal, ein falscher Code

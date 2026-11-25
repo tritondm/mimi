@@ -140,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
     let users = auth.users();
     if !users.values().any(|u| u.admin) {
         eprintln!(
-            "Es ist noch kein Admin angelegt. Zuerst ausführen:\n  rampe benutzer-anlegen <name> --admin\n(Benutzerdatei: {})\nWeitere Benutzer kann der Admin dann im Browser unter /admin anlegen.",
+            "Es ist noch kein Admin angelegt. Zuerst ausführen:\n  mimi benutzer-anlegen <name> --admin\n(Benutzerdatei: {})\nWeitere Benutzer kann der Admin dann im Browser unter /admin anlegen.",
             users_file.display()
         );
         std::process::exit(1);

@@ -85,7 +85,7 @@ made only for the export:
 | Bibliography fields (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) become text | Otherwise LibreOffice builds a protected index that looks different from Word and is tagged as a table of contents (`TOC`). | `unlink_bibliography` |
 | Paragraph spacing from the table style is written directly onto the cell paragraphs, unless the paragraph style (other than “Standard”) or direct formatting sets it | That is how Word calculates it. LibreOffice uses the document defaults instead (e.g. line spacing 1.25 instead of 1.1 from “Table Grid”). The rows get taller. In one field-test report: 65 instead of 57 pages. Conditional formats (first row etc.) are not taken into account. | `apply_table_spacing` |
 | Links to local files (`file://`, `C:\…`, `\\server\…`) become text | They lead nowhere in the PDF. Mimi also reports them in the analysis. | `unlink_local` |
-| Images and shapes in headers/footers become decorative, with alt text `rampe:dekorativ` | Headers/footers are artifacts, but LibreOffice tags anchored graphics in them as `Figure` (PAC: “Possibly inappropriate use of a Figure”). For images the Word “decorative” mark is enough. LibreOffice still tags shapes (decorative bars); post-processing recognises them by their alt text. The same applies to shapes marked as decorative in the body text. | `decorate_all`, `mark_decorative_alt` |
+| Images and shapes in headers/footers become decorative, with alt text `mimi:dekorativ` | Headers/footers are artifacts, but LibreOffice tags anchored graphics in them as `Figure` (PAC: “Possibly inappropriate use of a Figure”). For images the Word “decorative” mark is enough. LibreOffice still tags shapes (decorative bars); post-processing recognises them by their alt text. The same applies to shapes marked as decorative in the body text. | `decorate_all`, `mark_decorative_alt` |
 
 Which adjustments a report gets is shown by Mimi before export in the tab
 “PDF erzeugen” (`pdf_prep` in the analysis).
@@ -119,7 +119,7 @@ Only parent references in the structure tree are changed. Page content, content 
 
 **Decorative shapes:** LibreOffice only takes over the Word “decorative” mark for images.
 Shapes (rectangles, decorative bars) are tagged as `Figure`. The export copy gives them the
-alt text `rampe:dekorativ`. Post-processing turns their marked content into
+alt text `mimi:dekorativ`. Post-processing turns their marked content into
 `/Artifact BMC`, clears the entry in the ParentTree and removes the structure element
 (`artifact_decorative`). The page image stays the same.
 
@@ -227,14 +227,14 @@ with the same version.
 Post-process and check an existing PDF (writes `a.fixed.pdf` next to it):
 
 ```bash
-RAMPE_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture
+MIMI_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture
 ```
 
-Run a real report without the user interface: with `RAMPE_TEST_APPLY=1` everything you can
+Run a real report without the user interface: with `MIMI_TEST_APPLY=1` everything you can
 click in Mimi is applied first. Alt texts become placeholders.
 
 ```bash
-RAMPE_TEST_APPLY=1 RAMPE_TEST_IN=bericht.docx RAMPE_TEST_OUT=/tmp/rt \
+MIMI_TEST_APPLY=1 MIMI_TEST_IN=bericht.docx MIMI_TEST_OUT=/tmp/rt \
   cargo test --release write_fixture -- --ignored --nocapture
 
 cd /tmp/rt
@@ -242,7 +242,7 @@ soffice --headless --convert-to 'pdf:writer_pdf_Export:{"UseTaggedPDF":{"type":"
 verapdf -f ua1 --format text vorbereitet.pdf
 ```
 
-Without `RAMPE_TEST_IN` a small built-in sample document is used.
+Without `MIMI_TEST_IN` a small built-in sample document is used.
 
 ## Open issues
 

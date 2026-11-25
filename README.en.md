@@ -19,8 +19,8 @@ The user interface is in German.
 ```bash
 cargo build --release
 # once: create the first admin (password at least 12 characters, prompted without echo)
-./target/release/rampe benutzer-anlegen chef --admin
-./target/release/rampe
+./target/release/mimi benutzer-anlegen chef --admin
+./target/release/mimi
 ```
 
 Then open <http://127.0.0.1:8080> in the browser and log in.
@@ -36,9 +36,9 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
   grant/revoke admin rights, delete. Admins cannot delete themselves or revoke their own
   admin rights, so there is always an admin left.
 - Alternatively on the command line:
-  `rampe benutzer-anlegen NAME [--admin]` (create user), `rampe passwort-ändern NAME`
-  (change password, role is kept), `rampe benutzer-entfernen NAME` (remove user),
-  `rampe benutzer-liste` (list users), `rampe zwei-faktor-aus NAME` (reset two-factor).
+  `mimi benutzer-anlegen NAME [--admin]` (create user), `mimi passwort-ändern NAME`
+  (change password, role is kept), `mimi benutzer-entfernen NAME` (remove user),
+  `mimi benutzer-liste` (list users), `mimi zwei-faktor-aus NAME` (reset two-factor).
 - **Two-factor login (optional):** everyone can set it up with an authenticator app via the
   “Zwei-Faktor” button (TOTP according to RFC 6238: 6 digits, 30 seconds). Mimi then asks for a
   code after the password; each code is valid only once, a wrong code counts as a failed attempt.

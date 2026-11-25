@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Baut das statische Binary und spielt es in den LXD-Container "rampe" auf dem Host.
+# Baut das statische Binary und spielt es in den LXD-Container "mimi" auf dem Host.
 # Nutzung: deploy/deploy.sh [root@host] [container]
 # Ohne Host: DEPLOY_HOST aus der Umgebung oder aus deploy/local/deploy.env
 # Einmalige Einrichtung (Container, LibreOffice, Schriften, veraPDF, nginx): siehe INSTALL.md
@@ -7,8 +7,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f deploy/local/deploy.env ] && . deploy/local/deploy.env
 HOST="${1:-${DEPLOY_HOST:?Host fehlt: deploy/deploy.sh root@host [container] oder DEPLOY_HOST setzen}}"
-CT="${2:-rampe}"
-APP=rampe
+CT="${2:-mimi}"
+APP=mimi
 BIN=target/x86_64-unknown-linux-musl/release/$APP
 
 export PATH="$HOME/.cargo/bin:$PATH"

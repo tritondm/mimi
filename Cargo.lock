@@ -766,6 +766,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5848f5a9e8117cf94f2f90faac24a87ff81600ff8628c1e3deaab572e76bfa1"
 
 [[package]]
+name = "mimi"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "axum",
+ "getrandom",
+ "hmac",
+ "lopdf",
+ "qrcode",
+ "quick-xml",
+ "rpassword",
+ "serde",
+ "serde_json",
+ "sha1",
+ "tokio",
+ "uuid",
+ "zip",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -917,27 +938,6 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
-
-[[package]]
-name = "rampe"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "axum",
- "getrandom",
- "hmac",
- "lopdf",
- "qrcode",
- "quick-xml",
- "rpassword",
- "serde",
- "serde_json",
- "sha1",
- "tokio",
- "uuid",
- "zip",
-]
 
 [[package]]
 name = "rand"

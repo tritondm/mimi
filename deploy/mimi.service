@@ -3,24 +3,24 @@ Description=Mimi (Macht Inhalte Mühelos Inklusiv) – Word-Berichte barrierefre
 After=network.target
 
 [Service]
-User=rampe
-Group=rampe
-WorkingDirectory=/var/lib/rampe
-Environment=HOME=/var/lib/rampe
+User=mimi
+Group=mimi
+WorkingDirectory=/var/lib/mimi
+Environment=HOME=/var/lib/mimi
 Environment=ADDR=0.0.0.0:8080
 Environment=COOKIE_SECURE=1
-Environment=USERS_FILE=/var/lib/rampe/users.txt
-Environment=DATA_DIR=/var/lib/rampe/data
+Environment=USERS_FILE=/var/lib/mimi/users.txt
+Environment=DATA_DIR=/var/lib/mimi/data
 # Berichte 30 Tage nach der letzten Nutzung löschen, ersetzte nach 1 Tag (0 = aus)
 Environment=JOB_TTL_DAYS=30
 Environment=VERAPDF=/opt/verapdf/verapdf
 # LibreOffice von The Document Foundation (26.2 aus Ubuntu lässt die Links der Verzeichnisse weg)
 Environment=SOFFICE=/opt/libreoffice26.8/program/soffice
-ExecStart=/opt/rampe/rampe
+ExecStart=/opt/mimi/mimi
 Restart=on-failure
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/rampe /tmp
+ReadWritePaths=/var/lib/mimi /tmp
 PrivateTmp=true
 
 [Install]

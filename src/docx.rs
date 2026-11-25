@@ -21,7 +21,7 @@ const NS_ADEC: &str = "http://schemas.microsoft.com/office/drawing/2017/decorati
 /// Alternativtext, mit dem die Export-Kopie dekorative Bilder und Formen kennzeichnet.
 /// LibreOffice beachtet „dekorativ“ nur bei Bildern; `pdffix` macht Abbildungen mit
 /// diesem Alternativtext nach dem Export zu Artefakten.
-pub const DECORATIVE_ALT: &str = "rampe:dekorativ";
+pub const DECORATIVE_ALT: &str = "mimi:dekorativ";
 
 // ---------------------------------------------------------------------------
 // Ergebnis-Strukturen
@@ -3028,21 +3028,21 @@ pub(crate) mod tests {
     }
 
     /// Ende-zu-Ende mit LibreOffice: `cargo test -- --ignored`.
-    /// Schreibt Original und vorbereitete Kopie nach RAMPE_TEST_OUT (Standard: target/prep-test).
+    /// Schreibt Original und vorbereitete Kopie nach MIMI_TEST_OUT (Standard: target/prep-test).
     #[test]
     #[ignore]
     fn write_fixture_for_libreoffice() {
-        let dir = std::path::PathBuf::from(std::env::var("RAMPE_TEST_OUT").unwrap_or("target/prep-test".into()));
+        let dir = std::path::PathBuf::from(std::env::var("MIMI_TEST_OUT").unwrap_or("target/prep-test".into()));
         std::fs::create_dir_all(&dir).unwrap();
-        // RAMPE_TEST_IN=bericht.docx: echtes Dokument statt des eingebauten Beispiels
-        let input = std::env::var("RAMPE_TEST_IN").ok();
+        // MIMI_TEST_IN=bericht.docx: echtes Dokument statt des eingebauten Beispiels
+        let input = std::env::var("MIMI_TEST_IN").ok();
         let orig = match &input {
             Some(p) => std::fs::read(p).unwrap(),
             None => fixture(),
         };
-        // RAMPE_TEST_APPLY=1: vorher alles anwenden, was man in der Oberfläche anklicken
+        // MIMI_TEST_APPLY=1: vorher alles anwenden, was man in der Oberfläche anklicken
         // kann (Alternativtexte als Platzhalter, Linkbeschreibungen, Ebenen, Farben, Tabellenköpfe)
-        let orig = if std::env::var("RAMPE_TEST_APPLY").is_ok() {
+        let orig = if std::env::var("MIMI_TEST_APPLY").is_ok() {
             let a = analyze(&orig).unwrap();
             let ch: Changes = serde_json::from_value(serde_json::json!({
                 "title": if a.title.is_empty() { "Testtitel".to_string() } else { a.title.clone() },

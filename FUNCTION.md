@@ -85,7 +85,7 @@ behebt sie in einer Kopie, die nur für den Export entsteht:
 | Literaturverzeichnis-Felder (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) werden zu Text | LibreOffice baut sonst ein geschütztes Verzeichnis, das anders aussieht als in Word und als Inhaltsverzeichnis (`TOC`) getaggt wird. | `unlink_bibliography` |
 | Absatzabstände der Tabellenvorlage werden direkt an die Zellabsätze geschrieben, soweit Absatzvorlage (außer „Standard“) oder direkte Formatierung sie nicht festlegen | So rechnet Word. LibreOffice nimmt stattdessen die Dokument-Standardwerte (z. B. Zeilenabstand 1,25 statt 1,1 aus „Tabellenraster“). Die Zeilen werden höher. Bei einem Bericht aus dem Praxistest: 65 statt 57 Seiten. Bedingte Formate (erste Zeile usw.) werden nicht berücksichtigt. | `apply_table_spacing` |
 | Links auf lokale Dateien (`file://`, `C:\…`, `\\server\…`) werden zu Text | Sie führen im PDF ins Leere. Mimi meldet sie auch in der Analyse. | `unlink_local` |
-| Bilder und Formen in Kopf-/Fußzeilen werden dekorativ, mit Alternativtext `rampe:dekorativ` | Kopf-/Fußzeilen sind Artefakte, verankerte Grafiken darin taggt LibreOffice aber als `Figure` (PAC: „Possibly inappropriate use of a Figure“). Bei Bildern genügt die Word-Markierung „dekorativ“. Formen (Zierbalken) taggt LibreOffice trotzdem; die Nachbearbeitung erkennt sie am Alternativtext. Dasselbe gilt für Formen, die im Text als dekorativ markiert sind. | `decorate_all`, `mark_decorative_alt` |
+| Bilder und Formen in Kopf-/Fußzeilen werden dekorativ, mit Alternativtext `mimi:dekorativ` | Kopf-/Fußzeilen sind Artefakte, verankerte Grafiken darin taggt LibreOffice aber als `Figure` (PAC: „Possibly inappropriate use of a Figure“). Bei Bildern genügt die Word-Markierung „dekorativ“. Formen (Zierbalken) taggt LibreOffice trotzdem; die Nachbearbeitung erkennt sie am Alternativtext. Dasselbe gilt für Formen, die im Text als dekorativ markiert sind. | `decorate_all`, `mark_decorative_alt` |
 
 Welche Anpassungen ein Bericht bekommt, zeigt Mimi vor dem Export im Reiter
 „PDF erzeugen“ an (`pdf_prep` in der Analyse).
@@ -118,7 +118,7 @@ der Inhalte (MCID) und Layout bleiben unberührt.
 
 **Dekorative Formen:** LibreOffice übernimmt die Word-Markierung „dekorativ“ nur bei Bildern.
 Formen (Rechtecke, Zierbalken) werden als `Figure` getaggt. Die Export-Kopie gibt ihnen den
-Alternativtext `rampe:dekorativ`. Die Nachbearbeitung macht aus ihrem markierten Inhalt
+Alternativtext `mimi:dekorativ`. Die Nachbearbeitung macht aus ihrem markierten Inhalt
 `/Artifact BMC`, leert den Eintrag im ParentTree und entfernt das Strukturelement
 (`artifact_decorative`). Das Seitenbild bleibt gleich.
 
@@ -227,14 +227,14 @@ Version, oder lokal mit derselben Version.
 Ein vorhandenes PDF nachbearbeiten und prüfen (schreibt `a.fixed.pdf` daneben):
 
 ```bash
-RAMPE_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture
+MIMI_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture
 ```
 
-Einen echten Bericht ohne Oberfläche durchspielen: Mit `RAMPE_TEST_APPLY=1` wird vorher
+Einen echten Bericht ohne Oberfläche durchspielen: Mit `MIMI_TEST_APPLY=1` wird vorher
 alles angewendet, was man in Mimi anklicken kann. Alternativtexte werden dabei Platzhalter.
 
 ```bash
-RAMPE_TEST_APPLY=1 RAMPE_TEST_IN=bericht.docx RAMPE_TEST_OUT=/tmp/rt \
+MIMI_TEST_APPLY=1 MIMI_TEST_IN=bericht.docx MIMI_TEST_OUT=/tmp/rt \
   cargo test --release write_fixture -- --ignored --nocapture
 
 cd /tmp/rt
@@ -242,7 +242,7 @@ soffice --headless --convert-to 'pdf:writer_pdf_Export:{"UseTaggedPDF":{"type":"
 verapdf -f ua1 --format text vorbereitet.pdf
 ```
 
-Ohne `RAMPE_TEST_IN` wird ein kleines eingebautes Beispieldokument verwendet.
+Ohne `MIMI_TEST_IN` wird ein kleines eingebautes Beispieldokument verwendet.
 
 ## Offene Punkte
 

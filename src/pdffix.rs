@@ -478,17 +478,17 @@ mod tests {
         assert_eq!(fix_structure(&pdf, &[]).unwrap().moved, 0);
     }
 
-    /// Beliebiges PDF korrigieren: `RAMPE_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture`
+    /// Beliebiges PDF korrigieren: `MIMI_TEST_PDF=a.pdf cargo test --release fix_file -- --ignored --nocapture`
     /// (schreibt a.fixed.pdf daneben).
     #[test]
     #[ignore]
     fn fix_file() {
-        let Ok(p) = std::env::var("RAMPE_TEST_PDF") else { return };
+        let Ok(p) = std::env::var("MIMI_TEST_PDF") else { return };
         let src = std::path::PathBuf::from(p);
         let out = src.with_extension("fixed.pdf");
         std::fs::copy(&src, &out).unwrap();
-        // Alternativtexte der Formeln aus der passenden DOCX: RAMPE_TEST_DOCX=a.docx
-        let alts = std::env::var("RAMPE_TEST_DOCX").ok().map(|d| crate::formula::pdf_alts(&std::fs::read(d).unwrap()).unwrap()).unwrap_or_default();
+        // Alternativtexte der Formeln aus der passenden DOCX: MIMI_TEST_DOCX=a.docx
+        let alts = std::env::var("MIMI_TEST_DOCX").ok().map(|d| crate::formula::pdf_alts(&std::fs::read(d).unwrap()).unwrap()).unwrap_or_default();
         println!("{:?}", fix_structure(&out, &alts).unwrap());
         let (_, checks) = pdfcheck::basic_checks(&out).unwrap();
         for c in checks.iter().filter(|c| !c.ok) {
