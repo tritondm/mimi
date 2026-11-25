@@ -152,7 +152,7 @@ anders um. Tabellenzeilen werden dann höher, und Seitenumbrüche verschieben si
 | `fonts-opensymbol` | OpenSymbol | Symbol, Wingdings (Aufzählungszeichen) |
 
 LibreOffice ordnet Calibri → Carlito und Cambria → Caladea selbst zu, eine Einstellung ist
-nicht nötig. Im Praxistest-Bericht landet der gesamte Fließtext als Carlito im PDF.
+nicht nötig. Im Bericht aus dem Praxistest landet der gesamte Fließtext als Carlito im PDF.
 
 **Ohne gleichwertigen Ersatz:** Corbel, Tahoma, Consolas, Segoe UI, Aptos (neue
 Standardschrift ab Word 2024). Kommen sie im Fließtext vor, weicht das Layout ab.

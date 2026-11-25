@@ -75,9 +75,9 @@ Stand: November 2026, Mimi mit LibreOffice 26.8 und veraPDF 1.30.
 | **nein**, nicht abgedeckt | – (0) |
 | **n. z.**, nicht zutreffend für Word-Berichte | 03, 05, 08, 12, 20–26, 29 (12) |
 
-**Ergebnis im Praxistest** (Praxistest-Abschlussbericht, 100 Seiten): veraPDF meldet nach
+**Ergebnis im Praxistest** (Abschlussbericht eines Forschungsprojekts, 100 Seiten): veraPDF meldet nach
 Vorbereitung und Korrekturen in Mimi keine Verstöße mehr gegen PDF/UA-1, siehe
-[FUNCTION.md](FUNCTION.md#praxistest-Praxistest-abschlussbericht-november-2026).
+[FUNCTION.md](FUNCTION.md#praxistest-abschlussbericht-eines-forschungsprojekts-november-2026).
 
 ## Was Menschen immer prüfen müssen
 
@@ -112,7 +112,7 @@ zweistufigem Kopf und verbundenen Zellen und einem zweispaltigen Abschnitt ging 
 Der Testbericht wurde mit LibreOffice erzeugt. Deshalb ging zusätzlich ein echter Bericht
 aus Microsoft Word durch Mimi.
 
-## Praxistest mit dem Praxistest-Abschlussbericht (Word, November 2026)
+## Praxistest mit dem Abschlussbericht eines Forschungsprojekts (Word, November 2026)
 
 100 Seiten, 64 Bilder, 12 Tabellen, 6 Fußnoten, 3 Word-Rahmen, keine Formeln. Durch Mimi mit
 allen Korrekturen, die man anklicken kann (die Alternativtexte der Bilder waren dabei
@@ -135,7 +135,7 @@ exportiert verletzt er 8 Regeln. Der Testbericht mit Sonderfällen ist auch als 
 
 ## Ausblick: PDF/UA-2
 
-Derselbe Praxistest-Bericht, zusätzlich mit veraPDF nach PDF/UA-2 (ISO 14289-2) geprüft:
+Derselbe Bericht, zusätzlich mit veraPDF nach PDF/UA-2 (ISO 14289-2) geprüft:
 
 | Regel | Anzahl | Was fehlt |
 |---|---|---|

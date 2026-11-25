@@ -135,7 +135,7 @@ Mimi liest den Bericht ein und zeigt danach die Übersicht.
 
 Der Titel erscheint im PDF-Fenster statt des Dateinamens und wird von Screenreadern
 vorgelesen. Tragen Sie den richtigen Berichtstitel ein, z. B.
-„Abschlussbericht Praxistest 2026“.
+„Abschlussbericht Forschungsprojekt 2026“.
 
 ### Hauptsprache
 

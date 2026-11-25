@@ -52,7 +52,7 @@ Status: November 2026, Mimi with LibreOffice 26.8 and veraPDF 1.30.
 | 16 | Lists | **partly** | LibreOffice tags Word lists as lists, veraPDF checks the structure. Analysis: hint on typed lists. Correctly nested in the test (`L`/`LI`/`Lbl`/`LBody`, including sub-lists). Cosmetic issues: bullet characters are missing from `Lbl`, `ListNumbering` is missing for “a) b)” and bullets (only required by PDF/UA-2). | Use only Word's list function for lists. |
 | 17 | Mathematical expressions | **partly** | Analysis: equations from Word's equation editor are listed, with the linear format as a suggestion (e.g. `E=mc^2`) and an own text. Post-processing: the text is set as `Alt` on `Formula` (only if the number of equations in Word and PDF matches). Basic check “Formeln ohne Alternativtext” (equations without alt text). No MathML (only PDF/UA-2 provides for it). | Is the text read out understandably? Spell out complex equations. |
 | 18 | Page headers and footers | **yes** | LibreOffice marks them as artifacts. Preparation: links and reference fields (`STYLEREF`, `PAGEREF` …) become text, images and shapes become decorative. | – |
-| 19 | Notes and references | **partly** | No correction of its own. LibreOffice tags footnotes and endnotes as `Note` with a unique `ID`, with number (`Lbl`) and links both ways (verified on the test report and on the 6 footnotes of the Praxistest report from Word). veraPDF checks the `ID`. In the reading order the notes come at the end of the document. | – |
+| 19 | Notes and references | **partly** | No correction of its own. LibreOffice tags footnotes and endnotes as `Note` with a unique `ID`, with number (`Lbl`) and links both ways (verified on the test report and on the 6 footnotes of the field-test report from Word). veraPDF checks the `ID`. In the reading order the notes come at the end of the document. | – |
 | 20 | Optional content (layers) | **n/a** | Does not occur in Word reports. | – |
 | 21 | Embedded files | **n/a** | LibreOffice does not embed files. | – |
 | 22 | Article threads | **n/a** | – | – |
@@ -75,9 +75,9 @@ Status: November 2026, Mimi with LibreOffice 26.8 and veraPDF 1.30.
 | **no**, not covered | – (0) |
 | **n/a**, not applicable to Word reports | 03, 05, 08, 12, 20–26, 29 (12) |
 
-**Result of the field test** (Praxistest final report, 100 pages): after preparation and
+**Result of the field test** (final report of a research project, 100 pages): after preparation and
 corrections in Mimi, veraPDF reports no more violations of PDF/UA-1, see
-[FUNCTION.en.md](FUNCTION.en.md#field-test-Praxistest-final-report-november-2026).
+[FUNCTION.en.md](FUNCTION.en.md#field-test-final-report-of-a-research-project-november-2026).
 
 ## What humans always have to check
 
@@ -112,7 +112,7 @@ with a two-level header and merged cells, and a two-column section went through 
 The test report was created with LibreOffice. That is why a real report from Microsoft Word
 also went through Mimi.
 
-## Field test with the Praxistest final report (Word, November 2026)
+## Field test with the final report of a research project (Word, November 2026)
 
 100 pages, 64 images, 12 tables, 6 footnotes, 3 Word frames, no equations. Through Mimi with all
 corrections that can be clicked (the images' alt texts were placeholders):
@@ -130,11 +130,11 @@ corrections that can be clicked (the images' alt texts were placeholders):
 **compliant** after Mimi (100 pages, veraPDF PDF/UA-1). Exported directly from LibreOffice it
 violates 8 rules. The test report with special cases is compliant as ODT too.
 
-**Still open:** equations in a file straight from Microsoft Word (the Praxistest report contains none).
+**Still open:** equations in a file straight from Microsoft Word (the field-test report contains none).
 
 ## Outlook: PDF/UA-2
 
-The same Praxistest report, additionally checked with veraPDF against PDF/UA-2 (ISO 14289-2):
+The same report, additionally checked with veraPDF against PDF/UA-2 (ISO 14289-2):
 
 | Rule | Count | What is missing |
 |---|---|---|

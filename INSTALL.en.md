@@ -153,7 +153,7 @@ Table rows then get taller and page breaks shift.
 | `fonts-opensymbol` | OpenSymbol | Symbol, Wingdings (bullets) |
 
 LibreOffice maps Calibri → Carlito and Cambria → Caladea by itself, no configuration is
-needed. In the Praxistest report the entire body text ends up as Carlito in the PDF.
+needed. In the field-test report the entire body text ends up as Carlito in the PDF.
 
 **Without an equivalent substitute:** Corbel, Tahoma, Consolas, Segoe UI, Aptos (new
 default font from Word 2024). If they are used in body text, the layout differs.

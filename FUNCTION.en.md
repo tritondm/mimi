@@ -83,7 +83,7 @@ made only for the export:
 | The style “Beschriftung” (`caption`) is called “Bildunterschrift (Mimi)” in the copy | LibreOffice tags captions as `Caption`, but free-standing instead of inside `Figure`/`Table`. PAC complains about that. As a normal paragraph it is correct. Numbering (SEQ fields) and indexes stay the same. | `rename_caption_style` |
 | Links and reference fields (`STYLEREF`, `REF`, `PAGEREF` …) in headers and footers become text, both as simple (`w:fldSimple`) and as complex fields (`w:fldChar`) | Headers and footers are artifacts in the PDF. A link inside them is untagged – on every page (veraPDF 7.18.5-1). | `unlink_header_footer` |
 | Bibliography fields (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) become text | Otherwise LibreOffice builds a protected index that looks different from Word and is tagged as a table of contents (`TOC`). | `unlink_bibliography` |
-| Paragraph spacing from the table style is written directly onto the cell paragraphs, unless the paragraph style (other than “Standard”) or direct formatting sets it | That is how Word calculates it. LibreOffice uses the document defaults instead (e.g. line spacing 1.25 instead of 1.1 from “Table Grid”). The rows get taller. In the Praxistest report: 65 instead of 57 pages. Conditional formats (first row etc.) are not taken into account. | `apply_table_spacing` |
+| Paragraph spacing from the table style is written directly onto the cell paragraphs, unless the paragraph style (other than “Standard”) or direct formatting sets it | That is how Word calculates it. LibreOffice uses the document defaults instead (e.g. line spacing 1.25 instead of 1.1 from “Table Grid”). The rows get taller. In one field-test report: 65 instead of 57 pages. Conditional formats (first row etc.) are not taken into account. | `apply_table_spacing` |
 | Links to local files (`file://`, `C:\…`, `\\server\…`) become text | They lead nowhere in the PDF. Mimi also reports them in the analysis. | `unlink_local` |
 | Images and shapes in headers/footers become decorative, with alt text `rampe:dekorativ` | Headers/footers are artifacts, but LibreOffice tags anchored graphics in them as `Figure` (PAC: “Possibly inappropriate use of a Figure”). For images the Word “decorative” mark is enough. LibreOffice still tags shapes (decorative bars); post-processing recognises them by their alt text. The same applies to shapes marked as decorative in the body text. | `decorate_all`, `mark_decorative_alt` |
 
@@ -184,7 +184,7 @@ What no software can check, e.g. whether an alt text makes sense or whether the 
 order is right, remains with a human. The final test with **PAC** (Windows only) is done by
 the staff member.
 
-## Field test: Praxistest final report (November 2026)
+## Field test: final report of a research project (November 2026)
 
 100 pages, 64 images, 12 tables, 113 links in the indexes. Checked with veraPDF 1.30.4 (PDF/UA-1):
 

@@ -543,7 +543,7 @@ mod tests {
 
     #[test]
     fn keeps_foreign_properties() {
-        let xml = format!(r#"<Properties xmlns="{NS_CUSTOM}" xmlns:vt="{NS_VT}"><property fmtid="{FMTID}" pid="2" name="Projekt"><vt:lpwstr>Praxistest</vt:lpwstr></property><property fmtid="{FMTID}" pid="7" name="{PROP_PREFIX}abc"><vt:lpwstr>alt</vt:lpwstr></property></Properties>"#);
+        let xml = format!(r#"<Properties xmlns="{NS_CUSTOM}" xmlns:vt="{NS_VT}"><property fmtid="{FMTID}" pid="2" name="Projekt"><vt:lpwstr>Beispiel</vt:lpwstr></property><property fmtid="{FMTID}" pid="7" name="{PROP_PREFIX}abc"><vt:lpwstr>alt</vt:lpwstr></property></Properties>"#);
         let (keep, pid) = foreign_properties(&xml);
         assert_eq!(keep.len(), 1);
         assert!(keep[0].contains("Projekt"));

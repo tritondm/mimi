@@ -131,7 +131,7 @@ Mimi reads the report and then shows the overview.
 ### Dokumenttitel (Document title)
 
 The title is shown in the PDF viewer instead of the file name and is read out by screen
-readers. Enter the proper report title, e.g. “Final Report Praxistest 2026”.
+readers. Enter the proper report title, e.g. “Final Report Research Project 2026”.
 
 ### Hauptsprache (Main language)
 

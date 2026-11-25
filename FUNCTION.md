@@ -83,7 +83,7 @@ behebt sie in einer Kopie, die nur für den Export entsteht:
 | Die Vorlage „Beschriftung“ (`caption`) heißt in der Kopie „Bildunterschrift (Mimi)“ | LibreOffice taggt Beschriftungen als `Caption`, aber frei stehend statt innerhalb von `Figure`/`Table`. PAC bemängelt das. Als normaler Absatz ist es korrekt. Nummerierung (SEQ-Felder) und Verzeichnisse bleiben gleich. | `rename_caption_style` |
 | Links und Verweis-Felder (`STYLEREF`, `REF`, `PAGEREF` …) in Kopf- und Fußzeilen werden zu Text, als einfaches (`w:fldSimple`) wie als zusammengesetztes Feld (`w:fldChar`) | Kopf- und Fußzeilen sind im PDF Artefakte. Ein Link darin ist ungetaggt, und zwar auf jeder Seite (veraPDF 7.18.5-1). | `unlink_header_footer` |
 | Literaturverzeichnis-Felder (Word `BIBLIOGRAPHY`, Citavi, Zotero, EndNote) werden zu Text | LibreOffice baut sonst ein geschütztes Verzeichnis, das anders aussieht als in Word und als Inhaltsverzeichnis (`TOC`) getaggt wird. | `unlink_bibliography` |
-| Absatzabstände der Tabellenvorlage werden direkt an die Zellabsätze geschrieben, soweit Absatzvorlage (außer „Standard“) oder direkte Formatierung sie nicht festlegen | So rechnet Word. LibreOffice nimmt stattdessen die Dokument-Standardwerte (z. B. Zeilenabstand 1,25 statt 1,1 aus „Tabellenraster“). Die Zeilen werden höher. Beim Praxistest-Bericht: 65 statt 57 Seiten. Bedingte Formate (erste Zeile usw.) werden nicht berücksichtigt. | `apply_table_spacing` |
+| Absatzabstände der Tabellenvorlage werden direkt an die Zellabsätze geschrieben, soweit Absatzvorlage (außer „Standard“) oder direkte Formatierung sie nicht festlegen | So rechnet Word. LibreOffice nimmt stattdessen die Dokument-Standardwerte (z. B. Zeilenabstand 1,25 statt 1,1 aus „Tabellenraster“). Die Zeilen werden höher. Bei einem Bericht aus dem Praxistest: 65 statt 57 Seiten. Bedingte Formate (erste Zeile usw.) werden nicht berücksichtigt. | `apply_table_spacing` |
 | Links auf lokale Dateien (`file://`, `C:\…`, `\\server\…`) werden zu Text | Sie führen im PDF ins Leere. Mimi meldet sie auch in der Analyse. | `unlink_local` |
 | Bilder und Formen in Kopf-/Fußzeilen werden dekorativ, mit Alternativtext `rampe:dekorativ` | Kopf-/Fußzeilen sind Artefakte, verankerte Grafiken darin taggt LibreOffice aber als `Figure` (PAC: „Possibly inappropriate use of a Figure“). Bei Bildern genügt die Word-Markierung „dekorativ“. Formen (Zierbalken) taggt LibreOffice trotzdem; die Nachbearbeitung erkennt sie am Alternativtext. Dasselbe gilt für Formen, die im Text als dekorativ markiert sind. | `decorate_all`, `mark_decorative_alt` |
 
@@ -184,7 +184,7 @@ Was keine Software prüfen kann, z. B. ob ein Alternativtext sinnvoll ist oder o
 Lesereihenfolge stimmt, bleibt beim Menschen. Den abschließenden Test mit **PAC** (nur Windows)
 macht die Mitarbeiterin bzw. der Mitarbeiter.
 
-## Praxistest: Praxistest-Abschlussbericht (November 2026)
+## Praxistest: Abschlussbericht eines Forschungsprojekts (November 2026)
 
 100 Seiten, 64 Bilder, 12 Tabellen, 113 Links in den Verzeichnissen. Prüfung mit veraPDF 1.30.4 (PDF/UA-1):
 
