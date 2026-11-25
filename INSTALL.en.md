@@ -22,7 +22,8 @@ Internet ──https──▶ Host server.example.org (LXD)
 | Program | `/opt/rampe/rampe` (statically built, musl) |
 | Service | `/etc/systemd/system/rampe.service` (template: `deploy/rampe.service`) |
 | User | system user `rampe`, home `/var/lib/rampe` |
-| User file | `/var/lib/rampe/users.txt` (mode 600) |
+| User file | `/var/lib/rampe/users.txt` (mode 600, with the two-factor secrets) |
+| Audit log | `/var/lib/rampe/data/audit.log` (mode 600, 90 days) |
 | Reports | `/var/lib/rampe/data/jobs/` |
 | LibreOffice profile | `/var/lib/rampe/data/lo-profile` (created by Leo itself) |
 | veraPDF | `/opt/verapdf/verapdf` |
@@ -209,4 +210,7 @@ lxc exec rampe -- apt-get upgrade                   # system packages; LibreOffi
   (`JOB_TTL_DAYS` in `deploy/rampe.service`), a user's superseded reports after 1 day.
   Leo cleans up at start and then hourly. The journal only shows the count, e.g.
   “3 Bericht(e) gelöscht (412 MB, Löschfrist abgelaufen)” (3 reports deleted, deadline expired).
-- Backup: `/var/lib/rampe/users.txt` is sufficient. Reports can be uploaded again at any time.
+- Backup: `/var/lib/rampe/users.txt` is sufficient, plus `audit.log` if needed. Reports can be uploaded again at any time.
+  `users.txt` contains the two-factor secrets: protect backups just like the file itself.
+- Reset two-factor for someone without a browser:
+  `lxc exec rampe -- runuser -u rampe -- env USERS_FILE=/var/lib/rampe/users.txt DATA_DIR=/var/lib/rampe/data /opt/rampe/rampe zwei-faktor-aus NAME`

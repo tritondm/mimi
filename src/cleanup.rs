@@ -10,6 +10,8 @@
 //!   Ältere Berichte desselben Benutzers sind nicht mehr erreichbar und werden nach einem Tag
 //!   ohne Nutzung gelöscht (Puffer, falls jemand in zwei Browser-Tabs arbeitet).
 //! - Berichte ohne Besitzer (abgebrochenes Hochladen) werden nach einem Tag gelöscht.
+//! - Berichte von Benutzern, die es nicht mehr gibt (z. B. über die Kommandozeile gelöscht),
+//!   werden sofort gelöscht.
 //! - `JOB_TTL_DAYS=0` schaltet das automatische Löschen ab.
 //!
 //! Ein Bericht, der gerade exportiert wird, bleibt immer stehen.
@@ -122,11 +124,13 @@ fn remove(dir: &Path, out: &mut Swept) {
 }
 
 /// Ein Aufräumlauf. `busy`: IDs von Berichten, die gerade exportiert werden.
-pub fn sweep(jobs: &Path, policy: &Policy, busy: &HashSet<String>) -> Result<Swept> {
-    sweep_at(jobs, policy, busy, now_secs())
+/// `users`: alle Benutzer – Berichte anderer Besitzer werden gelöscht. Ist die Menge leer
+/// (Benutzerdatei nicht lesbar), wird diese Regel ausgelassen.
+pub fn sweep(jobs: &Path, policy: &Policy, busy: &HashSet<String>, users: &HashSet<String>) -> Result<Swept> {
+    sweep_at(jobs, policy, busy, users, now_secs())
 }
 
-fn sweep_at(jobs: &Path, policy: &Policy, busy: &HashSet<String>, now: u64) -> Result<Swept> {
+fn sweep_at(jobs: &Path, policy: &Policy, busy: &HashSet<String>, users: &HashSet<String>, now: u64) -> Result<Swept> {
     let mut out = Swept::default();
     let Some(ttl) = policy.ttl else { return Ok(out) };
     let age = |t: u64| now.saturating_sub(t);
@@ -141,6 +145,8 @@ fn sweep_at(jobs: &Path, policy: &Policy, busy: &HashSet<String>, now: u64) -> R
         }
         let t = last_used(&dir);
         match std::fs::read_to_string(dir.join("owner.txt")) {
+            // Besitzer gibt es nicht mehr
+            Ok(owner) if !users.is_empty() && !users.contains(&owner) => remove(&dir, &mut out),
             Ok(owner) => by_owner.entry(owner).or_default().push((t, dir)),
             // abgebrochenes Hochladen
             Err(_) if age(t) >= GRACE.as_secs() => remove(&dir, &mut out),
@@ -219,16 +225,18 @@ mod tests {
         let carl_only = job(&jobs, Some("carl"), NOW, 31.0); // einziger, > 30 Tage
         let orphan = job(&jobs, None, NOW, 2.0);
         let busy_old = job(&jobs, Some("dora"), NOW, 40.0);
+        let gone_user = job(&jobs, Some("emil"), NOW, 0.0); // Benutzer gibt es nicht mehr
         let busy: HashSet<String> = [busy_old.clone()].into();
+        let users: HashSet<String> = ["anna", "bert", "carl", "dora"].map(String::from).into();
 
-        let s = sweep_at(&jobs, &P30, &busy, NOW).unwrap();
+        let s = sweep_at(&jobs, &P30, &busy, &users, NOW).unwrap();
         let left: HashSet<String> = std::fs::read_dir(&jobs).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
-        assert_eq!(s.removed, 3);
-        assert!(s.bytes >= 3000);
+        assert_eq!(s.removed, 4);
+        assert!(s.bytes >= 4000);
         for id in [&anna_new, &anna_old_fresh, &bert_only, &busy_old] {
             assert!(left.contains(id), "{id} hätte bleiben sollen");
         }
-        for id in [&anna_old, &carl_only, &orphan] {
+        for id in [&anna_old, &carl_only, &orphan, &gone_user] {
             assert!(!left.contains(id), "{id} hätte gelöscht werden sollen");
         }
         let _ = std::fs::remove_dir_all(&jobs);
@@ -239,8 +247,19 @@ mod tests {
         let jobs = tmp("off");
         job(&jobs, Some("anna"), NOW, 400.0);
         job(&jobs, Some("anna"), NOW, 300.0);
-        let s = sweep_at(&jobs, &Policy { ttl: None }, &HashSet::new(), NOW).unwrap();
+        let s = sweep_at(&jobs, &Policy { ttl: None }, &HashSet::new(), &HashSet::new(), NOW).unwrap();
         assert_eq!(s, Swept::default());
+        let _ = std::fs::remove_dir_all(&jobs);
+    }
+
+    #[test]
+    fn unreadable_users_file_keeps_everything() {
+        let jobs = tmp("nousers");
+        let a = job(&jobs, Some("anna"), NOW, 0.0);
+        // leere Benutzermenge (Datei kaputt) darf nicht alles löschen
+        let s = sweep_at(&jobs, &P30, &HashSet::new(), &HashSet::new(), NOW).unwrap();
+        assert_eq!(s.removed, 0);
+        assert!(jobs.join(&a).is_dir());
         let _ = std::fs::remove_dir_all(&jobs);
     }
 

@@ -32,6 +32,8 @@ Schritt 3 und ohne die Anpassungen aus Schritt 4. Sie bleibt eine normale Word-D
 |---|---|
 | `src/main.rs` | Webserver (axum): Routen, Anmeldung, Ablage, Aufruf von LibreOffice |
 | `src/cleanup.rs` | Automatisches Löschen der Berichte |
+| `src/audit.rs` | Audit-Log für Admins |
+| `src/totp.rs` | Zwei-Faktor-Anmeldung (TOTP, QR-Code) |
 | `src/auth.rs` | Benutzer, Passwörter (Argon2id), Sitzungen, Kommandozeilenbefehle |
 | `src/docx.rs` | Lesen, Korrigieren und Vorbereiten der Word-Datei |
 | `src/pdffix.rs` | Nachbearbeitung des PDFs: falsch verschachtelte Struktur geradeziehen |
@@ -131,6 +133,22 @@ den Baum selbst richtig, findet sie nichts und lässt das PDF unverändert. Mach
 anders falsch, meldet die Basisprüfung „Falsch verschachtelte Struktur“. Ein Fehler wird
 also nie still durchgereicht. Nach einem LibreOffice-Update zeigt der Regressionstest
 (siehe [Testen](#testen)), ob alles noch passt.
+
+## Audit-Log und Zwei-Faktor-Anmeldung
+
+**Audit-Log** (`audit.rs`): eine JSON-Zeile pro Ereignis in `audit.log`, nur angehängt, Rechte
+600. Festgehalten werden Zeit, Benutzer (bzw. „Kommandozeile“ oder „System“), Aktion, betroffener
+Benutzer oder Bericht-ID, Erfolg, Zusatzinfo und IP-Adresse (vom Reverse-Proxy,
+`X-Forwarded-For`). Dateinamen und Inhalte der Berichte stehen bewusst nicht darin. Eingaben von
+außen werden gekürzt und von Steuerzeichen befreit, damit niemand Zeilen vortäuschen kann.
+Einträge älter als `AUDIT_DAYS` (90) entfernt das stündliche Aufräumen.
+
+**Zwei-Faktor** (`totp.rs`, `auth.rs`): TOTP nach RFC 6238 (HMAC-SHA1, 6 Ziffern, 30 Sekunden,
+ein Zeitschritt Toleranz). Das Geheimnis (160 Bit, Base32) steht als `:totp=…` in `users.txt`.
+Einrichten: Leo erzeugt ein Geheimnis und zeigt es als QR-Code; erst wenn der erste Code aus der
+App stimmt, wird es gespeichert (offenes Einrichten verfällt nach 10 Minuten). Bei der Anmeldung
+prüft Leo erst das Passwort, dann den Code. Ein Code gilt nur einmal (letzter Zeitschritt pro
+Benutzer). Ein falscher Code zählt als Fehlversuch für die Sperre.
 
 ## Automatisches Löschen
 

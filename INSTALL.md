@@ -22,7 +22,8 @@ Internet ──https──▶ Host server.example.org (LXD)
 | Programm | `/opt/rampe/rampe` (statisch gebaut, musl) |
 | Dienst | `/etc/systemd/system/rampe.service` (Vorlage: `deploy/rampe.service`) |
 | Benutzer | Systembenutzer `rampe`, Home `/var/lib/rampe` |
-| Benutzerdatei | `/var/lib/rampe/users.txt` (Rechte 600) |
+| Benutzerdatei | `/var/lib/rampe/users.txt` (Rechte 600, mit den Geheimnissen der Zwei-Faktor-Anmeldung) |
+| Audit-Log | `/var/lib/rampe/data/audit.log` (Rechte 600, 90 Tage) |
 | Berichte | `/var/lib/rampe/data/jobs/` |
 | LibreOffice-Profil | `/var/lib/rampe/data/lo-profile` (legt Leo selbst an) |
 | veraPDF | `/opt/verapdf/verapdf` |
@@ -208,4 +209,7 @@ lxc exec rampe -- apt-get upgrade                   # Systempakete; LibreOffice 
   (`JOB_TTL_DAYS` in `deploy/rampe.service`), ersetzte Berichte eines Benutzers nach 1 Tag.
   Leo räumt beim Start und dann stündlich auf. Im Journal steht nur die Anzahl, z. B.
   „3 Bericht(e) gelöscht (412 MB, Löschfrist abgelaufen)“.
-- Sicherung: `/var/lib/rampe/users.txt` genügt. Berichte lassen sich jederzeit neu hochladen.
+- Sicherung: `/var/lib/rampe/users.txt` genügt, dazu bei Bedarf `audit.log`. Berichte lassen sich jederzeit neu hochladen.
+  `users.txt` enthält die Geheimnisse der Zwei-Faktor-Anmeldung: Sicherungen genauso schützen wie die Datei selbst.
+- Zwei-Faktor für jemanden zurücksetzen, ohne Browser:
+  `lxc exec rampe -- runuser -u rampe -- env USERS_FILE=/var/lib/rampe/users.txt DATA_DIR=/var/lib/rampe/data /opt/rampe/rampe zwei-faktor-aus NAME`

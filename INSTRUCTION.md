@@ -79,6 +79,22 @@ Administratorin bzw. dem Administrator.
 - Nach **5 falschen Passwörtern** ist der Benutzername **5 Minuten gesperrt**.
 - Passwort vergessen oder ändern? Bitte an die Administration wenden.
 
+### Zwei-Faktor-Anmeldung (freiwillig)
+
+Mit der Zwei-Faktor-Anmeldung braucht man außer dem Passwort einen Code, den eine App auf
+Ihrem Handy alle 30 Sekunden neu erzeugt, z. B. Microsoft Authenticator, Google Authenticator
+oder FreeOTP. Ein gestohlenes Passwort allein reicht dann nicht mehr.
+
+1. Rechts oben auf **Zwei-Faktor** klicken, dann auf **Einrichten**.
+2. In der App ein Konto hinzufügen und den **QR-Code** scannen. Ohne Kamera: den angezeigten
+   Schlüssel eintippen.
+3. Den Code aus der App eingeben und **Aktivieren**.
+
+Ab jetzt fragt Leo beim Anmelden nach dem Passwort nach dem **Code aus der Authenticator-App**.
+Jeder Code gilt nur einmal. Kommt die Meldung „schon verwendet“, warten Sie auf den nächsten
+Code. Ausschalten können Sie die Zwei-Faktor-Anmeldung an derselben Stelle mit einem gültigen
+Code. **Handy verloren oder gewechselt?** Die Administration setzt sie zurück.
+
 Rechts oben finden Sie **Abmelden**. Admins sehen dort zusätzlich die
 **Benutzerverwaltung** (siehe [Für Admins](#für-admins)).
 
@@ -333,7 +349,13 @@ Unter **Benutzerverwaltung** (rechts oben, Adresse `/admin`) können Admins:
 - **Passwort setzen** – z. B. wenn jemand das Passwort vergessen hat. Bestehende
   Anmeldungen dieser Person werden sofort beendet.
 - **Admin-Rechte** vergeben oder entziehen.
-- **Benutzer löschen.**
+- **Zwei-Faktor zurücksetzen** – wenn jemand das Handy verloren hat. Die Person meldet sich
+  danach nur mit Passwort an und kann die App neu einrichten.
+- **Benutzer löschen.** Seine Berichte werden mitgelöscht.
+- Das **Protokoll** ansehen: wer wann was getan hat (Anmeldungen, auch fehlgeschlagene,
+  Benutzerverwaltung, Berichte hochgeladen, erzeugt, heruntergeladen, gelöscht). Mit Suche und
+  „nur Fehlschläge“. Dateinamen und Inhalte stehen nicht darin. Einträge werden nach 90 Tagen
+  gelöscht.
 
 Sich selbst löschen oder die eigenen Admin-Rechte entziehen geht nicht, so bleibt immer
 mindestens ein Admin. Teilen Sie Passwörter bitte auf sicherem Weg mit (nicht im selben

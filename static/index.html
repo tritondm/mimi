@@ -59,6 +59,9 @@ nav.tabs button[aria-selected=true] { background: var(--accent); color: var(--ac
 .img-card:first-of-type { border-top: 0; }
 @media (max-width: 700px) { .img-card { grid-template-columns: 1fr; } }
 .preview { width: 100%; max-height: 200px; object-fit: contain; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0/16px 16px; border-radius: 6px; border: 1px solid var(--line); }
+.qr { width: 220px; height: 220px; background: #fff; padding: 6px; border-radius: 6px; border: 1px solid var(--line); }
+.qr svg { width: 100%; height: 100%; display: block; }
+.secret { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 1.1rem; letter-spacing: .05em; }
 .noprev code { font-size: 1.1rem; color: var(--text); word-break: break-all; }
 .noprev { height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px dashed var(--line); border-radius: 6px; color: var(--muted); padding: 8px; }
 table.list { width: 100%; border-collapse: collapse; }
@@ -89,7 +92,7 @@ ul.hints li:first-child { border-top: 0; }
       <h1>Leo <span class="claim">Leichte Erstellung Ohne Barrieren</span></h1>
       <p>Barrierefrei-Prüfung für Berichte: Word-Datei hochladen → Probleme beheben → barrierefreies PDF (PDF/UA) erzeugen und prüfen</p>
     </div>
-    <div id="userbox" class="hidden"><span class="muted">Angemeldet als <strong id="username"></strong></span><a class="btn secondary hidden" id="adminlink" href="/admin">Benutzerverwaltung</a><button class="secondary" id="logout">Abmelden</button></div>
+    <div id="userbox" class="hidden"><span class="muted">Angemeldet als <strong id="username"></strong></span><button class="secondary" id="mfabtn" aria-controls="mfa" aria-expanded="false">Zwei-Faktor</button><a class="btn secondary hidden" id="adminlink" href="/admin">Benutzerverwaltung</a><button class="secondary" id="logout">Abmelden</button></div>
   </div>
 </header>
 <main>
@@ -100,8 +103,16 @@ ul.hints li:first-child { border-top: 0; }
     <form id="loginform">
       <div><label for="l-user">Benutzername</label><input id="l-user" type="text" autocomplete="username" required></div>
       <div><label for="l-pw">Passwort</label><input id="l-pw" type="password" autocomplete="current-password" required></div>
+      <div id="l-codewrap" class="hidden"><label for="l-code">Code aus der Authenticator-App</label><input id="l-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" aria-describedby="l-codehelp"><p class="muted" id="l-codehelp">Die 6 Ziffern, die Ihre App gerade für „Leo“ anzeigt.</p></div>
       <div><button type="submit" id="l-btn">Anmelden</button></div>
     </form>
+  </section>
+
+  <section id="mfa" class="card hidden" aria-labelledby="h-mfa">
+    <h2 id="h-mfa">Zwei-Faktor-Anmeldung</h2>
+    <div id="mfabody"></div>
+    <p id="mfamsg" role="status" aria-live="polite"></p>
+    <p><button class="secondary" id="mfaclose">Schließen</button></p>
   </section>
 
   <section id="upload" class="card hidden" aria-labelledby="h-upload">
@@ -595,6 +606,7 @@ async function afterLogin() {
   let info = {user: '', admin: false};
   try { info = await api('/api/me'); } catch (e) { return; }
   $('#username').textContent = info.user;
+  mfaOn = !!info.mfa;
   ttlDays = info.ttl_days || 0;
   $('#ttlinfo').textContent = ttlDays ? ` Hochgeladene Berichte werden ${ttlDays} Tage nach der letzten Nutzung automatisch gelöscht, ältere Berichte nach einem Tag, sobald Sie einen neuen hochladen.` : '';
   $('#adminlink').classList.toggle('hidden', !info.admin);
@@ -609,11 +621,76 @@ $('#loginform').addEventListener('submit', async e => {
   e.preventDefault(); showError('');
   $('#l-btn').disabled = true;
   try {
-    const r = await api('/api/login', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({user: $('#l-user').value, password: $('#l-pw').value})});
-    $('#l-pw').value = '';
+    const codeShown = !$('#l-codewrap').classList.contains('hidden');
+    const body = {user: $('#l-user').value, password: $('#l-pw').value};
+    if (codeShown) body.code = $('#l-code').value;
+    const r = await fetch('/api/login', {method: 'POST', credentials: 'same-origin', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (j.mfa) {
+        // Passwort stimmt, jetzt der Code aus der App
+        $('#l-codewrap').classList.remove('hidden');
+        $('#l-code').value = '';
+        $('#l-code').focus();
+        if (codeShown) showError(j.error);
+        return;
+      }
+      throw new Error(j.error || r.statusText);
+    }
+    $('#l-pw').value = ''; $('#l-code').value = '';
     await afterLogin();
   } catch (err) { showError(err.message); }
   finally { $('#l-btn').disabled = false; }
+});
+// Benutzername geändert: Codefeld wieder ausblenden
+$('#l-user').addEventListener('input', () => $('#l-codewrap').classList.add('hidden'));
+
+// --- Zwei-Faktor-Anmeldung einrichten und ausschalten ---
+let mfaOn = false;
+function mfaOpen(open) {
+  $('#mfa').classList.toggle('hidden', !open);
+  $('#mfabtn').setAttribute('aria-expanded', open);
+  $('#mfamsg').textContent = '';
+  if (open) { renderMfa(); $('#h-mfa').setAttribute('tabindex', '-1'); $('#h-mfa').focus(); }
+}
+function renderMfa() {
+  $('#mfabody').innerHTML = mfaOn
+    ? `<p><span class="badge b-ok">eingeschaltet</span> Beim Anmelden fragt Leo nach Ihrem Passwort einen Code aus Ihrer Authenticator-App ab.</p>
+       <p class="muted">Handy verloren oder gewechselt? Die Administration kann die Zwei-Faktor-Anmeldung zurücksetzen.</p>
+       <form id="mfaoff" class="row"><div><label for="mfa-off-code">Aktueller Code zum Ausschalten</label><input id="mfa-off-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div><div><button type="submit" class="secondary">Ausschalten</button></div></form>`
+    : `<p>Mit der Zwei-Faktor-Anmeldung braucht man zum Anmelden außer dem Passwort einen Code, den eine App auf Ihrem Handy alle 30 Sekunden neu erzeugt (z.&nbsp;B. Microsoft Authenticator, Google Authenticator, FreeOTP). Ein gestohlenes Passwort allein reicht dann nicht mehr. Freiwillig.</p>
+       <p><button id="mfastart">Einrichten</button></p>`;
+}
+$('#mfabtn').addEventListener('click', () => mfaOpen($('#mfa').classList.contains('hidden')));
+$('#mfaclose').addEventListener('click', () => { mfaOpen(false); $('#mfabtn').focus(); });
+$('#mfabody').addEventListener('click', async e => {
+  if (e.target.id !== 'mfastart') return;
+  showError('');
+  try {
+    const r = await api('/api/mfa/setup', {method: 'POST'});
+    $('#mfabody').innerHTML = `
+      <ol>
+        <li>Öffnen Sie Ihre Authenticator-App und fügen Sie ein Konto hinzu („QR-Code scannen“).</li>
+        <li>Scannen Sie diesen QR-Code:
+          <div class="qr" role="img" aria-label="QR-Code für die Authenticator-App">${r.qr}</div>
+          Oder tippen Sie den Schlüssel ein: <span class="secret">${esc(r.secret)}</span> <span class="muted">(Konto: ${esc(r.issuer)}, zeitbasiert)</span></li>
+        <li>Geben Sie zur Bestätigung den Code ein, den die App jetzt anzeigt:</li>
+      </ol>
+      <form id="mfaon" class="row"><div><label for="mfa-on-code">Code aus der App</label><input id="mfa-on-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div><div><button type="submit">Aktivieren</button></div></form>
+      <p class="muted">Das Einrichten gilt 10 Minuten.</p>`;
+    $('#mfa-on-code').focus();
+  } catch (err) { showError(err.message); }
+});
+$('#mfabody').addEventListener('submit', async e => {
+  e.preventDefault(); showError('');
+  const on = e.target.id === 'mfaon';
+  const code = (on ? $('#mfa-on-code') : $('#mfa-off-code')).value;
+  try {
+    const r = await api(on ? '/api/mfa/enable' : '/api/mfa/disable', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({code})});
+    mfaOn = r.mfa; renderMfa();
+    $('#mfamsg').innerHTML = mfaOn ? '<span class="badge b-ok">✓</span> Zwei-Faktor-Anmeldung eingeschaltet.' : 'Zwei-Faktor-Anmeldung ausgeschaltet.';
+    $('#h-mfa').focus();
+  } catch (err) { showError(err.message); }
 });
 $('#logout').addEventListener('click', async () => {
   if (job && dirty() && !confirm('Ungespeicherte Änderungen verwerfen?')) return;

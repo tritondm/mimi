@@ -81,6 +81,21 @@ Enter your user name and password. You get your login details from the administr
 - After **5 wrong passwords** the user name is **locked for 5 minutes**.
 - Forgot or want to change your password? Please contact the administrator.
 
+### Two-factor login (optional)
+
+With two-factor login you need, in addition to your password, a code that an app on your
+phone generates every 30 seconds, e.g. Microsoft Authenticator, Google Authenticator or
+FreeOTP. A stolen password alone is then no longer enough.
+
+1. Click **Zwei-Faktor** (Two-factor) at the top right, then **Einrichten** (Set up).
+2. Add an account in the app and scan the **QR code**. Without a camera: type in the key shown.
+3. Enter the code from the app and click **Aktivieren** (Activate).
+
+From now on Leo asks for the **code from the authenticator app** after your password. Each
+code is valid only once. If you see “schon verwendet” (already used), wait for the next code.
+You can switch two-factor login off in the same place with a valid code. **Lost or changed
+your phone?** The administrator resets it.
+
 At the top right you find **Abmelden** (Log out). Admins also see
 **Benutzerverwaltung** (User management) there (see [For admins](#for-admins)).
 
@@ -332,7 +347,13 @@ Under **Benutzerverwaltung** (User management, top right, address `/admin`) admi
 - **Passwort setzen** (Set password) – e.g. if someone has forgotten their password.
   That person's existing sessions are ended immediately.
 - Grant or revoke **admin rights**.
-- **Delete users.**
+- **Zwei-Faktor zurücksetzen** (Reset two-factor) – if someone has lost their phone. The
+  person then logs in with the password only and can set up the app again.
+- **Delete users.** Their reports are deleted too.
+- View the **Protokoll** (audit log): who did what and when (logins including failed ones,
+  user management, reports uploaded, created, downloaded, deleted). With search and “nur
+  Fehlschläge” (failures only). File names and contents are not included. Entries are deleted
+  after 90 days.
 
 You cannot delete yourself or revoke your own admin rights, so there is always at least
 one admin. Please share passwords securely (not in the same e-mail as the user name).

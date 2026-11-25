@@ -32,6 +32,8 @@ step 3 and without the adjustments from step 4. It remains a normal Word file.
 |---|---|
 | `src/main.rs` | Web server (axum): routes, login, storage, calling LibreOffice |
 | `src/cleanup.rs` | Automatic deletion of reports |
+| `src/audit.rs` | Audit log for admins |
+| `src/totp.rs` | Two-factor login (TOTP, QR code) |
 | `src/auth.rs` | Users, passwords (Argon2id), sessions, command-line commands |
 | `src/docx.rs` | Reading, correcting and preparing the Word file |
 | `src/pdffix.rs` | Post-processing of the PDF: straightening incorrectly nested structure |
@@ -131,6 +133,22 @@ correctly itself, it finds nothing and leaves the PDF unchanged. If it gets it w
 different way, the basic check reports “Falsch verschachtelte Struktur” (incorrectly nested
 structure). So an error is never passed through silently. After a LibreOffice update the
 regression test (see [Testing](#testing)) shows whether everything still works.
+
+## Audit log and two-factor login
+
+**Audit log** (`audit.rs`): one JSON line per event in `audit.log`, append-only, mode 600.
+It records time, user (or “Kommandozeile”/command line or “System”), action, affected user or
+report ID, success, extra info and IP address (from the reverse proxy, `X-Forwarded-For`). File
+names and contents of reports are deliberately not included. Input from outside is shortened
+and stripped of control characters so nobody can fake lines. Entries older than `AUDIT_DAYS`
+(90) are removed by the hourly cleanup.
+
+**Two-factor** (`totp.rs`, `auth.rs`): TOTP according to RFC 6238 (HMAC-SHA1, 6 digits,
+30 seconds, one time step tolerance). The secret (160 bits, Base32) is stored as `:totp=…` in
+`users.txt`. Setup: Leo generates a secret and shows it as a QR code; it is only stored once the
+first code from the app is correct (an open setup expires after 10 minutes). At login Leo first
+checks the password, then the code. A code is valid only once (last time step per user). A
+wrong code counts as a failed attempt for the lockout.
 
 ## Automatic deletion
 

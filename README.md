@@ -35,8 +35,18 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
   Admin-Rechte entziehen geht nicht – es bleibt also immer ein Admin.
 - Alternativ über die Kommandozeile:
   `rampe benutzer-anlegen NAME [--admin]`, `rampe passwort-ändern NAME` (Rolle bleibt),
-  `rampe benutzer-entfernen NAME`, `rampe benutzer-liste`.
-- Passwörter werden mit Argon2id gehasht in `users.txt` gespeichert (Dateirechte 600).
+  `rampe benutzer-entfernen NAME`, `rampe benutzer-liste`,
+  `rampe zwei-faktor-aus NAME` (Zwei-Faktor zurücksetzen).
+- **Zwei-Faktor-Anmeldung (freiwillig):** Jeder kann sie über den Knopf „Zwei-Faktor“ mit
+  einer Authenticator-App einrichten (TOTP nach RFC 6238: 6 Ziffern, 30 Sekunden). Danach
+  fragt Leo nach dem Passwort einen Code ab, jeder Code gilt nur einmal, ein falscher Code
+  zählt als Fehlversuch. Handy verloren: Admins setzen sie unter `/admin` zurück.
+- **Audit-Log:** Anmeldungen, Benutzerverwaltung, Zwei-Faktor und Aktionen an Berichten
+  (hochgeladen, PDF erzeugt, heruntergeladen, gelöscht) mit Zeit, Benutzer und IP-Adresse.
+  Ohne Dateinamen und Inhalte. Admins sehen es unter `/admin` („Protokoll“). Einträge werden
+  nach 90 Tagen gelöscht (`AUDIT_DAYS`).
+- Passwörter werden mit Argon2id gehasht in `users.txt` gespeichert (Dateirechte 600),
+  dort auch die Geheimnisse der Zwei-Faktor-Anmeldung.
 - Sitzungen: Cookie `HttpOnly`, `SameSite=Strict`, 8 Stunden ab letzter Aktivität.
   Passwortänderung oder Löschung beendet die Sitzungen des Benutzers sofort.
 - Nach 5 Fehlversuchen wird der Benutzername 5 Minuten gesperrt.
@@ -54,6 +64,8 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
 | `SOFFICE`       | `soffice`         | Pfad zu LibreOffice                         |
 | `VERAPDF`       | –                 | Pfad zum veraPDF-Startskript                |
 | `JOB_TTL_DAYS`  | `30`              | Berichte so viele Tage nach der letzten Nutzung löschen, ersetzte nach 1 Tag; `0` = aus |
+| `AUDIT_FILE`    | `<DATA_DIR>/audit.log` | Audit-Log (eine JSON-Zeile pro Ereignis) |
+| `AUDIT_DAYS`    | `90`              | Einträge im Audit-Log so viele Tage aufbewahren; `0` = unbegrenzt |
 
 Voraussetzung auf dem Server: **LibreOffice** (läuft unsichtbar im Hintergrund) und die
 passenden **Schriften** (v. a. Carlito als Ersatz für Calibri), siehe [INSTALL.md](INSTALL.md#schriften).

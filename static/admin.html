@@ -31,7 +31,7 @@ button, .btn { font: inherit; border: 1px solid var(--accent); background: var(-
 button.secondary, .btn.secondary { background: transparent; color: var(--accent); }
 button.danger { background: transparent; color: var(--err); border-color: var(--err); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-input[type=text], input[type=password] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+input[type=text], input[type=password], input[type=search] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
 label { font-weight: 600; display: block; margin-bottom: 4px; }
 label.inline { display: inline-flex; gap: 6px; align-items: center; font-weight: normal; }
 .muted { color: var(--muted); font-size: .92rem; }
@@ -42,6 +42,13 @@ th { border-top: 0; color: var(--muted); font-size: .9rem; }
 td.actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
 @media (max-width: 700px) { form.grid { grid-template-columns: 1fr; } }
+.badge.ok { background: var(--ok-bg); color: var(--ok); }
+.badge.err { background: var(--err-bg); color: var(--err); }
+.filter { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 8px; }
+.filter input[type=search] { min-width: 240px; }
+.scroll { overflow-x: auto; }
+#audit td { font-size: .9rem; vertical-align: top; }
+#audit td.nowrap, #audit .nowrap { white-space: nowrap; }
 .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
 .msg.err { background: var(--err-bg); color: var(--err); }
 .msg.ok { background: var(--ok-bg); color: var(--ok); }
@@ -78,9 +85,26 @@ form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align
     <section class="card" aria-labelledby="h-list">
       <h2 id="h-list">Benutzer</h2>
       <table>
-        <thead><tr><th scope="col">Name</th><th scope="col">Rolle</th><th scope="col"><span class="hidden">Aktionen</span></th></tr></thead>
+        <thead><tr><th scope="col">Name</th><th scope="col">Rolle</th><th scope="col">Zwei-Faktor</th><th scope="col"><span class="hidden">Aktionen</span></th></tr></thead>
         <tbody id="users"></tbody>
       </table>
+    </section>
+
+    <section class="card" aria-labelledby="h-audit">
+      <h2 id="h-audit">Protokoll</h2>
+      <p class="muted" id="audit-info">Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte.</p>
+      <div class="filter">
+        <div><label for="a-q">Suchen</label><input id="a-q" type="search" placeholder="Name, Aktion, IP …"></div>
+        <label class="inline"><input type="checkbox" id="a-fail"> nur Fehlschläge</label>
+        <button class="secondary" id="a-reload">Neu laden</button>
+        <span class="muted" id="a-count" role="status" aria-live="polite"></span>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th scope="col">Zeit</th><th scope="col">Wer</th><th scope="col">Aktion</th><th scope="col">Betrifft</th><th scope="col">Info</th><th scope="col">IP</th></tr></thead>
+          <tbody id="audit"></tbody>
+        </table>
+      </div>
     </section>
   </div>
 </main>
@@ -106,6 +130,7 @@ function render(users) {
     return `<tr>
       <td>${esc(u.name)}${self ? ' <span class="muted">(Sie)</span>' : ''}</td>
       <td>${u.admin ? '<span class="badge">Admin</span>' : 'Benutzer'}</td>
+      <td>${u.mfa ? `<span class="badge ok">eingeschaltet</span> <button class="secondary" data-mfa="${esc(u.name)}">Zurücksetzen</button>` : '<span class="muted">aus</span>'}</td>
       <td class="actions">
         <button class="secondary" data-pw="${esc(u.name)}">Passwort setzen</button>
         ${self ? '' : `<button class="secondary" data-role="${esc(u.name)}" data-admin="${u.admin ? 0 : 1}">${u.admin ? 'Admin-Rechte entziehen' : 'Zum Admin machen'}</button>
@@ -139,14 +164,45 @@ $('#users').addEventListener('click', async e => {
     } else if (b.dataset.role) {
       r = await post('/api/admin/users', {name: b.dataset.role, admin: b.dataset.admin === '1'});
       msg(`Rolle von „${b.dataset.role}“ geändert.`, true);
+    } else if (b.dataset.mfa) {
+      if (!confirm(`Zwei-Faktor-Anmeldung von „${b.dataset.mfa}“ zurücksetzen? Die Person meldet sich danach nur mit Passwort an und kann die App neu einrichten.`)) return;
+      r = await api('/api/admin/users/' + encodeURIComponent(b.dataset.mfa) + '/mfa-reset', {method: 'POST'});
+      msg(`Zwei-Faktor-Anmeldung von „${b.dataset.mfa}“ zurückgesetzt.`, true);
     } else if (b.dataset.del) {
       if (!confirm(`Benutzer „${b.dataset.del}“ wirklich löschen?`)) return;
       r = await api('/api/admin/users/' + encodeURIComponent(b.dataset.del), {method: 'DELETE'});
       msg(`Benutzer „${b.dataset.del}“ gelöscht.`, true);
     }
     window.__users = r.users; render(r.users);
+    loadAudit();
   } catch (err) { msg(err.message); }
 });
+
+// --- Protokoll ---
+let auditEntries = [];
+function renderAudit() {
+  const q = $('#a-q').value.trim().toLowerCase(), onlyFail = $('#a-fail').checked;
+  const rows = auditEntries.filter(e => (!onlyFail || !e.ok) && (!q || [e.actor, e.action, e.target, e.detail, e.ip].join(' ').toLowerCase().includes(q)));
+  $('#audit').innerHTML = rows.slice(0, 1000).map(e => `<tr>
+    <td class="nowrap">${esc(new Date(e.ts * 1000).toLocaleString('de-AT'))}</td>
+    <td>${esc(e.actor)}</td>
+    <td>${e.ok ? '' : '<span class="badge err">fehlgeschlagen</span> '}${esc(e.action)}</td>
+    <td>${/^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(e.target) ? `<span class="nowrap" title="${esc(e.target)}">Bericht ${esc(e.target.slice(0, 8))}</span>` : esc(e.target)}</td>
+    <td>${esc(e.detail)}</td>
+    <td class="nowrap">${esc(e.ip)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Keine Einträge.</td></tr>';
+  $('#a-count').textContent = `${rows.length} von ${auditEntries.length} Einträgen${rows.length > 1000 ? ' (die neuesten 1000 angezeigt)' : ''}`;
+}
+async function loadAudit() {
+  try {
+    const r = await api('/api/admin/audit');
+    auditEntries = r.entries;
+    if (r.days) $('#audit-info').textContent = `Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte. Einträge werden nach ${r.days} Tagen gelöscht.`;
+    renderAudit();
+  } catch (err) { msg(err.message); }
+}
+$('#a-q').addEventListener('input', renderAudit);
+$('#a-fail').addEventListener('change', renderAudit);
+$('#a-reload').addEventListener('click', loadAudit);
 
 (async () => {
   try {
@@ -158,6 +214,7 @@ $('#users').addEventListener('click', async e => {
     minPw = l.min_password; $('#minpw').textContent = `(mind. ${minPw} Zeichen)`;
     window.__users = l.users; render(l.users);
     $('#content').classList.remove('hidden');
+    loadAudit();
   } catch (e) { $('#noaccess').classList.remove('hidden'); }
 })();
 </script>

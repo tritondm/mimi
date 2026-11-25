@@ -5,9 +5,11 @@
 //! Sitzungen per Cookie, Sperre nach wiederholten Fehlversuchen.
 //!
 //! Benutzerdatei (Standard `users.txt`), eine Zeile pro Benutzer:
-//! `name:rolle:$argon2id$…` mit rolle = `admin` oder `benutzer`.
+//! `name:rolle:$argon2id$…[:totp=GEHEIMNIS]` mit rolle = `admin` oder `benutzer`.
+//! `totp=` ist das Geheimnis für die freiwillige Zwei-Faktor-Anmeldung (Base32).
 //! Verwaltung im Browser unter `/admin` oder über die Unterbefehle
-//! `benutzer-anlegen`, `passwort-ändern`, `benutzer-entfernen`, `benutzer-liste`.
+//! `benutzer-anlegen`, `passwort-ändern`, `benutzer-entfernen`, `benutzer-liste`,
+//! `zwei-faktor-aus`.
 
 use anyhow::{bail, Context, Result};
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
@@ -19,11 +21,18 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
+use crate::audit::Audit;
+use crate::totp;
+
 pub const COOKIE: &str = "bf_session";
 pub const SESSION_TTL: Duration = Duration::from_secs(8 * 3600);
 pub const MIN_PASSWORD: usize = 12;
 const MAX_FAILS: u32 = 5;
 const LOCK_TIME: Duration = Duration::from_secs(5 * 60);
+/// So lange gilt ein begonnenes Einrichten der Zwei-Faktor-Anmeldung
+const MFA_SETUP_TTL: Duration = Duration::from_secs(10 * 60);
+/// Kennung der Kommandozeile im Audit-Log
+pub const CLI_ACTOR: &str = "Kommandozeile";
 
 #[derive(Clone)]
 pub struct User {
@@ -35,12 +44,16 @@ pub struct User {
 pub struct UserRec {
     pub admin: bool,
     pub hash: String,
+    /// Geheimnis der Zwei-Faktor-Anmeldung (Base32), wenn eingerichtet
+    pub totp: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct UserEntry {
     pub name: String,
     pub admin: bool,
+    /// Zwei-Faktor-Anmeldung eingerichtet
+    pub mfa: bool,
 }
 
 struct Session {
@@ -61,10 +74,19 @@ pub struct Auth {
     file_lock: Mutex<()>,
     /// Hash für unbekannte Benutzer, damit die Antwortzeit nichts verrät.
     dummy_hash: String,
+    /// zuletzt verwendeter Zeitschritt pro Benutzer: jeder Code gilt nur einmal
+    totp_used: Mutex<HashMap<String, u64>>,
+    /// begonnenes Einrichten: Benutzer → (Geheimnis, Beginn)
+    totp_pending: Mutex<HashMap<String, (String, Instant)>>,
 }
 
 pub enum LoginError {
+    /// Benutzername oder Passwort falsch
     Invalid,
+    /// Passwort richtig, Code aus der App fehlt
+    CodeRequired,
+    /// Passwort richtig, Code falsch oder schon verwendet
+    BadCode,
     Locked(u64),
 }
 
@@ -105,12 +127,21 @@ pub fn read_users(path: &Path) -> Result<BTreeMap<String, UserRec>> {
     let mut users = BTreeMap::new();
     for line in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
         let parts: Vec<&str> = line.splitn(3, ':').collect();
-        let (name, admin, hash) = match parts.as_slice() {
+        let (name, admin, rest) = match parts.as_slice() {
             [n, role, h] if *role == "admin" || *role == "benutzer" => (*n, *role == "admin", *h),
             [n, h] => (*n, false, *h),
             _ => continue,
         };
-        users.insert(name.to_string(), UserRec { admin, hash: hash.to_string() });
+        // Der Argon2-Hash enthält kein „:“; danach folgen optionale Felder „schlüssel=wert“.
+        let mut fields = rest.split(':');
+        let hash = fields.next().unwrap_or_default().to_string();
+        let mut totp = None;
+        for f in fields {
+            if let Some(v) = f.strip_prefix("totp=") {
+                totp = Some(v.to_string()).filter(|v| !v.is_empty());
+            }
+        }
+        users.insert(name.to_string(), UserRec { admin, hash, totp });
     }
     Ok(users)
 }
@@ -118,7 +149,8 @@ pub fn read_users(path: &Path) -> Result<BTreeMap<String, UserRec>> {
 fn write_users(path: &Path, users: &BTreeMap<String, UserRec>) -> Result<()> {
     let mut out = String::from("# Benutzer von Leo – im Browser unter /admin oder über die Unterbefehle bearbeiten\n");
     for (n, u) in users {
-        out.push_str(&format!("{n}:{}:{}\n", if u.admin { "admin" } else { "benutzer" }, u.hash));
+        let totp = u.totp.as_deref().map(|t| format!(":totp={t}")).unwrap_or_default();
+        out.push_str(&format!("{n}:{}:{}{totp}\n", if u.admin { "admin" } else { "benutzer" }, u.hash));
     }
     let tmp = path.with_extension("tmp");
     std::fs::write(&tmp, out)?;
@@ -144,7 +176,7 @@ fn read_password(prompt: &str) -> Result<String> {
 }
 
 /// Unterbefehle zur Benutzerverwaltung. Gibt `true` zurück, wenn ein Befehl ausgeführt wurde.
-pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
+pub fn cli(args: &[String], users_file: &Path, audit: &Audit) -> Result<bool> {
     match args.first().map(String::as_str) {
         Some("benutzer-anlegen") => {
             let name = args.get(1).context("Aufruf: benutzer-anlegen <name> [--admin]")?;
@@ -159,8 +191,11 @@ pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
                 bail!("Die Passwörter stimmen nicht überein.");
             }
             let mut users = read_users(users_file)?;
-            let existed = users.insert(name.clone(), UserRec { admin, hash: hash_password(&pw)? }).is_some();
+            // eine eingerichtete Zwei-Faktor-Anmeldung bleibt erhalten
+            let totp = users.get(name.as_str()).and_then(|u| u.totp.clone());
+            let existed = users.insert(name.clone(), UserRec { admin, hash: hash_password(&pw)?, totp }).is_some();
             write_users(users_file, &users)?;
+            audit.log(CLI_ACTOR, if existed { "Benutzer überschrieben" } else { "Benutzer angelegt" }, name, true, if admin { "Admin" } else { "Benutzer" }, "-");
             println!(
                 "{} „{name}“ ({}) in {}.",
                 if existed { "Benutzer aktualisiert:" } else { "Benutzer angelegt:" },
@@ -186,6 +221,7 @@ pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
             rec.hash = hash;
             let admin = rec.admin;
             write_users(users_file, &users)?;
+            audit.log(CLI_ACTOR, "Passwort gesetzt", name, true, "", "-");
             println!("Passwort für „{name}“ ({}) geändert. Laufende Anmeldungen enden beim nächsten Neustart des Servers.", if admin { "Admin" } else { "Benutzer" });
             Ok(true)
         }
@@ -196,7 +232,21 @@ pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
                 bail!("Benutzer „{name}“ gibt es nicht.");
             }
             write_users(users_file, &users)?;
-            println!("Benutzer „{name}“ entfernt.");
+            audit.log(CLI_ACTOR, "Benutzer gelöscht", name, true, "", "-");
+            println!("Benutzer „{name}“ entfernt. Seine Berichte löscht der Server beim nächsten Aufräumen (spätestens in einer Stunde).");
+            Ok(true)
+        }
+        Some("zwei-faktor-aus") => {
+            let name = args.get(1).context("Aufruf: zwei-faktor-aus <name>")?;
+            let mut users = read_users(users_file)?;
+            let rec = users.get_mut(name.as_str()).with_context(|| format!("Benutzer „{name}“ gibt es nicht."))?;
+            if rec.totp.take().is_none() {
+                println!("„{name}“ hat keine Zwei-Faktor-Anmeldung eingerichtet.");
+                return Ok(true);
+            }
+            write_users(users_file, &users)?;
+            audit.log(CLI_ACTOR, "Zwei-Faktor zurückgesetzt", name, true, "", "-");
+            println!("Zwei-Faktor-Anmeldung für „{name}“ ausgeschaltet. Anmelden geht jetzt wieder nur mit Passwort.");
             Ok(true)
         }
         Some("benutzer-liste") => {
@@ -205,13 +255,13 @@ pub fn cli(args: &[String], users_file: &Path) -> Result<bool> {
                 println!("Keine Benutzer angelegt.");
             }
             for (n, u) in users {
-                println!("{n}{}", if u.admin { " (Admin)" } else { "" });
+                println!("{n}{}{}", if u.admin { " (Admin)" } else { "" }, if u.totp.is_some() { " [Zwei-Faktor]" } else { "" });
             }
             Ok(true)
         }
         Some("hilfe") | Some("--help") | Some("-h") => {
             println!(
-                "Leo – Leichte Erstellung Ohne Barrieren\nWord-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
+                "Leo – Leichte Erstellung Ohne Barrieren\nWord-Berichte barrierefrei machen\n\n  rampe                                   Server starten\n  rampe benutzer-anlegen NAME [--admin]   Benutzer anlegen (oder überschreiben)\n  rampe passwort-ändern NAME              Passwort ändern, Rolle bleibt\n  rampe benutzer-entfernen NAME\n  rampe benutzer-liste\n  rampe zwei-faktor-aus NAME              Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)\n\nWeitere Benutzer können Admins im Browser unter /admin verwalten."
             );
             Ok(true)
         }
@@ -228,6 +278,8 @@ impl Auth {
             fails: Mutex::new(HashMap::new()),
             file_lock: Mutex::new(()),
             dummy_hash: hash_password(&random_token())?,
+            totp_used: Mutex::new(HashMap::new()),
+            totp_pending: Mutex::new(HashMap::new()),
         })
     }
 
@@ -235,7 +287,8 @@ impl Auth {
         read_users(&self.users_file).unwrap_or_default()
     }
 
-    pub async fn login(&self, name: &str, pw: &str) -> Result<String, LoginError> {
+    /// Anmelden. `code`: Einmal-Code aus der App, nötig wenn der Benutzer Zwei-Faktor eingerichtet hat.
+    pub async fn login(&self, name: &str, pw: &str, code: Option<&str>) -> Result<String, LoginError> {
         let key = name.to_lowercase();
         {
             let fails = self.fails.lock().await;
@@ -248,9 +301,33 @@ impl Auth {
         // Benutzerdatei bei jeder Anmeldung neu lesen: Änderungen wirken ohne Neustart.
         let rec = self.users().get(name).cloned();
         let known = rec.is_some();
+        let secret = rec.as_ref().and_then(|r| r.totp.clone());
         let hash = rec.map(|r| r.hash).unwrap_or_else(|| self.dummy_hash.clone());
         let pw = pw.to_string();
-        let ok = tokio::task::spawn_blocking(move || verify(&pw, &hash)).await.unwrap_or(false) && known;
+        let pw_ok = tokio::task::spawn_blocking(move || verify(&pw, &hash)).await.unwrap_or(false) && known;
+
+        // zweiter Faktor
+        let mut code_err = None;
+        if pw_ok {
+            if let Some(secret) = &secret {
+                match code.map(str::trim).filter(|c| !c.is_empty()) {
+                    // Passwort richtig, Code fehlt: nicht als Fehlversuch zählen
+                    None => return Err(LoginError::CodeRequired),
+                    Some(c) => match totp::verify(secret, c) {
+                        Some(step) => {
+                            let mut used = self.totp_used.lock().await;
+                            if used.get(name).is_some_and(|last| step <= *last) {
+                                code_err = Some(LoginError::BadCode);
+                            } else {
+                                used.insert(name.to_string(), step);
+                            }
+                        }
+                        None => code_err = Some(LoginError::BadCode),
+                    },
+                }
+            }
+        }
+        let ok = pw_ok && code_err.is_none();
 
         let mut fails = self.fails.lock().await;
         if !ok {
@@ -262,7 +339,7 @@ impl Auth {
             }
             drop(fails);
             tokio::time::sleep(Duration::from_millis(700)).await;
-            return Err(LoginError::Invalid);
+            return Err(code_err.unwrap_or(LoginError::Invalid));
         }
         fails.remove(&key);
         drop(fails);
@@ -308,7 +385,7 @@ impl Auth {
     // --- Verwaltung (für /admin) ---
 
     pub fn list(&self) -> Vec<UserEntry> {
-        self.users().into_iter().map(|(name, r)| UserEntry { name, admin: r.admin }).collect()
+        self.users().into_iter().map(|(name, r)| UserEntry { name, admin: r.admin, mfa: r.totp.is_some() }).collect()
     }
 
     /// Benutzer anlegen oder ändern. `password = None` lässt das Passwort unverändert.
@@ -332,7 +409,9 @@ impl Auth {
         if name == actor.name && !admin {
             bail!("Sie können sich nicht selbst die Admin-Rechte entziehen.");
         }
-        users.insert(name.to_string(), UserRec { admin, hash });
+        // eine eingerichtete Zwei-Faktor-Anmeldung bleibt erhalten
+        let totp = users.get(name).and_then(|u| u.totp.clone());
+        users.insert(name.to_string(), UserRec { admin, hash, totp });
         write_users(&self.users_file, &users)?;
         drop(_g);
         if password.is_some() {
@@ -356,6 +435,63 @@ impl Auth {
         self.end_sessions(name, None).await;
         Ok(())
     }
+
+    // --- Zwei-Faktor-Anmeldung ---
+
+    pub fn has_mfa(&self, name: &str) -> bool {
+        self.users().get(name).is_some_and(|u| u.totp.is_some())
+    }
+
+    /// Einrichten beginnen: neues Geheimnis, gilt 10 Minuten bis zur Bestätigung mit einem Code.
+    pub async fn mfa_begin(&self, name: &str) -> Result<String> {
+        if self.has_mfa(name) {
+            bail!("Die Zwei-Faktor-Anmeldung ist schon eingerichtet.");
+        }
+        let secret = totp::new_secret();
+        let mut p = self.totp_pending.lock().await;
+        p.retain(|_, (_, t)| t.elapsed() < MFA_SETUP_TTL);
+        p.insert(name.to_string(), (secret.clone(), Instant::now()));
+        Ok(secret)
+    }
+
+    /// Einrichten abschließen: der erste Code aus der App beweist, dass sie richtig eingerichtet ist.
+    pub async fn mfa_enable(&self, name: &str, code: &str) -> Result<()> {
+        let secret = {
+            let p = self.totp_pending.lock().await;
+            match p.get(name) {
+                Some((s, t)) if t.elapsed() < MFA_SETUP_TTL => s.clone(),
+                _ => bail!("Das Einrichten ist abgelaufen – bitte neu beginnen."),
+            }
+        };
+        let step = totp::verify(&secret, code).context("Der Code stimmt nicht. Bitte den aktuellen Code aus der App eingeben.")?;
+        self.set_totp(name, Some(secret)).await?;
+        self.totp_pending.lock().await.remove(name);
+        self.totp_used.lock().await.insert(name.to_string(), step);
+        Ok(())
+    }
+
+    /// Selbst ausschalten – nur mit gültigem Code.
+    pub async fn mfa_disable(&self, name: &str, code: &str) -> Result<()> {
+        let secret = self.users().get(name).and_then(|u| u.totp.clone()).context("Die Zwei-Faktor-Anmeldung ist nicht eingerichtet.")?;
+        totp::verify(&secret, code).context("Der Code stimmt nicht.")?;
+        self.set_totp(name, None).await
+    }
+
+    /// Admin setzt zurück (z. B. Handy verloren).
+    pub async fn mfa_reset(&self, name: &str) -> Result<()> {
+        if !self.has_mfa(name) {
+            bail!("„{name}“ hat keine Zwei-Faktor-Anmeldung eingerichtet.");
+        }
+        self.set_totp(name, None).await
+    }
+
+    async fn set_totp(&self, name: &str, secret: Option<String>) -> Result<()> {
+        let _g = self.file_lock.lock().await;
+        let mut users = read_users(&self.users_file)?;
+        let rec = users.get_mut(name).with_context(|| format!("Benutzer „{name}“ gibt es nicht."))?;
+        rec.totp = secret;
+        write_users(&self.users_file, &users)
+    }
 }
 
 pub fn token_from_headers(h: &axum::http::HeaderMap) -> Option<String> {
@@ -367,4 +503,30 @@ pub fn token_from_headers(h: &axum::http::HeaderMap) -> Option<String> {
         .find(|(k, _)| *k == COOKIE)
         .map(|(_, v)| v.to_string())
         .filter(|v| v.len() == 64 && v.chars().all(|c| c.is_ascii_hexdigit()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn users_file_with_and_without_totp() {
+        let dir = std::env::temp_dir().join(format!("leo-auth-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("users.txt");
+        // altes Format ohne Zusatzfelder
+        std::fs::write(&f, "# Kommentar\nanna:admin:$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA\nbert:benutzer:$argon2id$x:totp=JBSWY3DPEHPK3PXP\n").unwrap();
+        let u = read_users(&f).unwrap();
+        assert!(u["anna"].admin && u["anna"].totp.is_none());
+        assert_eq!(u["anna"].hash, "$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA");
+        assert_eq!(u["bert"].hash, "$argon2id$x");
+        assert_eq!(u["bert"].totp.as_deref(), Some("JBSWY3DPEHPK3PXP"));
+        // Schreiben und wieder lesen
+        write_users(&f, &u).unwrap();
+        let u2 = read_users(&f).unwrap();
+        assert_eq!(u2["bert"].totp.as_deref(), Some("JBSWY3DPEHPK3PXP"));
+        assert!(u2["anna"].totp.is_none());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

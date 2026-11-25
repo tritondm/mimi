@@ -4,12 +4,14 @@
 //! Leo: Word-Bericht hochladen, prüfen, korrigieren,
 //! als PDF/UA (plus DOCX/ODT) exportieren und das PDF prüfen.
 
+mod audit;
 mod auth;
 mod cleanup;
 mod docx;
 mod formula;
 mod pdfcheck;
 mod pdffix;
+mod totp;
 
 use axum::{
     body::Body,
@@ -41,11 +43,16 @@ struct AppState {
     policy: cleanup::Policy,
     /// Berichte, die gerade exportiert werden – nicht löschen
     busy: std::sync::Mutex<std::collections::HashSet<String>>,
+    audit: audit::Audit,
 }
 
 impl AppState {
     fn busy_ids(&self) -> std::collections::HashSet<String> {
         self.busy.lock().map(|b| b.clone()).unwrap_or_default()
+    }
+    /// Ereignis eines angemeldeten Benutzers festhalten.
+    fn log(&self, user: &auth::User, h: &HeaderMap, action: &str, target: &str, ok: bool, detail: &str) {
+        self.audit.log(&user.name, action, target, ok, detail, &audit::client_ip(h));
     }
 }
 
@@ -116,8 +123,10 @@ fn original_name(dir: &Path) -> String {
 async fn main() -> anyhow::Result<()> {
     let base = std::env::current_dir()?;
     let users_file = std::env::var("USERS_FILE").map(PathBuf::from).unwrap_or_else(|_| base.join("users.txt"));
+    let data_dir = std::env::var("DATA_DIR").map(PathBuf::from).unwrap_or_else(|_| base.join("data"));
+    let audit = audit::Audit::from_env(&data_dir);
     let args: Vec<String> = std::env::args().skip(1).collect();
-    if auth::cli(&args, &users_file)? {
+    if auth::cli(&args, &users_file, &audit)? {
         return Ok(());
     }
     let auth = auth::Auth::new(users_file.clone())?;
@@ -130,24 +139,47 @@ async fn main() -> anyhow::Result<()> {
         std::process::exit(1);
     }
     let secure_cookie = matches!(std::env::var("COOKIE_SECURE").as_deref(), Ok("1") | Ok("true"));
-    let jobs = std::env::var("DATA_DIR").map(PathBuf::from).unwrap_or_else(|_| base.join("data")).join("jobs");
+    let jobs = data_dir.join("jobs");
     std::fs::create_dir_all(&jobs)?;
     let soffice = std::env::var("SOFFICE").unwrap_or_else(|_| "soffice".into());
     let policy = cleanup::Policy::from_env();
-    let state = Arc::new(AppState { base, jobs, soffice, lo_lock: Mutex::new(()), auth, secure_cookie, policy, busy: Default::default() });
+    let state = Arc::new(AppState { base, jobs, soffice, lo_lock: Mutex::new(()), auth, secure_cookie, policy, busy: Default::default(), audit });
 
-    // Aufräumen: beim Start und danach stündlich
-    if policy.ttl.is_some() {
+    // Aufräumen: Berichte (wenn eingeschaltet) und Audit-Log – beim Start und danach stündlich
+    {
         let st = state.clone();
         tokio::spawn(async move {
             let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
             loop {
                 tick.tick().await;
                 let st2 = st.clone();
-                match tokio::task::spawn_blocking(move || cleanup::sweep(&st2.jobs, &st2.policy, &st2.busy_ids())).await {
-                    Ok(Ok(s)) if s.removed > 0 => println!("{}", cleanup::summary(&s, "Löschfrist abgelaufen")),
-                    Ok(Err(e)) => eprintln!("Aufräumen fehlgeschlagen: {e:#}"),
-                    _ => {}
+                let res = tokio::task::spawn_blocking(move || {
+                    let pruned = st2.audit.prune();
+                    let swept = if st2.policy.ttl.is_some() {
+                        let users = st2.auth.users().into_keys().collect();
+                        Some(cleanup::sweep(&st2.jobs, &st2.policy, &st2.busy_ids(), &users))
+                    } else {
+                        None
+                    };
+                    (pruned, swept)
+                })
+                .await;
+                match res {
+                    Ok((pruned, swept)) => {
+                        if pruned > 0 {
+                            println!("Audit-Log: {pruned} Eintrag/Einträge älter als {} Tage entfernt", st.audit.days());
+                        }
+                        match swept {
+                            Some(Ok(s)) if s.removed > 0 => {
+                                let text = cleanup::summary(&s, "Löschfrist abgelaufen");
+                                println!("{text}");
+                                st.audit.log("System", "Automatisch gelöscht", "", true, &text, "-");
+                            }
+                            Some(Err(e)) => eprintln!("Aufräumen fehlgeschlagen: {e:#}"),
+                            _ => {}
+                        }
+                    }
+                    Err(e) => eprintln!("Aufräumen fehlgeschlagen: {e}"),
                 }
             }
         });
@@ -162,6 +194,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/job/{id}/download/{kind}", get(download))
         .route("/api/admin/users", get(admin_list).post(admin_upsert))
         .route("/api/admin/users/{name}", axum::routing::delete(admin_delete))
+        .route("/api/admin/users/{name}/mfa-reset", post(admin_mfa_reset))
+        .route("/api/admin/audit", get(admin_audit))
+        .route("/api/mfa/setup", post(mfa_setup))
+        .route("/api/mfa/enable", post(mfa_enable))
+        .route("/api/mfa/disable", post(mfa_disable))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
     let app = Router::new()
@@ -179,6 +216,7 @@ async fn main() -> anyhow::Result<()> {
     let addr = std::env::var("ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     println!("Leo läuft auf http://{addr}  (Benutzerverwaltung: http://{addr}/admin)");
+    println!("Audit-Log: {} (Einträge {} Tage)", audit_path_hint(&data_dir), state.audit.days());
     match policy.ttl_days() {
         0 => println!("Automatisches Löschen: aus (JOB_TTL_DAYS=0)."),
         d => println!("Automatisches Löschen: {d} Tage nach der letzten Nutzung, ersetzte Berichte nach 1 Tag."),
@@ -189,6 +227,10 @@ async fn main() -> anyhow::Result<()> {
     }
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+fn audit_path_hint(data_dir: &Path) -> String {
+    std::env::var("AUDIT_FILE").unwrap_or_else(|_| data_dir.join("audit.log").display().to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -254,21 +296,42 @@ fn session_cookie(st: &AppState, value: &str, max_age: u64) -> String {
 struct LoginReq {
     user: String,
     password: String,
+    /// Einmal-Code aus der App (nur bei Zwei-Faktor-Anmeldung)
+    #[serde(default)]
+    code: Option<String>,
 }
 
-async fn login(State(st): St, Json(req): Json<LoginReq>) -> Result<Response, AppError> {
-    match st.auth.login(req.user.trim(), &req.password).await {
+async fn login(State(st): St, headers: HeaderMap, Json(req): Json<LoginReq>) -> Result<Response, AppError> {
+    let name = req.user.trim();
+    let ip = audit::client_ip(&headers);
+    let mfa = |msg: &str| (StatusCode::UNAUTHORIZED, Json(json!({ "error": msg, "mfa": true }))).into_response();
+    match st.auth.login(name, &req.password, req.code.as_deref()).await {
         Ok(token) => {
+            st.audit.log(name, "Anmeldung", "", true, if st.auth.has_mfa(name) { "mit Zwei-Faktor" } else { "" }, &ip);
             let cookie = session_cookie(&st, &token, auth::SESSION_TTL.as_secs());
-            Ok(([(header::SET_COOKIE, cookie)], Json(json!({ "user": req.user.trim() }))).into_response())
+            Ok(([(header::SET_COOKIE, cookie)], Json(json!({ "user": name }))).into_response())
         }
-        Err(auth::LoginError::Invalid) => Err(AppError(StatusCode::UNAUTHORIZED, "Benutzername oder Passwort falsch.".into())),
-        Err(auth::LoginError::Locked(min)) => Err(AppError(StatusCode::TOO_MANY_REQUESTS, format!("Zu viele Fehlversuche – bitte in {min} Minute(n) erneut versuchen."))),
+        Err(auth::LoginError::CodeRequired) => Ok(mfa("Bitte den Code aus Ihrer Authenticator-App eingeben.")),
+        Err(auth::LoginError::BadCode) => {
+            st.audit.log(name, "Anmeldung fehlgeschlagen", "", false, "Code falsch oder schon verwendet", &ip);
+            Ok(mfa("Der Code stimmt nicht oder wurde schon verwendet. Bitte den aktuellen Code eingeben."))
+        }
+        Err(auth::LoginError::Invalid) => {
+            st.audit.log(name, "Anmeldung fehlgeschlagen", "", false, "Benutzername oder Passwort falsch", &ip);
+            Err(AppError(StatusCode::UNAUTHORIZED, "Benutzername oder Passwort falsch.".into()))
+        }
+        Err(auth::LoginError::Locked(min)) => {
+            st.audit.log(name, "Anmeldung gesperrt", "", false, &format!("noch {min} Minute(n)"), &ip);
+            Err(AppError(StatusCode::TOO_MANY_REQUESTS, format!("Zu viele Fehlversuche – bitte in {min} Minute(n) erneut versuchen.")))
+        }
     }
 }
 
 async fn logout(State(st): St, headers: HeaderMap) -> Response {
     if let Some(t) = auth::token_from_headers(&headers) {
+        if let Some(u) = st.auth.user_for(&t).await {
+            st.log(&u, &headers, "Abmeldung", "", true, "");
+        }
         st.auth.logout(&t).await;
     }
     ([(header::SET_COOKIE, session_cookie(&st, "", 0))], Json(json!({ "ok": true }))).into_response()
@@ -277,7 +340,7 @@ async fn logout(State(st): St, headers: HeaderMap) -> Response {
 async fn me(State(st): St, headers: HeaderMap) -> Result<Json<serde_json::Value>, AppError> {
     let t = auth::token_from_headers(&headers).ok_or_else(|| AppError(StatusCode::UNAUTHORIZED, "Bitte anmelden.".into()))?;
     let u = st.auth.user_for(&t).await.ok_or_else(|| AppError(StatusCode::UNAUTHORIZED, "Bitte anmelden.".into()))?;
-    Ok(Json(json!({ "user": u.name, "admin": u.admin, "ttl_days": st.policy.ttl_days() })))
+    Ok(Json(json!({ "user": u.name, "admin": u.admin, "ttl_days": st.policy.ttl_days(), "mfa": st.auth.has_mfa(&u.name) })))
 }
 
 // ---------------------------------------------------------------------------
@@ -310,11 +373,25 @@ async fn admin_upsert(State(st): St, Extension(user): Extension<auth::User>, hea
     require_admin(&user)?;
     let token = auth::token_from_headers(&headers).unwrap_or_default();
     let pw = req.password.as_deref().filter(|p| !p.is_empty());
-    st.auth.upsert(&user, &token, req.name.trim(), pw, req.admin).await.map_err(|e| bad_request(&e.to_string()))?;
+    let name = req.name.trim();
+    let before = st.auth.users().get(name).cloned();
+    st.auth.upsert(&user, &token, name, pw, req.admin).await.map_err(|e| bad_request(&e.to_string()))?;
+    let role = if req.admin { "Admin" } else { "Benutzer" };
+    match before {
+        None => st.log(&user, &headers, "Benutzer angelegt", name, true, role),
+        Some(b) => {
+            if pw.is_some() {
+                st.log(&user, &headers, "Passwort gesetzt", name, true, "");
+            }
+            if b.admin != req.admin {
+                st.log(&user, &headers, "Rolle geändert", name, true, role);
+            }
+        }
+    }
     Ok(Json(json!({ "users": st.auth.list() })))
 }
 
-async fn admin_delete(State(st): St, Extension(user): Extension<auth::User>, AxPath(name): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
+async fn admin_delete(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(name): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
     require_admin(&user)?;
     st.auth.remove(&user, &name).await.map_err(|e| bad_request(&e.to_string()))?;
     // seine Berichte gleich mit
@@ -322,14 +399,71 @@ async fn admin_delete(State(st): St, Extension(user): Extension<auth::User>, AxP
     if s.removed > 0 {
         println!("{}", cleanup::summary(&s, "Benutzer gelöscht"));
     }
+    st.log(&user, &headers, "Benutzer gelöscht", &name, true, &format!("{} Bericht(e) mitgelöscht", s.removed));
     Ok(Json(json!({ "users": st.auth.list() })))
+}
+
+async fn admin_mfa_reset(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(name): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&user)?;
+    st.auth.mfa_reset(&name).await.map_err(|e| bad_request(&e.to_string()))?;
+    st.log(&user, &headers, "Zwei-Faktor zurückgesetzt", &name, true, "");
+    Ok(Json(json!({ "users": st.auth.list() })))
+}
+
+async fn admin_audit(State(st): St, Extension(user): Extension<auth::User>, Query(q): Query<std::collections::HashMap<String, String>>) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&user)?;
+    let limit = q.get("limit").and_then(|v| v.parse().ok()).unwrap_or(2000usize).min(20_000);
+    let days = st.audit.days();
+    let entries = tokio::task::spawn_blocking(move || st.audit.read(limit)).await.map_err(|e| anyhow::anyhow!(e))?;
+    Ok(Json(json!({ "entries": entries, "days": days })))
+}
+
+// ---------------------------------------------------------------------------
+// Zwei-Faktor-Anmeldung (für jeden Benutzer selbst)
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct CodeReq {
+    code: String,
+}
+
+async fn mfa_setup(State(st): St, Extension(user): Extension<auth::User>) -> Result<Json<serde_json::Value>, AppError> {
+    let secret = st.auth.mfa_begin(&user.name).await.map_err(|e| bad_request(&e.to_string()))?;
+    let uri = totp::uri(&user.name, &secret);
+    Ok(Json(json!({ "secret": totp::grouped(&secret), "uri": uri, "qr": totp::qr_svg(&uri), "issuer": totp::ISSUER })))
+}
+
+async fn mfa_enable(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, Json(req): Json<CodeReq>) -> Result<Json<serde_json::Value>, AppError> {
+    match st.auth.mfa_enable(&user.name, &req.code).await {
+        Ok(()) => {
+            st.log(&user, &headers, "Zwei-Faktor eingerichtet", &user.name, true, "");
+            Ok(Json(json!({ "mfa": true })))
+        }
+        Err(e) => {
+            st.log(&user, &headers, "Zwei-Faktor eingerichtet", &user.name, false, "Code falsch");
+            Err(bad_request(&e.to_string()))
+        }
+    }
+}
+
+async fn mfa_disable(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, Json(req): Json<CodeReq>) -> Result<Json<serde_json::Value>, AppError> {
+    match st.auth.mfa_disable(&user.name, &req.code).await {
+        Ok(()) => {
+            st.log(&user, &headers, "Zwei-Faktor ausgeschaltet", &user.name, true, "");
+            Ok(Json(json!({ "mfa": false })))
+        }
+        Err(e) => {
+            st.log(&user, &headers, "Zwei-Faktor ausgeschaltet", &user.name, false, "Code falsch");
+            Err(bad_request(&e.to_string()))
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
 // Fachliche Endpunkte
 // ---------------------------------------------------------------------------
 
-async fn upload(State(st): St, Extension(user): Extension<auth::User>, mut mp: Multipart) -> Result<Json<serde_json::Value>, AppError> {
+async fn upload(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, mut mp: Multipart) -> Result<Json<serde_json::Value>, AppError> {
     while let Some(field) = mp.next_field().await.map_err(|e| bad_request(&e.to_string()))? {
         if field.name() != Some("file") {
             continue;
@@ -349,6 +483,8 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, mut mp: M
         tokio::fs::write(dir.join("name.txt"), &stem).await?;
         tokio::fs::write(dir.join("owner.txt"), &user.name).await?;
         cleanup::touch(&dir);
+        let size = if data.len() < 1_048_576 { format!("{} KB", data.len().div_ceil(1024)) } else { format!("{:.1} MB", data.len() as f64 / 1_048_576.0) };
+        st.log(&user, &headers, "Bericht hochgeladen", &id, true, &size);
         return Ok(job_json(&st, &dir, &id, &stem, analysis));
     }
     Err(bad_request("Keine Datei übermittelt."))
@@ -394,7 +530,7 @@ async fn media(State(st): St, Extension(user): Extension<auth::User>, AxPath((id
         .into_response())
 }
 
-async fn apply(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>, Json(changes): Json<docx::Changes>) -> Result<Json<serde_json::Value>, AppError> {
+async fn apply(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(id): AxPath<String>, Json(changes): Json<docx::Changes>) -> Result<Json<serde_json::Value>, AppError> {
     let dir = job_dir(&st, &id, &user)?;
     let data = tokio::fs::read(dir.join("current.docx")).await?;
     let new = tokio::task::spawn_blocking(move || docx::apply(&data, &changes)).await.map_err(|e| anyhow::anyhow!(e))??;
@@ -402,6 +538,7 @@ async fn apply(State(st): St, Extension(user): Extension<auth::User>, AxPath(id)
     let analysis = docx::analyze(&new).map_err(|e| anyhow::anyhow!("Korrigierte Datei ist fehlerhaft, Änderungen nicht gespeichert: {e:#}"))?;
     tokio::fs::write(dir.join("current.docx"), &new).await?;
     let _ = tokio::fs::remove_dir_all(dir.join("out")).await;
+    st.log(&user, &headers, "Änderungen gespeichert", &id, true, "");
     Ok(job_json(&st, &dir, &id, &original_name(&dir), analysis))
 }
 
@@ -427,7 +564,7 @@ async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &st
     Ok(())
 }
 
-async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>, Query(q): Query<std::collections::HashMap<String, String>>) -> Result<Json<serde_json::Value>, AppError> {
+async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(id): AxPath<String>, Query(q): Query<std::collections::HashMap<String, String>>) -> Result<Json<serde_json::Value>, AppError> {
     let lossless = q.get("lossless").is_some_and(|v| v == "1");
     let dir = job_dir(&st, &id, &user)?;
     if let Ok(mut b) = st.busy.lock() {
@@ -507,22 +644,30 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, AxPath(id
     .await
     .map_err(|e| anyhow::anyhow!(e))??;
     let vera = pdfcheck::run_verapdf(pdfcheck::find_verapdf(&st.base), &pdf).await;
+    let fails = checks.iter().filter(|c| !c.ok).count();
+    let vera_txt = match vera.compliant {
+        Some(true) => "veraPDF konform",
+        Some(false) => "veraPDF nicht konform",
+        None => "ohne veraPDF",
+    };
+    st.log(&user, &headers, "PDF erzeugt", &id, fails == 0 && vera.compliant != Some(false), &format!("{pages} Seiten, {fails} Problem(e) in der Basisprüfung, {vera_txt}"));
     let report = pdfcheck::PdfReport { pages, checks, verapdf: vera };
     tokio::fs::write(out.join("report.json"), serde_json::to_vec_pretty(&report).unwrap_or_default()).await?;
     Ok(Json(json!(report)))
 }
 
 /// Bericht sofort löschen (Knopf „Bericht jetzt löschen“).
-async fn delete_job(State(st): St, Extension(user): Extension<auth::User>, AxPath(id): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
+async fn delete_job(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(id): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
     let dir = job_dir(&st, &id, &user)?;
     if st.busy_ids().contains(&id) {
         return Err(AppError(StatusCode::CONFLICT, "Das PDF wird gerade erzeugt – bitte kurz warten und dann löschen.".into()));
     }
     tokio::fs::remove_dir_all(&dir).await?;
+    st.log(&user, &headers, "Bericht gelöscht", &id, true, "von Hand");
     Ok(Json(json!({ "deleted": id })))
 }
 
-async fn download(State(st): St, Extension(user): Extension<auth::User>, AxPath((id, kind)): AxPath<(String, String)>) -> Result<Response, AppError> {
+async fn download(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath((id, kind)): AxPath<(String, String)>) -> Result<Response, AppError> {
     let dir = job_dir(&st, &id, &user)?;
     let stem = original_name(&dir);
     let (file, ct, ext) = match kind.as_str() {
@@ -532,6 +677,7 @@ async fn download(State(st): St, Extension(user): Extension<auth::User>, AxPath(
         _ => return Err(bad_request("Unbekanntes Format")),
     };
     let bytes = tokio::fs::read(&file).await.map_err(|_| AppError(StatusCode::NOT_FOUND, "Datei noch nicht erzeugt – zuerst „PDF erzeugen und prüfen“.".into()))?;
+    st.log(&user, &headers, "Heruntergeladen", &id, true, ext);
     let fname = format!("{stem} - barrierefrei.{ext}");
     let ascii: String = fname.chars().map(|c| if c.is_ascii_alphanumeric() || " ._-()".contains(c) { c } else { '_' }).collect();
     let encoded: String = fname.bytes().map(|b| if b.is_ascii_alphanumeric() || b"._-".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect();

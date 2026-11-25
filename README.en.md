@@ -38,8 +38,16 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
 - Alternatively on the command line:
   `rampe benutzer-anlegen NAME [--admin]` (create user), `rampe passwort-ändern NAME`
   (change password, role is kept), `rampe benutzer-entfernen NAME` (remove user),
-  `rampe benutzer-liste` (list users).
-- Passwords are stored hashed with Argon2id in `users.txt` (file mode 600).
+  `rampe benutzer-liste` (list users), `rampe zwei-faktor-aus NAME` (reset two-factor).
+- **Two-factor login (optional):** everyone can set it up with an authenticator app via the
+  “Zwei-Faktor” button (TOTP according to RFC 6238: 6 digits, 30 seconds). Leo then asks for a
+  code after the password; each code is valid only once, a wrong code counts as a failed attempt.
+  Lost phone: admins reset it under `/admin`.
+- **Audit log:** logins, user management, two-factor and actions on reports (uploaded, PDF
+  created, downloaded, deleted) with time, user and IP address. Without file names and contents.
+  Admins see it under `/admin` (“Protokoll”). Entries are deleted after 90 days (`AUDIT_DAYS`).
+- Passwords are stored hashed with Argon2id in `users.txt` (file mode 600), together with the
+  two-factor secrets.
 - Sessions: cookie `HttpOnly`, `SameSite=Strict`, 8 hours from the last activity.
   Changing a password or deleting a user ends that user's sessions immediately.
 - After 5 failed attempts the user name is locked for 5 minutes.
@@ -57,6 +65,8 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
 | `SOFFICE`       | `soffice`         | path to LibreOffice                          |
 | `VERAPDF`       | –                 | path to the veraPDF launcher script          |
 | `JOB_TTL_DAYS`  | `30`              | delete reports this many days after last use, superseded ones after 1 day; `0` = off |
+| `AUDIT_FILE`    | `<DATA_DIR>/audit.log` | audit log (one JSON line per event) |
+| `AUDIT_DAYS`    | `90`              | keep audit log entries this many days; `0` = unlimited |
 
 Required on the server: **LibreOffice** (runs invisibly in the background) and the matching
 **fonts** (above all Carlito as a substitute for Calibri), see [INSTALL.en.md](INSTALL.en.md#fonts).
