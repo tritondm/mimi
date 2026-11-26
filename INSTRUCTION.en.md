@@ -350,6 +350,54 @@ Check that it really is a .docx file and that it opens in Word.
 
 ---
 
+## Data protection
+
+Mimi is open-source software and runs on the server of the organisation that operates it.
+That organisation is responsible for data protection and publishes the privacy notice.
+Mimi itself handles data like this:
+
+**Nothing is passed on.** Conversion (LibreOffice) and checking (veraPDF) run on the same
+server. Mimi sends no data to other services, has no tracking and loads no fonts or scripts
+from other sites. Linked content in your report (e.g. images by link) is not fetched from
+the internet.
+
+| What | Why | How long |
+|---|---|---|
+| Your report and the generated files (PDF, Word, ODT) | editing | 30 days after last use, older reports one day after uploading a new one, immediately with **Bericht jetzt löschen** (Delete report now) |
+| User name, password (only as an Argon2id hash), two-factor key | login | until the account is deleted, then together with all reports |
+| Log: time, user name, IP address, action (e.g. logged in, PDF created) | security, traceability | 90 days, without file names or content |
+| Session cookie | staying logged in | until logout or 8 hours without activity |
+| Light/dark setting (in the browser) | display | stays in your browser |
+
+These periods are defaults; operators can change them.
+
+**Who sees what.** You only see your own reports, other users do not. Admins manage the
+accounts and see the log, but no reports. Only whoever runs the server has technical access
+to it.
+
+**Tips**
+
+- Only upload what the report needs. Names or data of people that do not belong in the
+  published PDF are best removed in Word already.
+- Mimi copies the document properties from Word (e.g. **Author**) into the PDF. Check them in
+  Word under *File → Info* before uploading.
+- Delete the report when you are done.
+
+**For operators.** To clarify before using real data:
+
+- A **privacy notice** for the users (Art. 13 GDPR) and an entry in the **record of
+  processing activities**. This section can serve as a basis.
+- If the server is run by an external provider, a **data processing agreement**
+  (Art. 28 GDPR) is needed.
+- **Other logs and backups** outside Mimi have their own retention: reverse-proxy access
+  logs, system logs, backups and snapshots. A report stays in a backup as long as the backup
+  is kept.
+- Make Mimi reachable only through the reverse proxy (`ADDR=127.0.0.1:…`, the default) and use
+  HTTPS with `COOKIE_SECURE=1`. Otherwise the IP address in the log could be forged.
+- Delete user accounts when someone no longer needs Mimi.
+
+---
+
 ## For admins
 
 Under **Benutzer** (Users) in the menu at the top (address `/admin`) admins can:

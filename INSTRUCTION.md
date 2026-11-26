@@ -355,6 +355,54 @@ Prüfen Sie, ob es wirklich eine .docx-Datei ist und ob sie sich in Word öffnen
 
 ---
 
+## Datenschutz
+
+Mimi ist Open-Source-Software und läuft auf dem Server der Stelle, die sie betreibt. Diese
+Stelle ist für den Datenschutz verantwortlich und gibt die Datenschutzerklärung heraus.
+Mimi selbst geht mit Daten so um:
+
+**Keine Weitergabe.** Umwandlung (LibreOffice) und Prüfung (veraPDF) laufen auf demselben
+Server. Mimi schickt keine Daten an andere Dienste, hat kein Tracking und lädt keine Schriften
+oder Skripte von fremden Seiten. Verknüpfte Inhalte in Ihrem Bericht (z. B. Bilder per Link)
+werden nicht aus dem Netz geladen.
+
+| Was | Wozu | Wie lange |
+|---|---|---|
+| Ihr Bericht und die erzeugten Dateien (PDF, Word, ODT) | Bearbeitung | 30 Tage nach der letzten Nutzung, ältere Berichte einen Tag nach dem Hochladen eines neuen, sofort mit **Bericht jetzt löschen** |
+| Benutzername, Passwort (nur als Argon2id-Hash), Schlüssel der Zwei-Faktor-Anmeldung | Anmeldung | bis das Konto gelöscht wird, dann mit allen Berichten |
+| Protokoll: Zeit, Benutzername, IP-Adresse, Aktion (z. B. angemeldet, PDF erzeugt) | Sicherheit, Nachvollziehbarkeit | 90 Tage, ohne Dateinamen und Inhalte |
+| Sitzungs-Cookie | angemeldet bleiben | bis zur Abmeldung oder 8 Stunden ohne Aktivität |
+| Hell/Dunkel-Einstellung (im Browser) | Anzeige | bleibt in Ihrem Browser |
+
+Die Fristen sind Voreinstellungen, die Betreiber können sie ändern.
+
+**Wer was sieht.** Sie sehen nur Ihre eigenen Berichte, andere Benutzer nicht. Admins
+verwalten die Konten und sehen das Protokoll, aber keine Berichte. Technischen Zugriff auf
+den Server hat nur, wer ihn betreibt.
+
+**Tipps**
+
+- Laden Sie nur hoch, was für den Bericht nötig ist. Namen oder Daten von Personen, die nicht
+  ins veröffentlichte PDF gehören, entfernen Sie am besten schon in Word.
+- Mimi übernimmt die Dokumenteigenschaften aus Word (z. B. **Autor**) ins PDF. Prüfen Sie sie
+  in Word unter *Datei → Informationen*, bevor Sie hochladen.
+- Löschen Sie den Bericht, wenn Sie fertig sind.
+
+**Für Betreiber.** Vor dem Einsatz mit echten Daten zu klären:
+
+- **Datenschutzerklärung** für die Benutzerinnen und Benutzer (Art. 13 DSGVO) und Eintrag im
+  **Verarbeitungsverzeichnis**. Dieser Abschnitt kann als Grundlage dienen.
+- Liegt der Server bei einem externen Anbieter, braucht es einen
+  **Auftragsverarbeitungsvertrag** (Art. 28 DSGVO).
+- **Weitere Protokolle und Sicherungen** außerhalb von Mimi haben eigene Fristen:
+  Zugriffsprotokolle des Reverse-Proxys, Systemprotokolle, Backups und Snapshots. In einem
+  Backup bleibt ein Bericht so lange, wie das Backup aufgehoben wird.
+- Mimi nur über den Reverse-Proxy erreichbar machen (`ADDR=127.0.0.1:…`, Voreinstellung) und
+  HTTPS mit `COOKIE_SECURE=1` verwenden. Sonst ließe sich die IP-Adresse im Protokoll fälschen.
+- Benutzerkonten löschen, wenn jemand Mimi nicht mehr braucht.
+
+---
+
 ## Für Admins
 
 Unter **Benutzer** im Menü oben (Adresse `/admin`) können Admins:
