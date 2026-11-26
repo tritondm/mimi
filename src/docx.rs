@@ -12,7 +12,7 @@ use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::{Reader, Writer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Write};
 
 const DECORATIVE_URI: &str = "{C183D7F6-B498-43B3-948B-1728B52AA6E4}";
 const NS_A: &str = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -249,11 +249,7 @@ fn reader(xml: &[u8]) -> Reader<&[u8]> {
 pub fn read_entry(zip_bytes: &[u8], name: &str) -> Result<Option<Vec<u8>>> {
     let mut zip = zip::ZipArchive::new(Cursor::new(zip_bytes)).context("Keine gültige DOCX-Datei")?;
     let result = match zip.by_name(name) {
-        Ok(mut f) => {
-            let mut buf = Vec::new();
-            f.read_to_end(&mut buf)?;
-            Some(buf)
-        }
+        Ok(f) => Some(crate::sanitize::read_limited(f)?),
         Err(_) => None,
     };
     Ok(result)
@@ -2106,6 +2102,10 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
     if deco > 0 {
         notes.push(format!("{deco} Bild(er) und Form(en) in Kopf-/Fußzeilen (Logos, Zierbalken) werden als dekorativ markiert. Kopf- und Fußzeilen liest der Screenreader ohnehin nicht vor; LibreOffice würde sie sonst als Abbildung taggen."));
     }
+    let ext = crate::sanitize::docx_external(docx, &mut replaced)?;
+    if ext > 0 {
+        notes.push(format!("{ext} verknüpfte(r) externe(r) Inhalt(e) (z. B. Bild per Link statt eingebettet, Vorlage auf einem anderen Rechner) werden nicht geladen. Im PDF fehlen sie – bitte in Word einfügen statt verknüpfen."));
+    }
     if replaced.is_empty() {
         return Ok((docx.to_vec(), notes));
     }
@@ -2117,7 +2117,7 @@ fn pdf_prep_notes(docx: &[u8]) -> Result<Vec<String>> {
     Ok(prepare_for_pdf(docx)?.1)
 }
 
-fn rewrite_zip(docx: &[u8], replaced: &HashMap<String, Vec<u8>>) -> Result<Vec<u8>> {
+pub(crate) fn rewrite_zip(docx: &[u8], replaced: &HashMap<String, Vec<u8>>) -> Result<Vec<u8>> {
     let mut zip = zip::ZipArchive::new(Cursor::new(docx))?;
     let mut out = zip::ZipWriter::new(Cursor::new(Vec::with_capacity(docx.len())));
     let opts = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);

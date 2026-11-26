@@ -400,8 +400,8 @@ pub async fn run_verapdf(bin: Option<PathBuf>, pdf: &Path) -> VeraResult {
         };
     };
     let out = tokio::time::timeout(
-        std::time::Duration::from_secs(600),
-        tokio::process::Command::new(&bin).args(["--flavour", "ua1", "--format", "mrr"]).arg(pdf).output(),
+        std::time::Duration::from_secs(300),
+        tokio::process::Command::new(&bin).args(["--flavour", "ua1", "--format", "mrr"]).arg(pdf).kill_on_drop(true).output(),
     )
     .await;
     let out = match out {

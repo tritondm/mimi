@@ -52,6 +52,12 @@ Then open <http://127.0.0.1:8080> in the browser and log in.
   Changing a password or deleting a user ends that user's sessions immediately.
 - After 5 failed attempts the user name is locked for 5 minutes.
 - Write requests from foreign websites are rejected (origin check).
+- Uploaded files are checked before unpacking: at most 256 MB per part, 1 GB in total and
+  10,000 parts (protection against "zip bombs"). LibreOffice only receives copies without linked
+  external content (images, templates, sections by link), so it fetches nothing from the network
+  or the server. Hyperlinks are kept.
+- A report cannot be exported, changed or deleted at the same time (otherwise 409). If an
+  export is aborted, LibreOffice is stopped as well.
 - Behind a reverse proxy with HTTPS, set `COOKIE_SECURE=1`.
 - Light, dark or automatic appearance (as in the operating system), switchable in the top bar, stored in the browser.
 

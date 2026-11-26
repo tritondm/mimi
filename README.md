@@ -51,6 +51,12 @@ Dann im Browser öffnen: <http://127.0.0.1:8080> und anmelden.
   Passwortänderung oder Löschung beendet die Sitzungen des Benutzers sofort.
 - Nach 5 Fehlversuchen wird der Benutzername 5 Minuten gesperrt.
 - Schreibende Anfragen von fremden Webseiten werden abgewiesen (Origin-Prüfung).
+- Hochgeladene Dateien werden vor dem Entpacken geprüft: höchstens 256 MB je Teil, 1 GB
+  insgesamt und 10.000 Teile (Schutz vor „ZIP-Bomben“). LibreOffice bekommt nur Kopien ohne
+  verknüpfte externe Inhalte (Bilder, Vorlagen, Abschnitte per Link) und lädt so nichts aus dem
+  Netz oder vom Server nach. Hyperlinks bleiben erhalten.
+- Ein Bericht kann nicht gleichzeitig exportiert, geändert oder gelöscht werden (sonst 409).
+  Bricht ein Export ab, wird LibreOffice mit beendet.
 - Hinter einem Reverse-Proxy mit HTTPS `COOKIE_SECURE=1` setzen.
 - Darstellung hell, dunkel oder automatisch (wie im Betriebssystem), umschaltbar in der Kopfzeile, gespeichert im Browser.
 

@@ -11,6 +11,7 @@ mod docx;
 mod formula;
 mod pdfcheck;
 mod pdffix;
+mod sanitize;
 mod totp;
 
 use axum::{
@@ -36,6 +37,13 @@ const FAVICON_SVG: &str = include_str!("../static/favicon.svg");
 const FAVICON_ICO: &[u8] = include_bytes!("../static/favicon.ico");
 const TOUCH_ICON: &[u8] = include_bytes!("../static/apple-touch-icon.png");
 
+/// Größte hochladbare Datei (wie `client_max_body_size` in nginx)
+const MAX_UPLOAD: usize = 300 << 20;
+
+/// Höchstdauer eines LibreOffice-Aufrufs. Ein Export ruft LibreOffice zweimal auf, dazu kommt
+/// veraPDF; nginx wartet insgesamt 900 s (`proxy_read_timeout`).
+const LO_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
+
 struct AppState {
     base: PathBuf,
     jobs: PathBuf,
@@ -47,7 +55,7 @@ struct AppState {
     secure_cookie: bool,
     /// automatisches Löschen (JOB_TTL_DAYS)
     policy: cleanup::Policy,
-    /// Berichte, die gerade exportiert werden – nicht löschen
+    /// Berichte, die gerade exportiert oder geändert werden – nicht löschen, nicht doppelt bearbeiten
     busy: std::sync::Mutex<std::collections::HashSet<String>>,
     audit: audit::Audit,
 }
@@ -56,13 +64,22 @@ impl AppState {
     fn busy_ids(&self) -> std::collections::HashSet<String> {
         self.busy.lock().map(|b| b.clone()).unwrap_or_default()
     }
+    /// Bericht für Export, Ändern oder Löschen belegen. Läuft schon etwas, gibt es 409:
+    /// Zwei Aufrufe würden sonst in denselben Dateien arbeiten.
+    fn claim(&self, id: &str) -> Result<BusyGuard<'_>, AppError> {
+        let mut b = self.busy.lock().map_err(|_| anyhow::anyhow!("interner Fehler (Sperre)"))?;
+        if !b.insert(id.to_string()) {
+            return Err(AppError(StatusCode::CONFLICT, "Der Bericht wird gerade bearbeitet (PDF wird erzeugt oder Änderungen werden gespeichert). Bitte kurz warten und noch einmal versuchen.".into()));
+        }
+        Ok(BusyGuard(self, id.to_string()))
+    }
     /// Ereignis eines angemeldeten Benutzers festhalten.
     fn log(&self, user: &auth::User, h: &HeaderMap, action: &str, target: &str, ok: bool, detail: &str) {
         self.audit.log(&user.name, action, target, ok, detail, &audit::client_ip(h));
     }
 }
 
-/// Markiert einen Bericht für die Dauer des Exports als belegt.
+/// Markiert einen Bericht für die Dauer von Export oder Änderung als belegt.
 struct BusyGuard<'a>(&'a AppState, String);
 
 impl Drop for BusyGuard<'_> {
@@ -193,7 +210,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let protected = Router::new()
-        .route("/api/upload", post(upload))
+        .route("/api/upload", post(upload).layer(DefaultBodyLimit::max(MAX_UPLOAD)))
         .route("/api/job/{id}", get(job).delete(delete_job))
         .route("/api/job/{id}/media/{*path}", get(media))
         .route("/api/job/{id}/apply", post(apply))
@@ -223,7 +240,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(protected)
         .layer(middleware::from_fn(same_origin))
         .layer(middleware::from_fn(security_headers))
-        .layer(DefaultBodyLimit::max(300 * 1024 * 1024))
+        .layer(DefaultBodyLimit::max(4 << 20))
         .with_state(state.clone());
 
     let addr = std::env::var("ADDR").unwrap_or_else(|_| "127.0.0.1:8080".into());
@@ -488,6 +505,9 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, headers: 
             return Err(bad_request("Bitte eine Word- oder OpenDocument-Datei (.docx oder .odt) hochladen."));
         }
         let raw = field.bytes().await.map_err(|e| bad_request(&e.to_string()))?;
+        // Entpackgrenzen (ZIP-Bombe), bevor irgendetwas die Datei entpackt
+        let raw2 = raw.clone();
+        tokio::task::spawn_blocking(move || sanitize::check_zip(&raw2)).await.map_err(|e| anyhow::anyhow!(e))?.map_err(|e| bad_request(&format!("{e:#}")))?;
         let id = uuid::Uuid::new_v4().to_string();
         let dir = st.jobs.join(&id);
         tokio::fs::create_dir_all(&dir).await?;
@@ -503,7 +523,8 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, headers: 
         } else {
             raw.to_vec()
         };
-        let analysis = match docx::analyze(&data) {
+        let data2 = data.clone();
+        let analysis = match tokio::task::spawn_blocking(move || docx::analyze(&data2)).await.map_err(|e| anyhow::anyhow!(e))? {
             Ok(a) => a,
             Err(e) => {
                 let _ = tokio::fs::remove_dir_all(&dir).await;
@@ -535,9 +556,16 @@ async fn odt_to_docx(st: &AppState, dir: &Path, odt: &[u8]) -> Result<Vec<u8>, A
     let conv = dir.join("conv");
     tokio::fs::create_dir_all(&conv).await?;
     tokio::fs::write(dir.join("original.odt"), odt).await?;
-    soffice_convert(st, &dir.join("original.odt"), &conv, "docx:MS Word 2007 XML").await?;
-    let docx = tokio::fs::read(conv.join("original.docx")).await.map_err(|_| bad_request("LibreOffice konnte die ODT-Datei nicht umwandeln."))?;
+    // LibreOffice bekommt eine Kopie ohne externe Verweise (Bilder, Abschnitte, Vorlagen)
+    let clean = sanitize::odt_without_external(odt).map_err(|e| bad_request(&format!("Die ODT-Datei konnte nicht gelesen werden: {e:#}")))?.0;
+    tokio::fs::write(conv.join("original.odt"), &clean).await?;
+    drop(clean);
+    let out = conv.join("out");
+    tokio::fs::create_dir_all(&out).await?;
+    soffice_convert(st, &conv.join("original.odt"), &out, "docx:MS Word 2007 XML").await?;
+    let docx = tokio::fs::read(out.join("original.docx")).await.map_err(|_| bad_request("LibreOffice konnte die ODT-Datei nicht umwandeln."))?;
     let _ = tokio::fs::remove_dir_all(&conv).await;
+    sanitize::check_zip(&docx).map_err(|e| bad_request(&format!("{e:#}")))?;
     tokio::fs::write(dir.join("source.txt"), "odt").await?;
     Ok(docx)
 }
@@ -584,14 +612,30 @@ async fn media(State(st): St, Extension(user): Extension<auth::User>, AxPath((id
 
 async fn apply(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(id): AxPath<String>, Json(changes): Json<docx::Changes>) -> Result<Json<serde_json::Value>, AppError> {
     let dir = job_dir(&st, &id, &user)?;
+    let _busy = st.claim(&id)?;
     let data = tokio::fs::read(dir.join("current.docx")).await?;
     let new = tokio::task::spawn_blocking(move || docx::apply(&data, &changes)).await.map_err(|e| anyhow::anyhow!(e))??;
     // Plausibilitätsprüfung: muss wieder lesbar sein, sonst nicht speichern
-    let analysis = docx::analyze(&new).map_err(|e| anyhow::anyhow!("Korrigierte Datei ist fehlerhaft, Änderungen nicht gespeichert: {e:#}"))?;
+    let new2 = new.clone();
+    let analysis = tokio::task::spawn_blocking(move || docx::analyze(&new2)).await.map_err(|e| anyhow::anyhow!(e))?.map_err(|e| anyhow::anyhow!("Korrigierte Datei ist fehlerhaft, Änderungen nicht gespeichert: {e:#}"))?;
     tokio::fs::write(dir.join("current.docx"), &new).await?;
     let _ = tokio::fs::remove_dir_all(dir.join("out")).await;
     st.log(&user, &headers, "Änderungen gespeichert", &id, true, "");
     Ok(job_json(&st, &dir, &id, &original_name(&dir), analysis))
+}
+
+/// Beendet eine Prozessgruppe, wenn sie beim Verlassen noch gesetzt ist.
+struct KillGroup(Option<u32>);
+
+impl Drop for KillGroup {
+    fn drop(&mut self) {
+        if let Some(pid) = self.0.and_then(|p| i32::try_from(p).ok()).filter(|p| *p > 1) {
+            // SAFETY: killpg hat keine Speicher-Vorbedingungen; die Gruppe gehört unserem Kindprozess.
+            unsafe {
+                libc::killpg(pid, libc::SIGKILL);
+            }
+        }
+    }
 }
 
 async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &str) -> Result<(), AppError> {
@@ -600,16 +644,27 @@ async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &st
     let profile = std::path::absolute(&profile).unwrap_or(profile);
     let profile_url = format!("file://{}", profile.display());
     let _guard = st.lo_lock.lock().await;
-    let fut = tokio::process::Command::new(&st.soffice)
+    let child = tokio::process::Command::new(&st.soffice)
         .arg(format!("-env:UserInstallation={profile_url}"))
         .args(["--headless", "--norestore", "--nolockcheck", "--convert-to", target, "--outdir"])
         .arg(outdir)
         .arg(input)
-        .output();
-    let out = tokio::time::timeout(std::time::Duration::from_secs(600), fut)
-        .await
-        .map_err(|_| anyhow::anyhow!("LibreOffice hat zu lange gebraucht"))?
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        // eigene Prozessgruppe: soffice startet oosplash und soffice.bin, die sollen mit beendet werden
+        .process_group(0)
+        .kill_on_drop(true)
+        .spawn()
         .map_err(|e| anyhow::anyhow!("LibreOffice konnte nicht gestartet werden ({}): {e}", st.soffice))?;
+    // Bei Zeitüberschreitung oder wenn der Browser bzw. nginx aufgibt (dann wird dieser Aufruf
+    // abgebrochen), LibreOffice beenden. Sonst liefe es weiter, während die Sperre schon frei ist.
+    let mut group = KillGroup(child.id());
+    let out = tokio::time::timeout(LO_TIMEOUT, child.wait_with_output())
+        .await
+        .map_err(|_| anyhow::anyhow!("LibreOffice hat zu lange gebraucht (mehr als {} Minuten)", LO_TIMEOUT.as_secs() / 60))?
+        .map_err(|e| anyhow::anyhow!("LibreOffice ist mit einem Fehler abgebrochen: {e}"))?;
+    group.0 = None;
     if !out.status.success() {
         return Err(anyhow::anyhow!("LibreOffice-Fehler: {}", String::from_utf8_lossy(&out.stderr)).into());
     }
@@ -619,10 +674,7 @@ async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &st
 async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(id): AxPath<String>, Query(q): Query<std::collections::HashMap<String, String>>) -> Result<Json<serde_json::Value>, AppError> {
     let lossless = q.get("lossless").is_some_and(|v| v == "1");
     let dir = job_dir(&st, &id, &user)?;
-    if let Ok(mut b) = st.busy.lock() {
-        b.insert(id.clone());
-    }
-    let _busy = BusyGuard(&st, id.clone());
+    let _busy = st.claim(&id)?;
     let out = dir.join("out");
     let _ = tokio::fs::remove_dir_all(&out).await;
     tokio::fs::create_dir_all(&out).await?;
@@ -632,16 +684,21 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
     let _ = tokio::fs::remove_dir_all(&prep_dir).await;
     tokio::fs::create_dir_all(&prep_dir).await?;
     let src = tokio::fs::read(dir.join("current.docx")).await?;
-    let (prepared, formula_alts) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+    let (prepared, for_odt, formula_alts) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
         // Alternativtexte der Formeln aus der korrigierten Datei (nicht aus der Export-Kopie)
         let alts = formula::pdf_alts(&src)?;
-        Ok((docx::prepare_for_pdf(&src)?.0, alts))
+        // beide Kopien ohne externe Inhalte, die LibreOffice sonst nachladen würde
+        Ok((docx::prepare_for_pdf(&src)?.0, sanitize::docx_without_external(&src)?, alts))
     })
     .await
     .map_err(|e| anyhow::anyhow!(e))??;
     let input = prep_dir.join("current.docx");
     tokio::fs::write(&input, &prepared).await?;
     drop(prepared);
+    let odt_dir = prep_dir.join("odt");
+    tokio::fs::create_dir_all(&odt_dir).await?;
+    tokio::fs::write(odt_dir.join("current.docx"), &for_odt).await?;
+    drop(for_odt);
 
     // Bilder in voller Auflösung (LibreOffice rechnet sonst auf 300 dpi herunter) und
     // JPEG-Qualität 95 statt 90. Wahlweise verlustfrei: keine JPEG-Artefakte an Schrift
@@ -653,7 +710,7 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
     soffice_convert(&st, &input, &out, &pdf_filter).await?;
     // ODT aus der korrigierten Datei, nicht aus der Export-Kopie: Vorlagennamen und Felder
     // (z. B. in Fußzeilen) bleiben so, wie sie sind – wer mit der ODT weiterarbeitet, braucht sie.
-    soffice_convert(&st, &dir.join("current.docx"), &out, "odt").await?;
+    soffice_convert(&st, &odt_dir.join("current.docx"), &out, "odt").await?;
 
     let _ = tokio::fs::remove_dir_all(&prep_dir).await;
 
@@ -713,9 +770,7 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
 /// Bericht sofort löschen (Knopf „Bericht jetzt löschen“).
 async fn delete_job(State(st): St, Extension(user): Extension<auth::User>, headers: HeaderMap, AxPath(id): AxPath<String>) -> Result<Json<serde_json::Value>, AppError> {
     let dir = job_dir(&st, &id, &user)?;
-    if st.busy_ids().contains(&id) {
-        return Err(AppError(StatusCode::CONFLICT, "Das PDF wird gerade erzeugt – bitte kurz warten und dann löschen.".into()));
-    }
+    let _busy = st.claim(&id)?;
     tokio::fs::remove_dir_all(&dir).await?;
     st.log(&user, &headers, "Bericht gelöscht", &id, true, "von Hand");
     Ok(Json(json!({ "deleted": id })))

@@ -774,6 +774,7 @@ dependencies = [
  "axum",
  "getrandom",
  "hmac",
+ "libc",
  "lopdf",
  "qrcode",
  "quick-xml",

@@ -20,8 +20,13 @@ ExecStart=/opt/mimi/mimi
 Restart=on-failure
 NoNewPrivileges=true
 ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
 ReadWritePaths=/var/lib/mimi /tmp
 PrivateTmp=true
+# Obergrenze für Mimi samt LibreOffice und veraPDF: bei einer präparierten Datei wird nur
+# dieser Dienst beendet und neu gestartet, nicht der ganze Container
+MemoryMax=4G
 
 [Install]
 WantedBy=multi-user.target
