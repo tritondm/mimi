@@ -101,7 +101,7 @@ legal:
 maintenance:
   type: community
   contacts:
-    - name: Mimi contributors
+    - name: tritondm
 
 localisation:
   localisationReady: true
