@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 Mimi contributors
+// SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 Andreas Kraxner
 // Gemeinsame Kopfzeile: Navigation und Benutzermenü.
 //   leoMenu.show(me, aktiv)   me = Antwort von /api/me, aktiv = 'bericht' | 'benutzer' | 'protokoll'
 //   leoMenu.hide()

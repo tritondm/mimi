@@ -96,12 +96,12 @@ description:
 
 legal:
   license: EUPL-1.2
-  mainCopyrightOwner: Mimi contributors
+  mainCopyrightOwner: Andreas Kraxner
 
 maintenance:
   type: community
   contacts:
-    - name: tritondm
+    - name: Andreas Kraxner
 
 localisation:
   localisationReady: true

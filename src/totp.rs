@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: EUPL-1.2
-// Copyright (c) 2026 Mimi contributors
+// Copyright (c) 2026 Andreas Kraxner
 
 //! Zwei-Faktor-Anmeldung mit Einmal-Codes aus einer App (TOTP, RFC 6238):
 //! HMAC-SHA1, 6 Ziffern, 30 Sekunden – das Verfahren von Google Authenticator,

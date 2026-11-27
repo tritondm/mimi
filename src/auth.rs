@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: EUPL-1.2
-// Copyright (c) 2026 Mimi contributors
+// Copyright (c) 2026 Andreas Kraxner
 
 //! Anmeldung: Benutzerdatei mit Argon2-Passwort-Hashes, Rollen (admin/benutzer),
 //! Sitzungen per Cookie, Sperre nach wiederholten Fehlversuchen.

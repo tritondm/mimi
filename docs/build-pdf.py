@@ -2,7 +2,7 @@
 # /// script
 # dependencies = ["markdown"]
 # ///
-# SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 Mimi contributors
+# SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 Andreas Kraxner
 """Erzeugt die PDFs der Anleitung und der Matterhorn-Übersicht (DE/EN) aus Markdown.
 
 Aufruf im Projektordner:  uv run docs/build-pdf.py            (alle)

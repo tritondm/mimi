@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: EUPL-1.2
-// Copyright (c) 2026 Mimi contributors
+// Copyright (c) 2026 Andreas Kraxner
 
 //! Schutz vor präparierten Dateien, bevor sie verarbeitet oder an LibreOffice gegeben werden:
 //!
