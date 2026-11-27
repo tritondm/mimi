@@ -165,7 +165,7 @@ Am Server: siehe [INSTALL.md](INSTALL.md#4-verapdf).
 
 ## Lizenz
 
-Copyright (c) 2026 example.org
+Copyright (c) 2026 Mimi contributors
 
 Dieses Programm steht unter der **European Union Public Licence (EUPL) v. 1.2** – siehe `LICENSE`.
 Die EUPL ist in allen Amtssprachen der EU gleichermaßen gültig; die deutsche Fassung ist unter

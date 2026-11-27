@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: EUPL-1.2
-// Copyright (c) 2026 example.org
+// Copyright (c) 2026 Mimi contributors
 
 //! Mimi: Word-Bericht hochladen, prüfen, korrigieren,
 //! als PDF/UA (plus DOCX/ODT) exportieren und das PDF prüfen.

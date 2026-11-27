@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org */
+/* SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 Mimi contributors */
 /* Farben aller Seiten. Darstellung: <html data-theme="light|dark">, ohne Angabe wie das System. */
 :root {
   --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;

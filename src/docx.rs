@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: EUPL-1.2
-// Copyright (c) 2026 example.org
+// Copyright (c) 2026 Mimi contributors
 
 //! Analyse und Korrektur von Word-Dateien (DOCX) im Hinblick auf Barrierefreiheit.
 //!

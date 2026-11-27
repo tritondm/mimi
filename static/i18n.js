@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 example.org
+// SPDX-License-Identifier: EUPL-1.2 · Copyright (c) 2026 Mimi contributors
 // Sprache der Oberfläche: Deutsch (Standard) oder Englisch, gespeichert im Cookie „mimi-lang“.
 // Ohne Cookie gilt die Standardsprache des Servers (DEFAULT_LANG, hier eingesetzt).
 // Vor menu.js und dem Seitenskript einbinden, am Ende von <body>.

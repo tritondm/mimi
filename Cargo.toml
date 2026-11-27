@@ -3,7 +3,7 @@ name = "mimi"
 version = "0.1.0"
 edition = "2024"
 license = "EUPL-1.2"
-authors = ["example.org"]
+authors = ["Mimi contributors"]
 description = "Mimi (Macht Inhalte Mühelos Inklusiv) – Word-Berichte barrierefrei machen: prüfen, korrigieren, PDF/UA erzeugen"
 
 [dependencies]

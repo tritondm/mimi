@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: EUPL-1.2
-// Copyright (c) 2026 example.org
+// Copyright (c) 2026 Mimi contributors
 
 //! Audit-Log für Admins: wer hat wann was getan.
 //!
