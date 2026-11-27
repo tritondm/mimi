@@ -1,0 +1,110 @@
+# Beschreibung für Software-Kataloge der öffentlichen Verwaltung (Standard: https://publiccodeyml.github.io/)
+publiccodeYmlVersion: "0"
+
+name: Mimi
+url: "https://github.com/tritondm/mimi"
+softwareVersion: "0.1.0"
+releaseDate: "2026-11-27"
+platforms:
+  - web
+  - linux
+
+categories:
+  - document-management
+  - office
+  - compliance-management
+
+developmentStatus: beta
+softwareType: standalone/web
+
+description:
+  en:
+    localisedName: Mimi – Making Information More Inclusive
+    shortDescription: >-
+      Makes Word and OpenDocument reports accessible: check, fix in the browser,
+      create and validate a PDF/UA.
+    longDescription: |
+      **Mimi** is a self-hosted web application that turns Word reports (.docx) and
+      OpenDocument texts (.odt) into accessible PDFs according to **PDF/UA-1**.
+
+      Users upload a report in the browser. Mimi checks the source document and shows
+      what is missing: alternative texts for images and equations, header rows of
+      tables, document title and language, skipped heading levels, text colours with
+      too little contrast and links without a description. Most of it can be fixed
+      directly in the browser – the corrected file is saved as a normal Word file.
+
+      Mimi then creates the PDF with LibreOffice, prepares the document for it and
+      corrects known problems in the PDF structure tree afterwards (frames and text
+      boxes nested inside paragraphs, captions, decorative shapes, links in headers
+      and footers). Finally the PDF is validated with **veraPDF** (Matterhorn
+      Protocol) and a basic check of its own. Users download the PDF, the corrected
+      DOCX and an ODT.
+
+      Mimi is aimed at public bodies and institutions that have to publish accessible
+      documents (Directive (EU) 2016/2102, European Accessibility Act). It runs on
+      your own server, documents are not passed on to third parties, and it includes
+      user management, optional two-factor login, an audit log and automatic
+      deletion. Requires LibreOffice; veraPDF is recommended.
+    documentation: "https://github.com/tritondm/mimi/blob/main/INSTRUCTION.en.md"
+    features:
+      - Upload Word (.docx) or OpenDocument (.odt) reports in the browser
+      - Check and fix alternative texts, decorative images and equations
+      - Mark table header rows, set document title and language
+      - Correct skipped heading levels and text colours with too little contrast
+      - Create PDF/UA-1 with LibreOffice and correct the PDF structure tree
+      - Validate with veraPDF (Matterhorn Protocol) and a basic check
+      - Download PDF, corrected DOCX and ODT
+      - Self-hosted, user management, two-factor login, audit log, automatic deletion
+      - Interface in German and English
+  de:
+    localisedName: Mimi – Macht Inhalte Mühelos Inklusiv
+    shortDescription: >-
+      Macht Word- und OpenDocument-Berichte barrierefrei: prüfen, im Browser
+      korrigieren, PDF/UA erzeugen und prüfen.
+    longDescription: |
+      **Mimi** ist eine selbst gehostete Webanwendung, die Word-Berichte (.docx) und
+      OpenDocument-Texte (.odt) in barrierefreie PDFs nach **PDF/UA-1** umwandelt.
+
+      Man lädt den Bericht im Browser hoch. Mimi prüft das Ausgangsdokument und zeigt,
+      was fehlt: Alternativtexte für Bilder und Formeln, Kopfzeilen von Tabellen,
+      Dokumenttitel und Sprache, übersprungene Überschriftenebenen, Schriftfarben mit
+      zu wenig Kontrast und Links ohne Beschreibung. Das meiste lässt sich direkt im
+      Browser beheben – die korrigierte Datei bleibt eine normale Word-Datei.
+
+      Danach erzeugt Mimi das PDF mit LibreOffice, bereitet das Dokument dafür vor und
+      korrigiert bekannte Fehler im Strukturbaum des PDFs (Rahmen und Textfelder in
+      Absätzen, Beschriftungen, dekorative Formen, Links in Kopf- und Fußzeilen).
+      Zum Schluss wird das PDF mit **veraPDF** (Matterhorn-Protokoll) und einer eigenen
+      Basisprüfung geprüft. Heruntergeladen werden PDF, korrigierte DOCX und ODT.
+
+      Mimi richtet sich an öffentliche Stellen und Einrichtungen, die barrierefreie
+      Dokumente veröffentlichen müssen (Richtlinie (EU) 2016/2102, European
+      Accessibility Act). Es läuft auf dem eigenen Server, Dokumente gehen nicht an
+      Dritte, mit Benutzerverwaltung, freiwilliger Zwei-Faktor-Anmeldung, Audit-Log
+      und automatischem Löschen. Benötigt LibreOffice; veraPDF wird empfohlen.
+    documentation: "https://github.com/tritondm/mimi/blob/main/INSTRUCTION.md"
+    features:
+      - Word- (.docx) oder OpenDocument-Berichte (.odt) im Browser hochladen
+      - Alternativtexte, dekorative Bilder und Formeln prüfen und korrigieren
+      - Kopfzeilen von Tabellen markieren, Dokumenttitel und Sprache setzen
+      - Übersprungene Überschriftenebenen und zu kontrastarme Schriftfarben korrigieren
+      - PDF/UA-1 mit LibreOffice erzeugen und den Strukturbaum korrigieren
+      - Prüfung mit veraPDF (Matterhorn-Protokoll) und eigener Basisprüfung
+      - PDF, korrigierte DOCX und ODT herunterladen
+      - Selbst gehostet, Benutzerverwaltung, Zwei-Faktor-Anmeldung, Audit-Log, automatisches Löschen
+      - Oberfläche auf Deutsch und Englisch
+
+legal:
+  license: EUPL-1.2
+  mainCopyrightOwner: example.org
+
+maintenance:
+  type: community
+  contacts:
+    - name: triton_dm
+
+localisation:
+  localisationReady: true
+  availableLanguages:
+    - de
+    - en
