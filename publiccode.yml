@@ -14,7 +14,7 @@ categories:
   - office
   - compliance-management
 
-developmentStatus: beta
+developmentStatus: development
 softwareType: standalone/web
 
 description:
@@ -101,7 +101,7 @@ legal:
 maintenance:
   type: community
   contacts:
-    - name: triton_dm
+    - name: Mimi contributors
 
 localisation:
   localisationReady: true
