@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Protokoll – Mimi</title>
+<title data-en="Audit log – Mimi">Protokoll – Mimi</title>
 <script>try { const t = localStorage.getItem('leo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32">
@@ -46,56 +46,58 @@ tr.fail td { background: color-mix(in srgb, var(--err-bg) 45%, transparent); }
 <body>
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="36" height="36" focusable="false"><polyline points="17,46 17,18 32,35 47,18 47,46" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-text"><span class="brand-name">Mimi</span><span class="brand-claim">Macht Inhalte Mühelos Inklusiv</span></span></a>
-    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü"></nav>
+    <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="36" height="36" focusable="false"><polyline points="17,46 17,18 32,35 47,18 47,46" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-text"><span class="brand-name">Mimi</span><span class="brand-claim" data-en="Making Information More Inclusive">Macht Inhalte Mühelos Inklusiv</span></span></a>
+    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü" data-en-label="Main menu"></nav>
+    <button type="button" class="themebtn langbtn" id="langbtn"></button>
     <button type="button" class="themebtn" id="themebtn"></button>
     <div class="usermenu hidden" id="usermenu"></div>
   </div>
 </header>
 <main>
-  <h1 class="pagetitle">Protokoll</h1>
-  <p class="lead" id="lead">Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte.</p>
+  <h1 class="pagetitle" data-en="Audit log">Protokoll</h1>
+  <p class="lead" id="lead" data-en="Who did what and when. Without file names or contents of the reports.">Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte.</p>
   <div id="msg" class="msg hidden" role="alert"></div>
 
   <section class="card hidden" id="noaccess">
-    <h2>Kein Zugriff</h2>
-    <p>Diese Seite ist nur für Admins. <a href="/">Zur Anmeldung</a></p>
+    <h2 data-en="No access">Kein Zugriff</h2>
+    <p data-en="This page is for admins only. &lt;a href=&quot;/&quot;&gt;Go to login&lt;/a&gt;">Diese Seite ist nur für Admins. <a href="/">Zur Anmeldung</a></p>
   </section>
 
   <div id="content" class="hidden">
-    <div class="stats" aria-label="Zusammenfassung des gewählten Zeitraums">
-      <div class="stat"><span class="n" id="s-all">0</span><span class="l">Ereignisse</span></div>
-      <div class="stat"><span class="n" id="s-login">0</span><span class="l">Anmeldungen</span></div>
-      <div class="stat warn"><span class="n" id="s-fail">0</span><span class="l">fehlgeschlagen</span></div>
-      <div class="stat"><span class="n" id="s-pdf">0</span><span class="l">PDFs erzeugt</span></div>
+    <div class="stats" aria-label="Zusammenfassung des gewählten Zeitraums" data-en-label="Summary of the selected period">
+      <div class="stat"><span class="n" id="s-all">0</span><span class="l" data-en="events">Ereignisse</span></div>
+      <div class="stat"><span class="n" id="s-login">0</span><span class="l" data-en="logins">Anmeldungen</span></div>
+      <div class="stat warn"><span class="n" id="s-fail">0</span><span class="l" data-en="failed">fehlgeschlagen</span></div>
+      <div class="stat"><span class="n" id="s-pdf">0</span><span class="l" data-en="PDFs created">PDFs erzeugt</span></div>
     </div>
 
-    <section class="card" aria-label="Filter">
+    <section class="card" aria-label="Filter" data-en-label="Filter">
       <div class="filter">
-        <div><label for="a-q">Suchen</label><input id="a-q" type="search" placeholder="Name, Aktion, IP …"></div>
-        <div><label for="a-range">Zeitraum</label>
+        <div><label for="a-q" data-en="Search">Suchen</label><input id="a-q" type="search" placeholder="Name, Aktion, IP …" data-en-placeholder="Name, action, IP …"></div>
+        <div><label for="a-range" data-en="Period">Zeitraum</label>
           <select id="a-range">
-            <option value="1">letzte 24 Stunden</option>
-            <option value="7" selected>letzte 7 Tage</option>
-            <option value="30">letzte 30 Tage</option>
-            <option value="0">alles</option>
+            <option value="1" data-en="last 24 hours">letzte 24 Stunden</option>
+            <option value="7" selected data-en="last 7 days">letzte 7 Tage</option>
+            <option value="30" data-en="last 30 days">letzte 30 Tage</option>
+            <option value="0" data-en="all">alles</option>
           </select></div>
-        <div><label for="a-action">Aktion</label><select id="a-action"><option value="">alle</option></select></div>
-        <label class="inline"><input type="checkbox" id="a-fail"> nur Fehlschläge</label>
-        <div class="push"><span class="muted" id="a-count" role="status" aria-live="polite"></span><button id="a-reload">Neu laden</button></div>
+        <div><label for="a-action" data-en="Action">Aktion</label><select id="a-action"><option value="" data-en="all">alle</option></select></div>
+        <label class="inline"><input type="checkbox" id="a-fail"> <span data-en="failures only">nur Fehlschläge</span></label>
+        <div class="push"><span class="muted" id="a-count" role="status" aria-live="polite"></span><button id="a-reload" data-en="Reload">Neu laden</button></div>
       </div>
     </section>
 
-    <section class="card" aria-label="Einträge">
+    <section class="card" aria-label="Einträge" data-en-label="Entries">
       <div class="scroll">
         <table>
-          <thead><tr><th scope="col">Zeit</th><th scope="col">Wer</th><th scope="col">Aktion</th><th scope="col">Betrifft</th><th scope="col">Info</th><th scope="col">IP</th></tr></thead>
+          <thead><tr><th scope="col" data-en="Time">Zeit</th><th scope="col" data-en="Who">Wer</th><th scope="col" data-en="Action">Aktion</th><th scope="col" data-en="Concerns">Betrifft</th><th scope="col">Info</th><th scope="col">IP</th></tr></thead>
           <tbody id="audit"></tbody>
         </table>
       </div>
     </section>
   </div>
 </main>
+<script src="/i18n.js"></script>
 <script src="/menu.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -105,13 +107,33 @@ let entries = [];
 
 function msg(t) { $('#msg').textContent = t; $('#msg').classList.toggle('hidden', !t); }
 const isJob = t => /^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(t);
+// Das Protokoll speichert Aktionen und Angaben auf Deutsch; auf Englisch hier übersetzen.
+const ACTIONS = {
+  'Anmeldung': 'Login', 'Anmeldung fehlgeschlagen': 'Login failed', 'Anmeldung gesperrt': 'Login locked', 'Abmeldung': 'Logout',
+  'Benutzer angelegt': 'User added', 'Benutzer überschrieben': 'User overwritten', 'Benutzer gelöscht': 'User deleted',
+  'Passwort gesetzt': 'Password set', 'Rolle geändert': 'Role changed',
+  'Zwei-Faktor eingerichtet': 'Two-factor set up', 'Zwei-Faktor ausgeschaltet': 'Two-factor turned off', 'Zwei-Faktor zurückgesetzt': 'Two-factor reset',
+  'Bericht hochgeladen': 'Report uploaded', 'Änderungen gespeichert': 'Changes saved', 'PDF erzeugt': 'PDF created',
+  'Heruntergeladen': 'Downloaded', 'Bericht gelöscht': 'Report deleted', 'Automatisch gelöscht': 'Deleted automatically',
+};
+const DETAILS = [
+  [/^mit Zwei-Faktor$/, 'with two-factor'], [/^Code falsch oder schon verwendet$/, 'code wrong or already used'], [/^Code falsch$/, 'code wrong'],
+  [/^Benutzername oder Passwort falsch$/, 'wrong user name or password'], [/^noch (\d+) Minute\(n\)$/, '$1 minute(s) left'],
+  [/^von Hand$/, 'manually'], [/^Benutzer$/, 'User'], [/^(\d+) Bericht\(e\) mitgelöscht$/, '$1 report(s) deleted with it'],
+  [/(\d+) Seiten, (\d+) Problem\(e\) in der Basisprüfung, /, '$1 pages, $2 problem(s) in the basic check, '],
+  [/veraPDF nicht konform/, 'veraPDF not compliant'], [/veraPDF konform/, 'veraPDF compliant'], [/ohne veraPDF/, 'without veraPDF'],
+  [/(\d+) Bericht\(e\) gelöscht \((\d+) MB, Löschfrist abgelaufen\)/, '$1 report(s) deleted ($2 MB, retention period expired)'],
+];
+const action = a => L(a, ACTIONS[a] || a);
+const actor = a => L(a, {Kommandozeile: 'Command line'}[a] || a);
+const detail = d => LANG === 'en' ? DETAILS.reduce((s, [re, en]) => s.replace(re, en), d || '') : d;
 
 function filtered() {
   const q = $('#a-q').value.trim().toLowerCase(), onlyFail = $('#a-fail').checked;
   const days = +$('#a-range').value, act = $('#a-action').value;
   const since = days ? Date.now() / 1000 - days * 86400 : 0;
   return entries.filter(e => e.ts >= since && (!onlyFail || !e.ok) && (!act || e.action === act)
-    && (!q || [e.actor, e.action, e.target, e.detail, e.ip].join(' ').toLowerCase().includes(q)));
+    && (!q || [e.actor, e.action, action(e.action), e.target, e.detail, detail(e.detail), e.ip].join(' ').toLowerCase().includes(q)));
 }
 
 function render() {
@@ -125,13 +147,13 @@ function render() {
   $('#s-pdf').textContent = inRange.filter(e => e.action === 'PDF erzeugt').length;
 
   $('#audit').innerHTML = rows.slice(0, SHOW).map(e => `<tr${e.ok ? '' : ' class="fail"'}>
-    <td class="nowrap">${esc(new Date(e.ts * 1000).toLocaleString('de-AT'))}</td>
-    <td>${esc(e.actor)}</td>
-    <td>${e.ok ? '' : '<span class="badge err">fehlgeschlagen</span> '}${esc(e.action)}</td>
-    <td>${isJob(e.target) ? `<span class="nowrap" title="${esc(e.target)}">Bericht ${esc(e.target.slice(0, 8))}</span>` : esc(e.target)}</td>
-    <td>${esc(e.detail)}</td>
-    <td class="nowrap">${esc(e.ip)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Keine Einträge für diese Auswahl.</td></tr>';
-  $('#a-count').textContent = `${rows.length} Einträge${rows.length > SHOW ? `, die neuesten ${SHOW} angezeigt` : ''}`;
+    <td class="nowrap">${esc(new Date(e.ts * 1000).toLocaleString(LOCALE))}</td>
+    <td>${esc(actor(e.actor))}</td>
+    <td>${e.ok ? '' : `<span class="badge err">${L('fehlgeschlagen', 'failed')}</span> `}${esc(action(e.action))}</td>
+    <td>${isJob(e.target) ? `<span class="nowrap" title="${esc(e.target)}">${L('Bericht', 'Report')} ${esc(e.target.slice(0, 8))}</span>` : esc(e.target)}</td>
+    <td>${esc(detail(e.detail))}</td>
+    <td class="nowrap">${esc(e.ip)}</td></tr>`).join('') || `<tr><td colspan="6" class="muted">${L('Keine Einträge für diese Auswahl.', 'No entries for this selection.')}</td></tr>`;
+  $('#a-count').textContent = L(`${rows.length} Einträge${rows.length > SHOW ? `, die neuesten ${SHOW} angezeigt` : ''}`, `${rows.length} entries${rows.length > SHOW ? `, newest ${SHOW} shown` : ''}`);
 }
 
 async function load() {
@@ -141,11 +163,12 @@ async function load() {
   const j = await r.json();
   if (!r.ok) { msg(j.error || r.statusText); return; }
   entries = j.entries;
-  if (j.days) $('#lead').textContent = `Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte. Einträge werden nach ${j.days} Tagen gelöscht.`;
+  if (j.days) $('#lead').textContent = L(`Wer hat wann was getan. Ohne Dateinamen und Inhalte der Berichte. Einträge werden nach ${j.days} Tagen gelöscht.`,
+    `Who did what and when. Without file names or contents of the reports. Entries are deleted after ${j.days} days.`);
   // Aktionen für die Auswahl
   const sel = $('#a-action'), cur = sel.value;
-  const acts = [...new Set(entries.map(e => e.action))].sort((a, b) => a.localeCompare(b, 'de'));
-  sel.innerHTML = '<option value="">alle</option>' + acts.map(a => `<option${a === cur ? ' selected' : ''}>${esc(a)}</option>`).join('');
+  const acts = [...new Set(entries.map(e => e.action))].sort((a, b) => action(a).localeCompare(action(b), LANG));
+  sel.innerHTML = `<option value="">${L('alle', 'all')}</option>` + acts.map(a => `<option value="${esc(a)}"${a === cur ? ' selected' : ''}>${esc(action(a))}</option>`).join('');
   render();
 }
 

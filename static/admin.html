@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Benutzerverwaltung – Mimi</title>
+<title data-en="User management – Mimi">Benutzerverwaltung – Mimi</title>
 <script>try { const t = localStorage.getItem('leo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32">
@@ -43,55 +43,58 @@ form.grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align
 <body>
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="36" height="36" focusable="false"><polyline points="17,46 17,18 32,35 47,18 47,46" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-text"><span class="brand-name">Mimi</span><span class="brand-claim">Macht Inhalte Mühelos Inklusiv</span></span></a>
-    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü"></nav>
+    <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="36" height="36" focusable="false"><polyline points="17,46 17,18 32,35 47,18 47,46" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-text"><span class="brand-name">Mimi</span><span class="brand-claim" data-en="Making Information More Inclusive">Macht Inhalte Mühelos Inklusiv</span></span></a>
+    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü" data-en-label="Main menu"></nav>
+    <button type="button" class="themebtn langbtn" id="langbtn"></button>
     <button type="button" class="themebtn" id="themebtn"></button>
     <div class="usermenu hidden" id="usermenu"></div>
   </div>
 </header>
 <main>
-  <h1 class="pagetitle">Benutzerverwaltung</h1>
+  <h1 class="pagetitle" data-en="User management">Benutzerverwaltung</h1>
   <div id="msg" class="msg hidden" role="status" aria-live="polite"></div>
 
   <section class="card hidden" id="noaccess">
-    <h2>Kein Zugriff</h2>
-    <p>Diese Seite ist nur für Admins. <a href="/">Zur Anmeldung</a></p>
+    <h2 data-en="No access">Kein Zugriff</h2>
+    <p data-en="This page is for admins only. &lt;a href=&quot;/&quot;&gt;Go to login&lt;/a&gt;">Diese Seite ist nur für Admins. <a href="/">Zur Anmeldung</a></p>
   </section>
 
   <div id="content" class="hidden">
     <section class="card" aria-labelledby="h-new">
-      <h2 id="h-new">Benutzer anlegen</h2>
+      <h2 id="h-new" data-en="Add user">Benutzer anlegen</h2>
       <form class="grid" id="newform">
-        <div><label for="n-name">Benutzername</label><input id="n-name" type="text" autocomplete="off" required pattern="[A-Za-z0-9._@\-]{1,64}"></div>
-        <div><label for="n-pw">Passwort <span class="muted" id="minpw"></span></label><input id="n-pw" type="password" autocomplete="new-password" required></div>
-        <div><button type="submit">Anlegen</button></div>
-        <div><label class="inline"><input type="checkbox" id="n-admin"> Admin (darf Benutzer verwalten)</label></div>
+        <div><label for="n-name" data-en="User name">Benutzername</label><input id="n-name" type="text" autocomplete="off" required pattern="[A-Za-z0-9._@\-]{1,64}"></div>
+        <div><label for="n-pw"><span data-en="Password">Passwort</span> <span class="muted" id="minpw"></span></label><input id="n-pw" type="password" autocomplete="new-password" required></div>
+        <div><button type="submit" data-en="Add">Anlegen</button></div>
+        <div><label class="inline"><input type="checkbox" id="n-admin"> <span data-en="Admin (may manage users)">Admin (darf Benutzer verwalten)</span></label></div>
       </form>
-      <p class="muted">Erlaubt sind Buchstaben, Ziffern und . _ - @. Das Passwort teilen Sie der Person bitte auf sicherem Weg mit.</p>
+      <p class="muted" data-en="Letters, digits and . _ - @ are allowed. Please give the password to the person by a secure channel.">Erlaubt sind Buchstaben, Ziffern und . _ - @. Das Passwort teilen Sie der Person bitte auf sicherem Weg mit.</p>
     </section>
 
     <section class="card" aria-labelledby="h-list">
-      <h2 id="h-list">Benutzer</h2>
+      <h2 id="h-list" data-en="Users">Benutzer</h2>
       <table>
-        <thead><tr><th scope="col">Name</th><th scope="col">Rolle</th><th scope="col">Zwei-Faktor</th><th scope="col"><span class="hidden">Aktionen</span></th></tr></thead>
+        <thead><tr><th scope="col">Name</th><th scope="col" data-en="Role">Rolle</th><th scope="col" data-en="Two-factor">Zwei-Faktor</th><th scope="col"><span class="hidden" data-en="Actions">Aktionen</span></th></tr></thead>
         <tbody id="users"></tbody>
       </table>
     </section>
 
   </div>
 </main>
+<script src="/i18n.js"></script>
 <script src="/menu.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let me = null, minPw = 12;
 
+const pwTooShort = () => L(`Das Passwort muss mindestens ${minPw} Zeichen lang sein.`, `The password must be at least ${minPw} characters long.`);
 function msg(text, ok) { const m = $('#msg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); m.classList.toggle('hidden', !text); }
 
 async function api(url, opts = {}) {
   const r = await fetch(url, {credentials: 'same-origin', ...opts});
   const body = (r.headers.get('content-type') || '').includes('json') ? await r.json() : {};
-  if (r.status === 401 || r.status === 403) { $('#content').classList.add('hidden'); $('#noaccess').classList.remove('hidden'); throw new Error(body.error || 'Kein Zugriff'); }
+  if (r.status === 401 || r.status === 403) { $('#content').classList.add('hidden'); $('#noaccess').classList.remove('hidden'); throw new Error(body.error || L('Kein Zugriff', 'No access')); }
   if (!r.ok) throw new Error(body.error || r.statusText);
   return body;
 }
@@ -101,13 +104,13 @@ function render(users) {
   $('#users').innerHTML = users.map(u => {
     const self = u.name === me;
     return `<tr>
-      <td>${esc(u.name)}${self ? ' <span class="muted">(Sie)</span>' : ''}</td>
-      <td>${u.admin ? '<span class="badge">Admin</span>' : 'Benutzer'}</td>
-      <td>${u.mfa ? `<span class="badge ok">eingeschaltet</span> <button class="secondary" data-mfa="${esc(u.name)}">Zurücksetzen</button>` : '<span class="muted">aus</span>'}</td>
+      <td>${esc(u.name)}${self ? ` <span class="muted">${L('(Sie)', '(you)')}</span>` : ''}</td>
+      <td>${u.admin ? '<span class="badge">Admin</span>' : L('Benutzer', 'User')}</td>
+      <td>${u.mfa ? `<span class="badge ok">${L('eingeschaltet', 'on')}</span> <button class="secondary" data-mfa="${esc(u.name)}">${L('Zurücksetzen', 'Reset')}</button>` : `<span class="muted">${L('aus', 'off')}</span>`}</td>
       <td class="actions">
-        <button class="secondary" data-pw="${esc(u.name)}">Passwort setzen</button>
-        ${self ? '' : `<button class="secondary" data-role="${esc(u.name)}" data-admin="${u.admin ? 0 : 1}">${u.admin ? 'Admin-Rechte entziehen' : 'Zum Admin machen'}</button>
-        <button class="danger" data-del="${esc(u.name)}">Löschen</button>`}
+        <button class="secondary" data-pw="${esc(u.name)}">${L('Passwort setzen', 'Set password')}</button>
+        ${self ? '' : `<button class="secondary" data-role="${esc(u.name)}" data-admin="${u.admin ? 0 : 1}">${u.admin ? L('Admin-Rechte entziehen', 'Remove admin rights') : L('Zum Admin machen', 'Make admin')}</button>
+        <button class="danger" data-del="${esc(u.name)}">${L('Löschen', 'Delete')}</button>`}
       </td></tr>`;
   }).join('');
 }
@@ -115,11 +118,11 @@ function render(users) {
 $('#newform').addEventListener('submit', async e => {
   e.preventDefault();
   const name = $('#n-name').value.trim(), password = $('#n-pw').value;
-  if (password.length < minPw) return msg(`Das Passwort muss mindestens ${minPw} Zeichen lang sein.`);
-  if (window.__users?.some(u => u.name === name) && !confirm(`„${name}“ gibt es schon. Passwort und Rolle überschreiben?`)) return;
+  if (password.length < minPw) return msg(pwTooShort());
+  if (window.__users?.some(u => u.name === name) && !confirm(L(`„${name}“ gibt es schon. Passwort und Rolle überschreiben?`, `“${name}” already exists. Overwrite password and role?`))) return;
   try {
     const r = await post('/api/admin/users', {name, password, admin: $('#n-admin').checked});
-    window.__users = r.users; render(r.users); e.target.reset(); msg(`Benutzer „${name}“ gespeichert.`, true);
+    window.__users = r.users; render(r.users); e.target.reset(); msg(L(`Benutzer „${name}“ gespeichert.`, `User “${name}” saved.`), true);
   } catch (err) { msg(err.message); }
 });
 
@@ -128,23 +131,24 @@ $('#users').addEventListener('click', async e => {
   try {
     let r;
     if (b.dataset.pw) {
-      const pw = prompt(`Neues Passwort für „${b.dataset.pw}“ (mindestens ${minPw} Zeichen):`);
+      const pw = prompt(L(`Neues Passwort für „${b.dataset.pw}“ (mindestens ${minPw} Zeichen):`, `New password for “${b.dataset.pw}” (at least ${minPw} characters):`));
       if (pw === null) return;
-      if (pw.length < minPw) return msg(`Das Passwort muss mindestens ${minPw} Zeichen lang sein.`);
+      if (pw.length < minPw) return msg(pwTooShort());
       const u = window.__users.find(x => x.name === b.dataset.pw);
       r = await post('/api/admin/users', {name: b.dataset.pw, password: pw, admin: u.admin});
-      msg(`Passwort für „${b.dataset.pw}“ geändert. Bestehende Anmeldungen dieses Benutzers wurden beendet.`, true);
+      msg(L(`Passwort für „${b.dataset.pw}“ geändert. Bestehende Anmeldungen dieses Benutzers wurden beendet.`, `Password for “${b.dataset.pw}” changed. This user's existing sessions were ended.`), true);
     } else if (b.dataset.role) {
       r = await post('/api/admin/users', {name: b.dataset.role, admin: b.dataset.admin === '1'});
-      msg(`Rolle von „${b.dataset.role}“ geändert.`, true);
+      msg(L(`Rolle von „${b.dataset.role}“ geändert.`, `Role of “${b.dataset.role}” changed.`), true);
     } else if (b.dataset.mfa) {
-      if (!confirm(`Zwei-Faktor-Anmeldung von „${b.dataset.mfa}“ zurücksetzen? Die Person meldet sich danach nur mit Passwort an und kann die App neu einrichten.`)) return;
+      if (!confirm(L(`Zwei-Faktor-Anmeldung von „${b.dataset.mfa}“ zurücksetzen? Die Person meldet sich danach nur mit Passwort an und kann die App neu einrichten.`,
+        `Reset two-factor login of “${b.dataset.mfa}”? The person then logs in with the password only and can set up the app again.`))) return;
       r = await api('/api/admin/users/' + encodeURIComponent(b.dataset.mfa) + '/mfa-reset', {method: 'POST'});
-      msg(`Zwei-Faktor-Anmeldung von „${b.dataset.mfa}“ zurückgesetzt.`, true);
+      msg(L(`Zwei-Faktor-Anmeldung von „${b.dataset.mfa}“ zurückgesetzt.`, `Two-factor login of “${b.dataset.mfa}” reset.`), true);
     } else if (b.dataset.del) {
-      if (!confirm(`Benutzer „${b.dataset.del}“ wirklich löschen?`)) return;
+      if (!confirm(L(`Benutzer „${b.dataset.del}“ wirklich löschen?`, `Really delete user “${b.dataset.del}”?`))) return;
       r = await api('/api/admin/users/' + encodeURIComponent(b.dataset.del), {method: 'DELETE'});
-      msg(`Benutzer „${b.dataset.del}“ gelöscht.`, true);
+      msg(L(`Benutzer „${b.dataset.del}“ gelöscht.`, `User “${b.dataset.del}” deleted.`), true);
     }
     window.__users = r.users; render(r.users);
   } catch (err) { msg(err.message); }
@@ -159,7 +163,7 @@ $('#users').addEventListener('click', async e => {
     leoMenu.show(j, 'benutzer');
     if (!j.admin) throw 0;
     const l = await api('/api/admin/users');
-    minPw = l.min_password; $('#minpw').textContent = `(mind. ${minPw} Zeichen)`;
+    minPw = l.min_password; $('#minpw').textContent = L(`(mind. ${minPw} Zeichen)`, `(at least ${minPw} characters)`);
     window.__users = l.users; render(l.users);
     $('#content').classList.remove('hidden');
   } catch (e) { $('#noaccess').classList.remove('hidden'); }

@@ -9,6 +9,7 @@
 //!   LibreOffice sonst beim Umwandeln aus dem Netz oder vom Dateisystem des Servers nachlädt.
 //!   Hyperlinks bleiben erhalten, die ruft LibreOffice nicht ab.
 
+use crate::{i18n, tr};
 use anyhow::{Context, Result, bail};
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, Writer};
@@ -37,25 +38,25 @@ pub fn check_zip(bytes: &[u8]) -> Result<()> {
 }
 
 fn check_zip_with(bytes: &[u8], lim: Limits) -> Result<()> {
-    let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).context("Die Datei ist beschädigt oder kein Word-/OpenDocument-Dokument")?;
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).context(i18n::t("Die Datei ist beschädigt oder kein Word-/OpenDocument-Dokument", "The file is damaged or not a Word/OpenDocument document"))?;
     if zip.len() > lim.entries {
-        bail!("Die Datei besteht aus mehr als {} Teilen und wird nicht verarbeitet.", lim.entries);
+        bail!(tr!("Die Datei besteht aus mehr als {} Teilen und wird nicht verarbeitet.", "The file consists of more than {} parts and will not be processed.", lim.entries));
     }
     let mut total = 0u64;
     for i in 0..zip.len() {
-        let f = zip.by_index(i).context("Ein Teil der Datei lässt sich nicht entpacken")?;
+        let f = zip.by_index(i).context(i18n::t("Ein Teil der Datei lässt sich nicht entpacken", "Part of the file cannot be unpacked"))?;
         let name = f.name().to_string();
-        let too_big = || anyhow::anyhow!("Der Teil „{name}“ ist entpackt größer als {} MB. Die Datei wird nicht verarbeitet.", lim.entry >> 20);
+        let too_big = || anyhow::anyhow!(tr!("Der Teil „{name}“ ist entpackt größer als {} MB. Die Datei wird nicht verarbeitet.", "The part “{name}” is larger than {} MB when unpacked. The file will not be processed.", lim.entry >> 20));
         if f.size() > lim.entry {
             return Err(too_big());
         }
-        let n = std::io::copy(&mut f.take(lim.entry + 1), &mut std::io::sink()).context("Ein Teil der Datei lässt sich nicht entpacken")?;
+        let n = std::io::copy(&mut f.take(lim.entry + 1), &mut std::io::sink()).context(i18n::t("Ein Teil der Datei lässt sich nicht entpacken", "Part of the file cannot be unpacked"))?;
         if n > lim.entry {
             return Err(too_big());
         }
         total += n;
         if total > lim.total {
-            bail!("Die Datei ist entpackt größer als {} MB und wird nicht verarbeitet.", lim.total >> 20);
+            bail!(tr!("Die Datei ist entpackt größer als {} MB und wird nicht verarbeitet.", "The file is larger than {} MB when unpacked and will not be processed.", lim.total >> 20));
         }
     }
     Ok(())
@@ -66,7 +67,7 @@ pub fn read_limited(f: impl Read) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
     f.take(LIMITS.entry + 1).read_to_end(&mut buf)?;
     if buf.len() as u64 > LIMITS.entry {
-        bail!("Ein Teil der Datei ist entpackt größer als {} MB.", LIMITS.entry >> 20);
+        bail!(tr!("Ein Teil der Datei ist entpackt größer als {} MB.", "Part of the file is larger than {} MB when unpacked.", LIMITS.entry >> 20));
     }
     Ok(buf)
 }

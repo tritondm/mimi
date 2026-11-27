@@ -8,7 +8,7 @@ Mimi turns a Word report (.docx) or OpenDocument text (.odt) into an accessible 
 Staff upload the report in the browser, add what only a human can know (e.g. alt texts)
 and get a checked PDF back.
 
-Installation and operation: [INSTALL.en.md](INSTALL.en.md) · Usage and settings: [README.en.md](README.en.md) · User guide: [INSTRUCTION.en.md](INSTRUCTION.en.md)
+Installation and operation: [INSTALL.en.md](INSTALL.en.md) · Usage and settings: [README.md](README.md) · User guide: [INSTRUCTION.en.md](INSTRUCTION.en.md)
 
 ## Workflow
 
@@ -250,4 +250,4 @@ Without `MIMI_TEST_IN` a small built-in sample document is used.
   (see above). If differences remain, it is usually due to missing fonts (see
   [INSTALL.en.md](INSTALL.en.md#fonts)). Fixed row heights cut off multi-line cells and are
   therefore not a solution.
-- Further limitations of the prototype: see [README.en.md](README.en.md#known-limitations-of-the-prototype).
+- Further limitations of the prototype: see [README.md](README.md#known-limitations-of-the-prototype).

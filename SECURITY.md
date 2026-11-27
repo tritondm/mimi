@@ -33,7 +33,7 @@ zusätzlich hier.
 
 ## Bitte beim Testen
 
-- Teste mit einer eigenen Installation (siehe [README.md](README.md)), nicht an fremden Servern.
+- Teste mit einer eigenen Installation (siehe [README.de.md](README.de.md)), nicht an fremden Servern.
 - Keine Last- oder Überlastungstests, kein Zugriff auf Berichte oder Konten anderer.
 - Wer sich daran hält und eine Lücke vertraulich meldet, hat von uns nichts zu befürchten.
 
@@ -42,7 +42,7 @@ zusätzlich hier.
 Passwörter mit Argon2id gehasht, Benutzerdatei mit Rechten 600, freiwillige Zwei-Faktor-Anmeldung
 (TOTP), Sitzungs-Cookie `HttpOnly` und `SameSite=Strict`, Origin-Prüfung bei schreibenden Anfragen,
 Sperre nach Fehlversuchen, Audit-Log, automatisches Löschen der Berichte. Details und bekannte
-Grenzen: [README.md](README.md).
+Grenzen: [README.de.md](README.de.md).
 
 ---
 
@@ -81,7 +81,7 @@ to report here as well.
 
 ### When testing
 
-- Test against your own installation (see [README.en.md](README.en.md)), not against other people's servers.
+- Test against your own installation (see [README.md](README.md)), not against other people's servers.
 - No load or denial-of-service tests, no access to other users' reports or accounts.
 - If you follow these rules and report privately, you have nothing to fear from us.
 
@@ -90,4 +90,4 @@ to report here as well.
 Passwords hashed with Argon2id, user file with mode 600, optional two-factor login (TOTP),
 session cookie `HttpOnly` and `SameSite=Strict`, origin check on write requests, lockout after
 failed attempts, audit log, automatic deletion of reports. Details and known limits:
-[README.en.md](README.en.md).
+[README.md](README.md).

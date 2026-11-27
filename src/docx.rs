@@ -7,6 +7,7 @@
 //! nur die gezielt geänderten Elemente werden neu geschrieben. Dadurch bleibt
 //! der Rest des Dokuments Byte für Byte erhalten.
 
+use crate::{i18n, tr};
 use anyhow::{Context, Result};
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::{Reader, Writer};
@@ -92,13 +93,16 @@ pub struct ColorIssue {
     pub places: Vec<String>,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Default)]
 pub struct Hint {
     /// "fehler", "warnung", "hinweis"
     pub severity: String,
     pub kind: String,
     pub text: String,
     pub section: String,
+    /// Absatz der Überschrift bei übersprungenen Ebenen (passt zu `HeadingFix::para`)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub para: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -247,7 +251,7 @@ fn reader(xml: &[u8]) -> Reader<&[u8]> {
 }
 
 pub fn read_entry(zip_bytes: &[u8], name: &str) -> Result<Option<Vec<u8>>> {
-    let mut zip = zip::ZipArchive::new(Cursor::new(zip_bytes)).context("Keine gültige DOCX-Datei")?;
+    let mut zip = zip::ZipArchive::new(Cursor::new(zip_bytes)).context(i18n::t("Keine gültige DOCX-Datei", "Not a valid DOCX file"))?;
     let result = match zip.by_name(name) {
         Ok(f) => Some(crate::sanitize::read_limited(f)?),
         Err(_) => None,
@@ -528,7 +532,7 @@ struct ParaRecord {
 }
 
 pub fn analyze(docx: &[u8]) -> Result<Analysis> {
-    let doc = read_entry(docx, "word/document.xml")?.context("word/document.xml fehlt – ist das eine Word-Datei?")?;
+    let doc = read_entry(docx, "word/document.xml")?.context(i18n::t("word/document.xml fehlt – ist das eine Word-Datei?", "word/document.xml is missing – is this a Word file?"))?;
     let styles = match read_entry(docx, "word/styles.xml")? {
         Some(s) => Styles::parse(&s)?,
         None => Styles { map: HashMap::new(), default_para: None, language: String::new() },
@@ -783,8 +787,14 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                                 hints.push(Hint {
                                     severity: "hinweis".into(),
                                     kind: "leer".into(),
-                                    text: format!("{} leere Absätze hintereinander (nach „{}“). Abstände besser über die Formatvorlage einstellen.", empty_streak, snippet(&empty_after, 60)),
+                                    text: tr!(
+                                        "{} leere Absätze hintereinander (nach „{}“). Abstände besser über die Formatvorlage einstellen.",
+                                        "{} empty paragraphs in a row (after “{}”). Better set spacing in the paragraph style.",
+                                        empty_streak,
+                                        snippet(&empty_after, 60)
+                                    ),
                                     section: section.clone(),
+                                    ..Default::default()
                                 });
                             }
                             empty_streak = 0;
@@ -800,16 +810,18 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                                     hints.push(Hint {
                                         severity: "warnung".into(),
                                         kind: "ebene".into(),
-                                        text: format!("Überschrift Ebene {} folgt direkt auf Ebene {}: „{}“", lvl, last_level, snippet(&text, 80)),
+                                        text: tr!("Überschrift Ebene {} folgt direkt auf Ebene {}: „{}“", "Heading level {} directly follows level {}: “{}”", lvl, last_level, snippet(&text, 80)),
                                         section: section.clone(),
+                                        para: Some(idx),
                                     });
                                 }
                                 if last_level == 0 && lvl > 1 {
                                     hints.push(Hint {
                                         severity: "hinweis".into(),
                                         kind: "ebene".into(),
-                                        text: format!("Erste Überschrift hat Ebene {} statt 1: „{}“", lvl, snippet(&text, 80)),
+                                        text: tr!("Erste Überschrift hat Ebene {} statt 1: „{}“", "The first heading has level {} instead of 1: “{}”", lvl, snippet(&text, 80)),
                                         section: section.clone(),
+                                        ..Default::default()
                                     });
                                 }
                                 last_level = lvl;
@@ -822,8 +834,13 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                                 hints.push(Hint {
                                     severity: "warnung".into(),
                                     kind: "scheinueberschrift".into(),
-                                    text: format!("Fett gesetzter Absatz sieht aus wie eine Überschrift, ist aber keine: „{}“. Falls es eine Überschrift ist, Formatvorlage „Überschrift“ verwenden.", snippet(&text, 80)),
+                                    text: tr!(
+                                        "Fett gesetzter Absatz sieht aus wie eine Überschrift, ist aber keine: „{}“. Falls es eine Überschrift ist, Formatvorlage „Überschrift“ verwenden.",
+                                        "Bold paragraph looks like a heading but is not one: “{}”. If it is a heading, use a “Heading” style.",
+                                        snippet(&text, 80)
+                                    ),
                                     section: section.clone(),
+                                    ..Default::default()
                                 });
                             }
                             let manual_list = ["- ", "• ", "– ", "* ", "▪ ", "· ", "o\t", "-\t", "•\t"].iter().any(|m| p.text.trim_start().starts_with(m));
@@ -831,8 +848,13 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
                                 hints.push(Hint {
                                     severity: "warnung".into(),
                                     kind: "liste".into(),
-                                    text: format!("Aufzählung von Hand getippt: „{}“. Besser die Aufzählungs-Funktion bzw. -Formatvorlage verwenden.", snippet(&text, 80)),
+                                    text: tr!(
+                                        "Aufzählung von Hand getippt: „{}“. Besser die Aufzählungs-Funktion bzw. -Formatvorlage verwenden.",
+                                        "List typed by hand: “{}”. Better use the bullets/numbering feature or a list style.",
+                                        snippet(&text, 80)
+                                    ),
                                     section: section.clone(),
+                                    ..Default::default()
                                 });
                             }
                         }
@@ -860,7 +882,11 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
     // Vektorgrafiken mit Text
     for img in images.iter_mut().filter(|i| i.kind == "smartart" && !i.decorative) {
         let name = snippet(if img.caption.is_empty() { &img.name } else { &img.caption }, 80);
-        hints.push(Hint { severity: "hinweis".into(), kind: "grafiktext".into(), text: format!("Grafik „{name}“ ist eine SmartArt-Grafik mit Text. PAC gibt dafür eine Warnung aus („Possibly inappropriate use of a Figure“). Unproblematisch, wenn der Alternativtext die Texte der Grafik wiedergibt."), section: img.section.clone() });
+        let text = tr!(
+            "Grafik „{name}“ ist eine SmartArt-Grafik mit Text. PAC gibt dafür eine Warnung aus („Possibly inappropriate use of a Figure“). Unproblematisch, wenn der Alternativtext die Texte der Grafik wiedergibt.",
+            "Graphic “{name}” is a SmartArt graphic with text. PAC shows a warning for it (“Possibly inappropriate use of a Figure”). No problem if the alternative text contains the texts of the graphic."
+        );
+        hints.push(Hint { severity: "hinweis".into(), kind: "grafiktext".into(), text, section: img.section.clone(), ..Default::default() });
     }
     for img in images.iter_mut() {
         let Some(m) = img.media.as_deref() else { continue };
@@ -876,9 +902,19 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
         }
         let name = snippet(if img.caption.is_empty() { &img.name } else { &img.caption }, 80);
         if img.vector_text >= VECTOR_TABLE_TEXTS {
-            hints.push(Hint { severity: "warnung".into(), kind: "grafiktext".into(), text: format!("Grafik „{name}“ enthält sehr viel Text ({} Textstellen) – vermutlich eine als Bild eingefügte Tabelle. Bitte als echte Word-Tabelle einfügen; als Bild ist der Inhalt für Screenreader kaum nutzbar und PAC warnt („Possibly inappropriate use of a Figure“).", img.vector_text), section: img.section.clone() });
+            let text = tr!(
+                "Grafik „{name}“ enthält sehr viel Text ({} Textstellen) – vermutlich eine als Bild eingefügte Tabelle. Bitte als echte Word-Tabelle einfügen; als Bild ist der Inhalt für Screenreader kaum nutzbar und PAC warnt („Possibly inappropriate use of a Figure“).",
+                "Graphic “{name}” contains a lot of text ({} text items) – probably a table inserted as an image. Please insert it as a real Word table; as an image the content is hardly usable with a screen reader and PAC warns (“Possibly inappropriate use of a Figure”).",
+                img.vector_text
+            );
+            hints.push(Hint { severity: "warnung".into(), kind: "grafiktext".into(), text, section: img.section.clone(), ..Default::default() });
         } else {
-            hints.push(Hint { severity: "hinweis".into(), kind: "grafiktext".into(), text: format!("Grafik „{name}“ ist eine Vektorgrafik mit Text ({} Textstellen). PAC gibt dafür eine Warnung aus („Possibly inappropriate use of a Figure“). Unproblematisch, wenn der Alternativtext die Beschriftungen wiedergibt – Schriftfarben in der Grafik selbst auf Kontrast prüfen.", img.vector_text), section: img.section.clone() });
+            let text = tr!(
+                "Grafik „{name}“ ist eine Vektorgrafik mit Text ({} Textstellen). PAC gibt dafür eine Warnung aus („Possibly inappropriate use of a Figure“). Unproblematisch, wenn der Alternativtext die Beschriftungen wiedergibt – Schriftfarben in der Grafik selbst auf Kontrast prüfen.",
+                "Graphic “{name}” is a vector graphic with text ({} text items). PAC shows a warning for it (“Possibly inappropriate use of a Figure”). No problem if the alternative text contains the labels – check the text colours in the graphic itself for contrast.",
+                img.vector_text
+            );
+            hints.push(Hint { severity: "hinweis".into(), kind: "grafiktext".into(), text, section: img.section.clone(), ..Default::default() });
         }
     }
 
@@ -887,29 +923,52 @@ pub fn analyze(docx: &[u8]) -> Result<Analysis> {
     if !local_ids.is_empty() {
         let texts = local_link_texts(&doc, &local_ids)?;
         if !texts.is_empty() {
-            let mut ex: Vec<String> = texts.iter().take(3).map(|t| format!("„{}“", snippet(t, 50))).collect();
+            let mut ex: Vec<String> = texts.iter().take(3).map(|t| tr!("„{}“", "“{}”", snippet(t, 50))).collect();
             if texts.len() > 3 {
                 ex.push("…".into());
             }
-            hints.push(Hint { severity: "warnung".into(), kind: "link".into(), text: format!("{} Link(s) zeigen auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…\\Downloads) und führen ins Leere: {}. Im PDF macht Mimi normalen Text daraus; in Word den Link entfernen (Rechtsklick → Link entfernen).", texts.len(), ex.join(", ")), section: String::new() });
+            let text = tr!(
+                "{} Link(s) zeigen auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…\\Downloads) und führen ins Leere: {}. Im PDF macht Mimi normalen Text daraus; in Word den Link entfernen (Rechtsklick → Link entfernen).",
+                "{} link(s) point to files on a single computer (e.g. C:\\Users\\…\\Downloads) and lead nowhere: {}. In the PDF Mimi turns them into normal text; remove the link in Word (right-click → Remove Hyperlink).",
+                texts.len(),
+                ex.join(", ")
+            );
+            hints.push(Hint { severity: "warnung".into(), kind: "link".into(), text, ..Default::default() });
         }
     }
 
     // Zusammenfassende Hinweise
     if title.is_empty() {
-        hints.insert(0, Hint { severity: "fehler".into(), kind: "titel".into(), text: "Kein Dokumenttitel gesetzt (Datei → Eigenschaften → Titel).".into(), section: String::new() });
+        let text = i18n::t("Kein Dokumenttitel gesetzt (Datei → Eigenschaften → Titel).", "No document title set (File → Properties → Title).").into();
+        hints.insert(0, Hint { severity: "fehler".into(), kind: "titel".into(), text, ..Default::default() });
     }
     if styles.language.is_empty() {
-        hints.insert(0, Hint { severity: "fehler".into(), kind: "sprache".into(), text: "Keine Dokumentsprache festgelegt.".into(), section: String::new() });
+        let text = i18n::t("Keine Dokumentsprache festgelegt.", "No document language set.").into();
+        hints.insert(0, Hint { severity: "fehler".into(), kind: "sprache".into(), text, ..Default::default() });
     }
     if headings.is_empty() {
-        hints.insert(0, Hint { severity: "fehler".into(), kind: "ebene".into(), text: "Das Dokument enthält keine Überschriften mit Überschrift-Formatvorlagen. Ohne sie gibt es keine Gliederung und keine Lesezeichen im PDF.".into(), section: String::new() });
+        let text = i18n::t(
+            "Das Dokument enthält keine Überschriften mit Überschrift-Formatvorlagen. Ohne sie gibt es keine Gliederung und keine Lesezeichen im PDF.",
+            "The document has no headings with heading styles. Without them there is no outline and there are no bookmarks in the PDF.",
+        )
+        .into();
+        hints.insert(0, Hint { severity: "fehler".into(), kind: "ebene".into(), text, ..Default::default() });
     }
     if url_links > 0 {
-        hints.push(Hint { severity: "hinweis".into(), kind: "link".into(), text: format!("{} Link(s) zeigen die nackte Webadresse als Text. Ein sprechender Linktext ist besser verständlich (für PAC kein Fehler).", url_links), section: String::new() });
+        let text = tr!(
+            "{} Link(s) zeigen die nackte Webadresse als Text. Ein sprechender Linktext ist besser verständlich (für PAC kein Fehler).",
+            "{} link(s) show the bare web address as text. A meaningful link text is easier to understand (not an error for PAC).",
+            url_links
+        );
+        hints.push(Hint { severity: "hinweis".into(), kind: "link".into(), text, ..Default::default() });
     }
     for t in tables.iter().filter(|t| t.rows <= 1) {
-        hints.push(Hint { severity: "hinweis".into(), kind: "tabelle".into(), text: format!("Tabelle {} hat nur eine Zeile – wird sie nur fürs Layout verwendet? Dann besser ohne Tabelle gestalten.", t.index + 1), section: t.section.clone() });
+        let text = tr!(
+            "Tabelle {} hat nur eine Zeile – wird sie nur fürs Layout verwendet? Dann besser ohne Tabelle gestalten.",
+            "Table {} has only one row – is it only used for layout? Then better lay it out without a table.",
+            t.index + 1
+        );
+        hints.push(Hint { severity: "hinweis".into(), kind: "tabelle".into(), text, section: t.section.clone(), ..Default::default() });
     }
 
     // Übersprungene Ebenen: passende Formatvorlage je Ebene suchen
@@ -1088,7 +1147,7 @@ fn color_issues(docx: &[u8], doc: &[u8]) -> Result<Vec<ColorIssue>> {
         if let Some(s) = cstyles.get(id) {
             for c in &s.colors {
                 let p = places.entry(c.clone()).or_default();
-                let label = format!("Formatvorlage „{}“", display_style_name(&s.name));
+                let label = tr!("Formatvorlage „{}“", "Style “{}”", display_style_name(&s.name));
                 if !p.contains(&label) {
                     p.push(label);
                 }
@@ -1136,7 +1195,7 @@ fn color_issues(docx: &[u8], doc: &[u8]) -> Result<Vec<ColorIssue>> {
             if let Some(cols) = num_to_abs.get(n).and_then(|a| abs_colors.get(a)) {
                 for c in cols {
                     let p = places.entry(c.clone()).or_default();
-                    let label = "Aufzählungszeichen/Nummerierung".to_string();
+                    let label = i18n::t("Aufzählungszeichen/Nummerierung", "Bullets/numbering").to_string();
                     if !p.contains(&label) {
                         p.push(label);
                     }
@@ -1145,7 +1204,7 @@ fn color_issues(docx: &[u8], doc: &[u8]) -> Result<Vec<ColorIssue>> {
         }
     }
     for (c, n) in &direct {
-        places.entry(c.clone()).or_default().push(format!("{n}× direkt im Text formatiert"));
+        places.entry(c.clone()).or_default().push(tr!("{n}× direkt im Text formatiert", "{n}× formatted directly in the text"));
     }
 
     let mut out: Vec<ColorIssue> = places
@@ -1601,7 +1660,10 @@ fn rename_std_styles(xml: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
                             i += 1;
                         }
                         names.insert(new.clone());
-                        renamed.push(format!("Formatvorlage „{v}“ heißt im PDF „{new}“, weil „{v}“ ein reservierter PDF-Tag ist (sonst werden z. B. alle Tabellenzellen falsch getaggt)."));
+                        renamed.push(tr!(
+                            "Formatvorlage „{v}“ heißt im PDF „{new}“, weil „{v}“ ein reservierter PDF-Tag ist (sonst werden z. B. alle Tabellenzellen falsch getaggt).",
+                            "Style “{v}” is called “{new}” in the PDF because “{v}” is a reserved PDF tag (otherwise e.g. all table cells would be tagged wrongly)."
+                        ));
                         w.write_event(Event::Empty(copy_start_with(e, &[("w:val", new.as_str())])))?;
                         buf.clear();
                         continue;
@@ -2033,7 +2095,13 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
         notes.extend(ren);
         let (new2, cap) = rename_caption_style(&new)?;
         if cap {
-            notes.push("Beschriftungen (Abbildung, Tabelle, Formel) werden im PDF als normale Absätze ausgegeben. LibreOffice würde sie sonst als frei stehende „Caption“ taggen, was PAC bemängelt.".into());
+            notes.push(
+                i18n::t(
+                    "Beschriftungen (Abbildung, Tabelle, Formel) werden im PDF als normale Absätze ausgegeben. LibreOffice würde sie sonst als frei stehende „Caption“ taggen, was PAC bemängelt.",
+                    "Captions (figure, table, equation) are output as normal paragraphs in the PDF. Otherwise LibreOffice would tag them as stand-alone “Caption”, which PAC reports.",
+                )
+                .into(),
+            );
         }
         if changed || cap {
             replaced.insert("word/styles.xml".into(), new2);
@@ -2042,13 +2110,22 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
     if let Some(doc) = read_entry(docx, "word/document.xml")? {
         let frames = count_frames(&doc)?;
         if frames > 0 {
-            notes.push(format!("{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Mimi löst ihn nach dem Export dort heraus – das Layout bleibt unverändert."));
+            notes.push(tr!(
+                "{frames} Word-Rahmen (z. B. Titelblock, Impressum): LibreOffice legt ihren Inhalt im PDF in einen Absatz. Mimi löst ihn nach dem Export dort heraus – das Layout bleibt unverändert.",
+                "{frames} Word frame(s) (e.g. title block, imprint): LibreOffice puts their content into a paragraph in the PDF. Mimi moves it out after the export – the layout stays the same."
+            ));
         }
         let mut doc_changed = false;
         let (mut doc, n) = unlink_bibliography(&doc)?;
         if n > 0 {
             doc_changed = true;
-            notes.push("Das Literaturverzeichnis wird im PDF als normaler Text ausgegeben – genau wie in Word. LibreOffice würde daraus sonst ein geschütztes Verzeichnis mit anderer Formatierung machen.".into());
+            notes.push(
+                i18n::t(
+                    "Das Literaturverzeichnis wird im PDF als normaler Text ausgegeben – genau wie in Word. LibreOffice würde daraus sonst ein geschütztes Verzeichnis mit anderer Formatierung machen.",
+                    "The bibliography is output as normal text in the PDF – just as in Word. Otherwise LibreOffice would turn it into a protected index with different formatting.",
+                )
+                .into(),
+            );
         }
         if let Some(rels) = read_entry(docx, "word/_rels/document.xml.rels")? {
             let ids = local_link_ids(&parse_rels(&rels)?);
@@ -2057,7 +2134,10 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
                 if n > 0 {
                     doc = new;
                     doc_changed = true;
-                    notes.push(format!("{n} Link(s) auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…) werden im PDF als normaler Text ausgegeben – sie würden dort ins Leere führen."));
+                    notes.push(tr!(
+                        "{n} Link(s) auf Dateien auf einem einzelnen Rechner (z. B. C:\\Users\\…) werden im PDF als normaler Text ausgegeben – sie würden dort ins Leere führen.",
+                        "{n} link(s) to files on a single computer (e.g. C:\\Users\\…) are output as normal text in the PDF – they would lead nowhere there."
+                    ));
                 }
             }
         }
@@ -2071,7 +2151,10 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
             if n > 0 {
                 doc = new;
                 doc_changed = true;
-                notes.push(format!("Absatzabstände aus den Tabellenvorlagen werden in {n} Tabellenzellen übernommen, wie Word es macht. LibreOffice würde sonst die Standardabstände verwenden und die Tabellenzeilen höher machen."));
+                notes.push(tr!(
+                    "Absatzabstände aus den Tabellenvorlagen werden in {n} Tabellenzellen übernommen, wie Word es macht. LibreOffice würde sonst die Standardabstände verwenden und die Tabellenzeilen höher machen.",
+                    "Paragraph spacing from the table styles is applied in {n} table cells, as Word does. Otherwise LibreOffice would use the default spacing and make the table rows taller."
+                ));
             }
         }
         if doc_changed {
@@ -2097,14 +2180,23 @@ pub fn prepare_for_pdf(docx: &[u8]) -> Result<(Vec<u8>, Vec<String>)> {
         }
     }
     if links > 0 {
-        notes.push(format!("{links} Verknüpfung(en) in Kopf-/Fußzeilen (z. B. Feld STYLEREF) werden im PDF als normaler Text ausgegeben – sonst entsteht auf jeder Seite ein ungetaggter Link."));
+        notes.push(tr!(
+            "{links} Verknüpfung(en) in Kopf-/Fußzeilen (z. B. Feld STYLEREF) werden im PDF als normaler Text ausgegeben – sonst entsteht auf jeder Seite ein ungetaggter Link.",
+            "{links} link(s) in headers/footers (e.g. STYLEREF field) are output as normal text in the PDF – otherwise every page gets an untagged link."
+        ));
     }
     if deco > 0 {
-        notes.push(format!("{deco} Bild(er) und Form(en) in Kopf-/Fußzeilen (Logos, Zierbalken) werden als dekorativ markiert. Kopf- und Fußzeilen liest der Screenreader ohnehin nicht vor; LibreOffice würde sie sonst als Abbildung taggen."));
+        notes.push(tr!(
+            "{deco} Bild(er) und Form(en) in Kopf-/Fußzeilen (Logos, Zierbalken) werden als dekorativ markiert. Kopf- und Fußzeilen liest der Screenreader ohnehin nicht vor; LibreOffice würde sie sonst als Abbildung taggen.",
+            "{deco} image(s) and shape(s) in headers/footers (logos, ornamental bars) are marked as decorative. Screen readers do not read headers and footers anyway; otherwise LibreOffice would tag them as figures."
+        ));
     }
     let ext = crate::sanitize::docx_external(docx, &mut replaced)?;
     if ext > 0 {
-        notes.push(format!("{ext} verknüpfte(r) externe(r) Inhalt(e) (z. B. Bild per Link statt eingebettet, Vorlage auf einem anderen Rechner) werden nicht geladen. Im PDF fehlen sie – bitte in Word einfügen statt verknüpfen."));
+        notes.push(tr!(
+            "{ext} verknüpfte(r) externe(r) Inhalt(e) (z. B. Bild per Link statt eingebettet, Vorlage auf einem anderen Rechner) werden nicht geladen. Im PDF fehlen sie – bitte in Word einfügen statt verknüpfen.",
+            "{ext} linked external item(s) (e.g. an image linked instead of embedded, a template on another computer) are not loaded. They are missing from the PDF – please insert them in Word instead of linking."
+        ));
     }
     if replaced.is_empty() {
         return Ok((docx.to_vec(), notes));
@@ -2182,7 +2274,7 @@ pub fn apply(docx: &[u8], changes: &Changes) -> Result<Vec<u8>> {
     let mut replaced: HashMap<String, Vec<u8>> = HashMap::new();
 
     if !changes.images.is_empty() || !changes.tables.is_empty() || changes.link_descriptions || !changes.headings.is_empty() {
-        let doc = read_entry(docx, "word/document.xml")?.context("word/document.xml fehlt")?;
+        let doc = read_entry(docx, "word/document.xml")?.context(i18n::t("word/document.xml fehlt", "word/document.xml is missing"))?;
         replaced.insert("word/document.xml".into(), apply_document(&doc, changes)?);
     }
     if let Some(t) = &changes.title {

@@ -64,3 +64,5 @@ html { scroll-padding-top: 90px; }
 .themebtn:hover { background: var(--info-bg); }
 .themebtn .ico { display: flex; }
 @media (max-width: 640px) { .themebtn .lbl { display: none; } }
+/* Umschalter Sprache: Beschriftung („English“ / „Deutsch“) immer zeigen */
+.langbtn[lang] .lbl { display: inline; }

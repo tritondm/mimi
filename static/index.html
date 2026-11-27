@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mimi – Macht Inhalte Mühelos Inklusiv</title>
+<title data-en="Mimi – Making Information More Inclusive">Mimi – Macht Inhalte Mühelos Inklusiv</title>
 <script>try { const t = localStorage.getItem('leo-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32">
@@ -77,102 +77,103 @@ ul.hints li:first-child { border-top: 0; }
 <body>
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="36" height="36" focusable="false"><polyline points="17,46 17,18 32,35 47,18 47,46" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-text"><span class="brand-name">Mimi</span><span class="brand-claim">Macht Inhalte Mühelos Inklusiv</span></span></a>
-    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü"></nav>
+    <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="36" height="36" focusable="false"><polyline points="17,46 17,18 32,35 47,18 47,46" fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-text"><span class="brand-name">Mimi</span><span class="brand-claim" data-en="Making Information More Inclusive">Macht Inhalte Mühelos Inklusiv</span></span></a>
+    <nav class="mainnav hidden" id="mainnav" aria-label="Hauptmenü" data-en-label="Main menu"></nav>
+    <button type="button" class="themebtn langbtn" id="langbtn"></button>
     <button type="button" class="themebtn" id="themebtn"></button>
     <div class="usermenu hidden" id="usermenu"></div>
   </div>
 </header>
 <main>
-  <div class="intro"><h1>Barrierefrei-Prüfung für Berichte</h1><p>Word-Datei hochladen → Probleme beheben → barrierefreies PDF (PDF/UA) erzeugen und prüfen</p></div>
+  <div class="intro"><h1 data-en="Accessibility check for reports">Barrierefrei-Prüfung für Berichte</h1><p data-en="Upload a Word file → fix problems → create and check an accessible PDF (PDF/UA)">Word-Datei hochladen → Probleme beheben → barrierefreies PDF (PDF/UA) erzeugen und prüfen</p></div>
   <div id="error" class="error-box hidden" role="alert"></div>
 
   <section id="login" class="card hidden" aria-labelledby="h-login">
-    <h2 id="h-login">Anmelden</h2>
+    <h2 id="h-login" data-en="Log in">Anmelden</h2>
     <form id="loginform">
-      <div><label for="l-user">Benutzername</label><input id="l-user" type="text" autocomplete="username" required></div>
-      <div><label for="l-pw">Passwort</label><input id="l-pw" type="password" autocomplete="current-password" required></div>
-      <div id="l-codewrap" class="hidden"><label for="l-code">Code aus der Authenticator-App</label><input id="l-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" aria-describedby="l-codehelp"><p class="muted" id="l-codehelp">Die 6 Ziffern, die Ihre App gerade für „Mimi“ anzeigt (bei früher eingerichteten Konten „Leo“).</p></div>
-      <div><button type="submit" id="l-btn">Anmelden</button></div>
+      <div><label for="l-user" data-en="User name">Benutzername</label><input id="l-user" type="text" autocomplete="username" required></div>
+      <div><label for="l-pw" data-en="Password">Passwort</label><input id="l-pw" type="password" autocomplete="current-password" required></div>
+      <div id="l-codewrap" class="hidden"><label for="l-code" data-en="Code from the authenticator app">Code aus der Authenticator-App</label><input id="l-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" aria-describedby="l-codehelp"><p class="muted" id="l-codehelp" data-en="The 6 digits your app currently shows for “Mimi” (for accounts set up earlier: “Leo”).">Die 6 Ziffern, die Ihre App gerade für „Mimi“ anzeigt (bei früher eingerichteten Konten „Leo“).</p></div>
+      <div><button type="submit" id="l-btn" data-en="Log in">Anmelden</button></div>
     </form>
   </section>
 
   <section id="mfa" class="card hidden" aria-labelledby="h-mfa">
-    <h2 id="h-mfa">Zwei-Faktor-Anmeldung</h2>
+    <h2 id="h-mfa" data-en="Two-factor login">Zwei-Faktor-Anmeldung</h2>
     <div id="mfabody"></div>
     <p id="mfamsg" role="status" aria-live="polite"></p>
-    <p><button class="secondary" id="mfaclose">Schließen</button></p>
+    <p><button class="secondary" id="mfaclose" data-en="Close">Schließen</button></p>
   </section>
 
   <section id="upload" class="card hidden" aria-labelledby="h-upload">
-    <h2 id="h-upload">1. Word-Datei hochladen</h2>
+    <h2 id="h-upload" data-en="1. Upload a Word file">1. Word-Datei hochladen</h2>
     <div id="drop" class="drop">
-      <p><label for="file" style="display:inline">Datei auswählen (.docx oder .odt)</label> oder hierher ziehen</p>
+      <p data-en="&lt;label for=&quot;file&quot; style=&quot;display:inline&quot;&gt;Choose a file (.docx or .odt)&lt;/label&gt; or drag it here"><label for="file" style="display:inline">Datei auswählen (.docx oder .odt)</label> oder hierher ziehen</p>
       <input id="file" type="file" accept=".docx,.odt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.oasis.opendocument.text">
-      <p class="muted">Word (.docx) oder LibreOffice/OpenOffice (.odt).</p>
-      <p class="muted">Die Datei bleibt auf diesem Rechner bzw. Server und wird nicht an Dritte weitergegeben.<span id="ttlinfo"></span></p>
+      <p class="muted" data-en="Word (.docx) or LibreOffice/OpenOffice (.odt).">Word (.docx) oder LibreOffice/OpenOffice (.odt).</p>
+      <p class="muted"><span data-en="The file stays on this computer or server and is not passed on to third parties.">Die Datei bleibt auf diesem Rechner bzw. Server und wird nicht an Dritte weitergegeben.</span><span id="ttlinfo"></span></p>
     </div>
   </section>
 
   <div id="workspace" class="hidden">
     <section class="card" aria-labelledby="h-sum">
-      <h2 id="h-sum">Übersicht: <span id="docname"></span></h2>
+      <h2 id="h-sum"><span data-en="Overview:">Übersicht:</span> <span id="docname"></span></h2>
       <p class="muted hidden" id="delinfo"></p>
-      <p class="hidden" id="odtinfo"><span class="badge b-info">ODT</span> Aus einer OpenDocument-Datei umgewandelt. Mimi prüft und korrigiert eine Word-Fassung davon. Am Ende bekommen Sie wieder eine <strong>OpenDocument-Datei (.odt)</strong> mit allen Korrekturen. Wo Mimi „in Word korrigieren“ schreibt, gilt das genauso für LibreOffice Writer. Bitte prüfen Sie das Layout im PDF.</p>
+      <p class="hidden" id="odtinfo" data-en="&lt;span class=&quot;badge b-info&quot;&gt;ODT&lt;/span&gt; Converted from an OpenDocument file. Mimi checks and corrects a Word version of it. At the end you get an &lt;strong&gt;OpenDocument file (.odt)&lt;/strong&gt; with all corrections again. Where Mimi says “correct in Word”, the same applies to LibreOffice Writer. Please check the layout in the PDF."><span class="badge b-info">ODT</span> Aus einer OpenDocument-Datei umgewandelt. Mimi prüft und korrigiert eine Word-Fassung davon. Am Ende bekommen Sie wieder eine <strong>OpenDocument-Datei (.odt)</strong> mit allen Korrekturen. Wo Mimi „in Word korrigieren“ schreibt, gilt das genauso für LibreOffice Writer. Bitte prüfen Sie das Layout im PDF.</p>
       <div class="summary" id="summary"></div>
     </section>
 
-    <nav class="tabs" role="tablist" aria-label="Bereiche">
-      <button role="tab" id="t-doc" aria-controls="p-doc" aria-selected="true">Dokument</button>
+    <nav class="tabs" role="tablist" aria-label="Bereiche" data-en-label="Sections">
+      <button role="tab" id="t-doc" aria-controls="p-doc" aria-selected="true" data-en="Document">Dokument</button>
       <button role="tab" id="t-img" tabindex="-1" aria-controls="p-img" aria-selected="false"><span id="l-img">Bilder</span> <span id="c-img"></span></button>
-      <button role="tab" id="t-tbl" tabindex="-1" aria-controls="p-tbl" aria-selected="false">Tabellen <span id="c-tbl"></span></button>
-      <button role="tab" id="t-str" tabindex="-1" aria-controls="p-str" aria-selected="false">Struktur &amp; Hinweise <span id="c-str"></span></button>
-      <button role="tab" id="t-exp" tabindex="-1" aria-controls="p-exp" aria-selected="false">PDF &amp; Download</button>
+      <button role="tab" id="t-tbl" tabindex="-1" aria-controls="p-tbl" aria-selected="false"><span data-en="Tables">Tabellen</span> <span id="c-tbl"></span></button>
+      <button role="tab" id="t-str" tabindex="-1" aria-controls="p-str" aria-selected="false"><span data-en="Structure &amp;amp; hints">Struktur &amp; Hinweise</span> <span id="c-str"></span></button>
+      <button role="tab" id="t-exp" tabindex="-1" aria-controls="p-exp" aria-selected="false" data-en="PDF &amp;amp; download">PDF &amp; Download</button>
     </nav>
 
     <section id="p-doc" role="tabpanel" aria-labelledby="t-doc" class="card">
-      <h2>Dokumenteigenschaften</h2>
+      <h2 data-en="Document properties">Dokumenteigenschaften</h2>
       <div class="grid2">
         <div>
-          <label for="title">Dokumenttitel</label>
+          <label for="title" data-en="Document title">Dokumenttitel</label>
           <input id="title" type="text">
-          <p class="muted">Wird im PDF-Fenster statt des Dateinamens angezeigt und von Screenreadern vorgelesen.</p>
+          <p class="muted" data-en="Shown in the PDF window instead of the file name and read out by screen readers.">Wird im PDF-Fenster statt des Dateinamens angezeigt und von Screenreadern vorgelesen.</p>
         </div>
         <div>
-          <label for="lang">Hauptsprache</label>
+          <label for="lang" data-en="Main language">Hauptsprache</label>
           <select id="lang">
-            <option value="de-AT">Deutsch (Österreich) – de-AT</option>
-            <option value="de-DE">Deutsch (Deutschland) – de-DE</option>
-            <option value="en-GB">Englisch (UK) – en-GB</option>
-            <option value="en-US">Englisch (USA) – en-US</option>
+            <option value="de-AT" data-en="German (Austria) – de-AT">Deutsch (Österreich) – de-AT</option>
+            <option value="de-DE" data-en="German (Germany) – de-DE">Deutsch (Deutschland) – de-DE</option>
+            <option value="en-GB" data-en="English (UK) – en-GB">Englisch (UK) – en-GB</option>
+            <option value="en-US" data-en="English (US) – en-US">Englisch (USA) – en-US</option>
           </select>
-          <p class="muted">Bestimmt die Aussprache im Screenreader. Fremdsprachige Passagen bitte in Word eigens markieren.</p>
+          <p class="muted" data-en="Sets the pronunciation in screen readers. Please mark passages in other languages separately in Word.">Bestimmt die Aussprache im Screenreader. Fremdsprachige Passagen bitte in Word eigens markieren.</p>
         </div>
       </div>
       <h3 style="margin-top:12px">Links</h3>
       <p id="linkinfo"></p>
-      <label class="inline" id="linkopt"><input type="checkbox" id="links"> Fehlende Linkbeschreibungen automatisch aus dem Linktext ergänzen (betrifft vor allem Inhalts-, Abbildungs- und Tabellenverzeichnis)</label>
-      <h3 style="margin-top:12px">Schriftfarben (Kontrast)</h3>
+      <label class="inline" id="linkopt"><input type="checkbox" id="links"> <span data-en="Add missing link descriptions automatically from the link text (mainly affects the table of contents, list of figures and list of tables)">Fehlende Linkbeschreibungen automatisch aus dem Linktext ergänzen (betrifft vor allem Inhalts-, Abbildungs- und Tabellenverzeichnis)</span></label>
+      <h3 style="margin-top:12px" data-en="Text colours (contrast)">Schriftfarben (Kontrast)</h3>
       <div id="colors"></div>
-      <p class="muted">Text muss sich mit mindestens 4,5 : 1 vom weißen Hintergrund abheben (WCAG). Farbige Schrift <em>in eingefügten Grafiken</em> (z.&nbsp;B. rot/grün beschriftete Schemata) kann das Tool nicht prüfen – PAC prüft sie aber mit. Solche Grafiken in der Ursprungsdatei mit dunkleren Farben neu erstellen.</p>
+      <p class="muted" data-en="Text needs a contrast of at least 4.5 : 1 against the white background (WCAG). The tool cannot check coloured text &lt;em&gt;in inserted graphics&lt;/em&gt; (e.g. diagrams labelled in red/green) – but PAC does check it. Recreate such graphics in the source file with darker colours.">Text muss sich mit mindestens 4,5 : 1 vom weißen Hintergrund abheben (WCAG). Farbige Schrift <em>in eingefügten Grafiken</em> (z.&nbsp;B. rot/grün beschriftete Schemata) kann das Tool nicht prüfen – PAC prüft sie aber mit. Solche Grafiken in der Ursprungsdatei mit dunkleren Farben neu erstellen.</p>
     </section>
 
     <section id="p-img" role="tabpanel" aria-labelledby="t-img" class="card hidden">
-      <h2>Bilder und Grafiken</h2>
-      <p class="muted">Jedes Bild braucht einen Alternativtext, der den Inhalt kurz beschreibt – oder es wird als „dekorativ“ markiert (z.&nbsp;B. Zierlinien). Logos bekommen einen Text wie „Logo der …“.</p>
+      <h2 data-en="Images and graphics">Bilder und Grafiken</h2>
+      <p class="muted" data-en="Every image needs an alternative text that briefly describes its content – or it is marked as “decorative” (e.g. ornamental lines). Logos get a text like “Logo of …”.">Jedes Bild braucht einen Alternativtext, der den Inhalt kurz beschreibt – oder es wird als „dekorativ“ markiert (z.&nbsp;B. Zierlinien). Logos bekommen einen Text wie „Logo der …“.</p>
       <div class="row" style="margin-bottom:8px">
-        <label class="inline"><input type="checkbox" id="onlyopen" checked> nur offene Punkte zeigen</label>
-        <button class="secondary" id="fillcaps">Alle leeren Alternativtexte aus der Bildunterschrift füllen</button>
+        <label class="inline"><input type="checkbox" id="onlyopen" checked> <span data-en="show only open items">nur offene Punkte zeigen</span></label>
+        <button class="secondary" id="fillcaps" data-en="Fill all empty alternative texts from the caption">Alle leeren Alternativtexte aus der Bildunterschrift füllen</button>
       </div>
       <div id="images"></div>
       <div id="formulas"></div>
     </section>
 
     <section id="p-tbl" role="tabpanel" aria-labelledby="t-tbl" class="card hidden">
-      <h2>Tabellen</h2>
-      <p class="muted">Die erste Zeile mit den Spaltenüberschriften muss als Kopfzeile markiert sein (in Word: Tabelleneigenschaften → Zeile → „Gleiche Kopfzeile auf jeder Seite wiederholen“). Nur so erkennt PAC Tabellenköpfe.</p>
+      <h2 data-en="Tables">Tabellen</h2>
+      <p class="muted" data-en="The first row with the column headings must be marked as a header row (in Word: Table Properties → Row → “Repeat as header row at the top of each page”). Only then does PAC recognise table headers.">Die erste Zeile mit den Spaltenüberschriften muss als Kopfzeile markiert sein (in Word: Tabelleneigenschaften → Zeile → „Gleiche Kopfzeile auf jeder Seite wiederholen“). Nur so erkennt PAC Tabellenköpfe.</p>
       <table class="list">
-        <thead><tr><th scope="col">Nr.</th><th scope="col">Erste Zeile</th><th scope="col">Zeilen</th><th scope="col">Kopfzeile</th></tr></thead>
+        <thead><tr><th scope="col" data-en="No.">Nr.</th><th scope="col" data-en="First row">Erste Zeile</th><th scope="col" data-en="Rows">Zeilen</th><th scope="col" data-en="Header row">Kopfzeile</th></tr></thead>
         <tbody id="tables"></tbody>
       </table>
     </section>
@@ -181,45 +182,46 @@ ul.hints li:first-child { border-top: 0; }
       <div class="grid2">
         <div>
           <div id="hfix"></div>
-          <h2>Hinweise</h2>
-          <p class="muted">Diese Punkte bitte in Word korrigieren – das Tool kann sie nicht automatisch beheben.</p>
+          <h2 data-en="Hints">Hinweise</h2>
+          <p class="muted" data-en="Please correct these points in Word – the tool cannot fix them automatically.">Diese Punkte bitte in Word korrigieren – das Tool kann sie nicht automatisch beheben.</p>
           <ul class="hints" id="hints"></ul>
         </div>
         <div>
-          <h2>Gliederung (Überschriften)</h2>
+          <h2 data-en="Outline (headings)">Gliederung (Überschriften)</h2>
           <ol class="outline" id="outline"></ol>
         </div>
       </div>
     </section>
 
     <section id="p-exp" role="tabpanel" aria-labelledby="t-exp" class="card hidden">
-      <h2>PDF erzeugen und prüfen</h2>
-      <p class="muted">Das PDF wird mit LibreOffice im Format PDF/UA erzeugt und anschließend geprüft. Die Prüfung ersetzt nicht den abschließenden Test mit PAC, sollte ihn aber zur Formsache machen.</p>
+      <h2 data-en="Create and check PDF">PDF erzeugen und prüfen</h2>
+      <p class="muted" data-en="The PDF is created with LibreOffice in PDF/UA format and then checked. The check does not replace the final test with PAC, but should make it a formality.">Das PDF wird mit LibreOffice im Format PDF/UA erzeugt und anschließend geprüft. Die Prüfung ersetzt nicht den abschließenden Test mit PAC, sollte ihn aber zur Formsache machen.</p>
       <div id="prep"></div>
-      <p><label class="inline"><input type="checkbox" id="lossless"> Bilder verlustfrei speichern – beste Qualität, auch bei transparentem Hintergrund, aber deutlich größere Datei (bei vielen Fotos ein Vielfaches)</label></p>
-      <p><button id="export2">PDF erzeugen und prüfen</button></p>
+      <p><label class="inline"><input type="checkbox" id="lossless"> <span data-en="Save images losslessly – best quality, also with transparent backgrounds, but a much larger file (many times larger with lots of photos)">Bilder verlustfrei speichern – beste Qualität, auch bei transparentem Hintergrund, aber deutlich größere Datei (bei vielen Fotos ein Vielfaches)</span></label></p>
+      <p><button id="export2" data-en="Create and check PDF">PDF erzeugen und prüfen</button></p>
       <div id="report" aria-live="polite"></div>
       <div id="downloads" class="row hidden" style="margin-top:12px">
-        <a class="btn" id="dl-pdf">PDF herunterladen</a>
+        <a class="btn" id="dl-pdf" data-en="Download PDF">PDF herunterladen</a>
         <a class="btn secondary" id="dl-docx">Korrigierte Word-Datei (.docx)</a>
         <a class="btn secondary" id="dl-odt">OpenDocument (.odt)</a>
       </div>
-      <h3 style="margin-top:24px">Bericht löschen</h3>
-      <p class="muted">Löscht alles zu diesem Bericht sofort vom Server: Word-Datei, PDF, ODT und Prüfbericht. Laden Sie vorher herunter, was Sie brauchen.<span id="delinfo2"></span></p>
-      <p><button class="secondary" id="deljob">Bericht jetzt löschen</button></p>
+      <h3 style="margin-top:24px" data-en="Delete report">Bericht löschen</h3>
+      <p class="muted"><span data-en="Immediately deletes everything about this report from the server: Word file, PDF, ODT and check report. Download what you need first.">Löscht alles zu diesem Bericht sofort vom Server: Word-Datei, PDF, ODT und Prüfbericht. Laden Sie vorher herunter, was Sie brauchen.</span><span id="delinfo2"></span></p>
+      <p><button class="secondary" id="deljob" data-en="Delete report now">Bericht jetzt löschen</button></p>
     </section>
   </div>
 </main>
 
 <div class="actions hidden" id="actions">
   <div class="inner">
-    <button id="save" class="secondary" disabled>Änderungen speichern</button>
-    <button id="export">PDF erzeugen und prüfen</button>
-    <button id="new" class="secondary">Andere Datei</button>
+    <button id="save" class="secondary" disabled data-en="Save changes">Änderungen speichern</button>
+    <button id="export" data-en="Create and check PDF">PDF erzeugen und prüfen</button>
+    <button id="new" class="secondary" data-en="Other file">Andere Datei</button>
     <span class="status muted" id="status" aria-live="polite"></span>
   </div>
 </div>
 
+<script src="/i18n.js"></script>
 <script src="/menu.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -234,7 +236,7 @@ function status(html) { $('#status').innerHTML = html; }
 
 async function api(url, opts = {}) {
   const r = await fetch(url, {credentials: 'same-origin', ...opts});
-  if (r.status === 401 && !url.endsWith('/api/login')) { showLogin(); throw new Error('Sitzung abgelaufen – bitte neu anmelden.'); }
+  if (r.status === 401 && !url.endsWith('/api/login')) { showLogin(); throw new Error(L('Sitzung abgelaufen – bitte neu anmelden.', 'Session expired – please log in again.')); }
   const ct = r.headers.get('content-type') || '';
   const body = ct.includes('json') ? await r.json() : await r.text();
   if (!r.ok) throw new Error(body.error || body || r.statusText);
@@ -245,9 +247,9 @@ function imgState(img) {
   const e = edits.images[img.index] || {};
   const alt = e.alt ?? img.alt;
   const dec = e.decorative ?? img.decorative;
-  if (dec) return {alt, dec, st: 'dekorativ', cls: 'b-info', open: false};
-  if (!alt.trim()) return {alt, dec, st: 'Alternativtext fehlt', cls: 'b-err', open: true};
-  if (GENERIC.test(alt.trim()) || alt.trim() === img.name) return {alt, dec, st: 'nichtssagend', cls: 'b-warn', open: true};
+  if (dec) return {alt, dec, st: L('dekorativ', 'decorative'), cls: 'b-info', open: false};
+  if (!alt.trim()) return {alt, dec, st: L('Alternativtext fehlt', 'alternative text missing'), cls: 'b-err', open: true};
+  if (GENERIC.test(alt.trim()) || alt.trim() === img.name) return {alt, dec, st: L('nichtssagend', 'meaningless'), cls: 'b-warn', open: true};
   return {alt, dec, st: 'ok', cls: 'b-ok', open: false};
 }
 function tblHeader(t) { return edits.tables[t.index] ?? t.header; }
@@ -284,16 +286,16 @@ function renderSummary() {
   const a = job.analysis, c = counts();
   const tile = (n, label, cls) => `<div class="tile"><span class="num">${n}</span><span class="badge ${n ? cls : 'b-ok'}">${label}</span></div>`;
   $('#summary').innerHTML =
-    tile(c.imgOpen, `Bilder offen (von ${a.images.length})`, 'b-err') +
-    tile(c.tblOpen, `Tabellen ohne Kopfzeile (von ${a.tables.length})`, 'b-err') +
-    tile(c.docOpen, 'Titel/Sprache/Links offen', 'b-err') +
-    tile(c.hintsErr + c.hintsWarn, 'Hinweise zur Struktur', 'b-warn');
+    tile(c.imgOpen, L(`Bilder offen (von ${a.images.length})`, `images open (of ${a.images.length})`), 'b-err') +
+    tile(c.tblOpen, L(`Tabellen ohne Kopfzeile (von ${a.tables.length})`, `tables without header row (of ${a.tables.length})`), 'b-err') +
+    tile(c.docOpen, L('Titel/Sprache/Links offen', 'title/language/links open'), 'b-err') +
+    tile(c.hintsErr + c.hintsWarn, L('Hinweise zur Struktur', 'structure hints'), 'b-warn');
   $('#c-img').innerHTML = c.imgOpen ? `<span class="badge b-err">${c.imgOpen}</span>` : '';
   $('#c-tbl').innerHTML = c.tblOpen ? `<span class="badge b-err">${c.tblOpen}</span>` : '';
   const hs = c.hintsErr + c.hintsWarn;
   $('#c-str').innerHTML = hs ? `<span class="badge b-warn">${hs}</span>` : '';
   $('#save').disabled = !dirty();
-  if (dirty()) status('Ungespeicherte Änderungen'); else if (!$('#status').textContent.startsWith('PDF')) status('');
+  if (dirty()) status(L('Ungespeicherte Änderungen', 'Unsaved changes')); else if (!$('#status').textContent.startsWith('PDF')) status('');
 }
 
 function renderDoc() {
@@ -305,40 +307,43 @@ function renderDoc() {
   sel.value = lang || 'de-AT';
   if (!lang) edits.language = 'de-AT';
   $('#linkinfo').innerHTML = a.links_missing
-    ? `<span class="badge b-err">${a.links_missing} von ${a.links_total} Links</span> ohne Beschreibung. PAC bemängelt Links ohne Beschreibung im PDF.`
-    : `<span class="badge b-ok">OK</span> ${a.links_total ? `Alle ${a.links_total} Links haben eine Beschreibung.` : 'Keine Links im Dokument.'}`;
+    ? L(`<span class="badge b-err">${a.links_missing} von ${a.links_total} Links</span> ohne Beschreibung. PAC bemängelt Links ohne Beschreibung im PDF.`,
+        `<span class="badge b-err">${a.links_missing} of ${a.links_total} links</span> without description. PAC reports links without description in the PDF.`)
+    : `<span class="badge b-ok">OK</span> ${a.links_total ? L(`Alle ${a.links_total} Links haben eine Beschreibung.`, `All ${a.links_total} links have a description.`) : L('Keine Links im Dokument.', 'No links in the document.')}`;
   $('#linkopt').classList.toggle('hidden', !a.links_missing);
   $('#links').checked = !!edits.links;
-  $('#colors').innerHTML = a.colors.length ? '<table class="list"><thead><tr><th scope="col">Farbe</th><th scope="col">Kontrast</th><th scope="col">Verwendet in</th><th scope="col">Korrektur</th></tr></thead><tbody>' +
+  $('#colors').innerHTML = a.colors.length ? `<table class="list"><thead><tr><th scope="col">${L('Farbe', 'Colour')}</th><th scope="col">${L('Kontrast', 'Contrast')}</th><th scope="col">${L('Verwendet in', 'Used in')}</th><th scope="col">${L('Korrektur', 'Correction')}</th></tr></thead><tbody>` +
     a.colors.map(c => `<tr>
-      <td><span class="swatch" style="background:#${esc(c.color)}"></span> <span class="sample" style="color:#${esc(c.color)}">Beispiel</span> #${esc(c.color)}</td>
+      <td><span class="swatch" style="background:#${esc(c.color)}"></span> <span class="sample" style="color:#${esc(c.color)}">${L('Beispiel', 'Sample')}</span> #${esc(c.color)}</td>
       <td><span class="badge b-err">${c.ratio.toFixed(2)} : 1</span></td>
       <td>${c.places.map(esc).join('<br>')}</td>
-      <td><label class="inline"><input type="checkbox" data-col="${esc(c.color)}" ${edits.colors[c.color] ? 'checked' : ''}> abdunkeln auf <span class="swatch" style="background:#${esc(c.suggestion)}"></span> <span class="sample" style="color:#${esc(c.suggestion)}">Beispiel</span> #${esc(c.suggestion)} (${c.suggestion_ratio.toFixed(2)} : 1)</label></td>
+      <td><label class="inline"><input type="checkbox" data-col="${esc(c.color)}" ${edits.colors[c.color] ? 'checked' : ''}> ${L('abdunkeln auf', 'darken to')} <span class="swatch" style="background:#${esc(c.suggestion)}"></span> <span class="sample" style="color:#${esc(c.suggestion)}">${L('Beispiel', 'Sample')}</span> #${esc(c.suggestion)} (${c.suggestion_ratio.toFixed(2)} : 1)</label></td>
     </tr>`).join('') + '</tbody></table>'
-    : '<p><span class="badge b-ok">OK</span> Alle Schriftfarben im Text haben genug Kontrast.</p>';
+    : `<p><span class="badge b-ok">OK</span> ${L('Alle Schriftfarben im Text haben genug Kontrast.', 'All text colours have enough contrast.')}</p>`;
 }
 
 function renderImages() {
   const only = $('#onlyopen').checked;
   const list = job.analysis.images.filter(i => !only || imgState(i).open);
-  if (!list.length) { $('#images').innerHTML = `<p><span class="badge b-ok">Alles erledigt</span> ${only ? 'Keine offenen Bilder.' : 'Keine Bilder im Dokument.'}</p>`; return; }
+  if (!list.length) { $('#images').innerHTML = `<p><span class="badge b-ok">${L('Alles erledigt', 'All done')}</span> ${only ? L('Keine offenen Bilder.', 'No open images.') : L('Keine Bilder im Dokument.', 'No images in the document.')}</p>`; return; }
   $('#images').innerHTML = list.map(img => {
     const s = imgState(img);
     const prev = img.media && PREVIEWABLE.test(img.media)
       ? `<img class="preview" loading="lazy" alt="" src="/api/job/${job.id}/media/${encodeURI(img.media)}">`
-      : `<div class="noprev">${img.kind === 'diagramm' ? 'Diagramm (Word-Diagramm)' : img.kind === 'form' ? 'Form / Textfeld' : img.kind === 'smartart' ? 'SmartArt-Grafik' : 'Keine Vorschau (' + esc((img.media || '').split('.').pop()) + ')'}</div>`;
+      : `<div class="noprev">${img.kind === 'diagramm' ? L('Diagramm (Word-Diagramm)', 'Chart (Word chart)') : img.kind === 'form' ? L('Form / Textfeld', 'Shape / text box') : img.kind === 'smartart' ? L('SmartArt-Grafik', 'SmartArt graphic') : L('Keine Vorschau', 'No preview') + ' (' + esc((img.media || '').split('.').pop()) + ')'}</div>`;
     return `<div class="img-card" data-i="${img.index}">
       <div>${prev}</div>
       <div>
-        <h3>${esc(img.caption || img.name || 'Bild')} <span class="badge ${s.cls}">${s.st}</span></h3>
-        ${img.vector_text ? `<p><span class="badge ${img.vector_text >= 300 ? 'b-warn' : 'b-info'}">Grafik mit Text</span> ${img.vector_text >= 300 ? `Sehr viel Text (${img.vector_text} Textstellen) – vermutlich eine Tabelle als Bild. Besser als echte Word-Tabelle einfügen.` : `${img.vector_text} Textstelle(n): Beschriftungen in den Alternativtext aufnehmen, Schriftfarben auf Kontrast prüfen.`}</p>` : ''}
-        <p class="muted">Abschnitt: ${esc(img.section || '– (vor der ersten Überschrift, z. B. Titelseite)')} · Word-Name: ${esc(img.name)}</p>
-        <label for="alt-${img.index}">Alternativtext</label>
+        <h3>${esc(img.caption || img.name || L('Bild', 'Image'))} <span class="badge ${s.cls}">${s.st}</span></h3>
+        ${img.vector_text ? `<p><span class="badge ${img.vector_text >= 300 ? 'b-warn' : 'b-info'}">${L('Grafik mit Text', 'Graphic with text')}</span> ${img.vector_text >= 300
+          ? L(`Sehr viel Text (${img.vector_text} Textstellen) – vermutlich eine Tabelle als Bild. Besser als echte Word-Tabelle einfügen.`, `A lot of text (${img.vector_text} text items) – probably a table as an image. Better insert it as a real Word table.`)
+          : L(`${img.vector_text} Textstelle(n): Beschriftungen in den Alternativtext aufnehmen, Schriftfarben auf Kontrast prüfen.`, `${img.vector_text} text item(s): include the labels in the alternative text, check the text colours for contrast.`)}</p>` : ''}
+        <p class="muted">${L('Abschnitt', 'Section')}: ${esc(img.section || L('– (vor der ersten Überschrift, z. B. Titelseite)', '– (before the first heading, e.g. title page)'))} · ${L('Word-Name', 'Word name')}: ${esc(img.name)}</p>
+        <label for="alt-${img.index}">${L('Alternativtext', 'Alternative text')}</label>
         <textarea id="alt-${img.index}" data-alt="${img.index}" ${s.dec ? 'disabled' : ''}>${esc(s.alt)}</textarea>
         <div class="row" style="margin-top:6px">
-          <label class="inline"><input type="checkbox" data-dec="${img.index}" ${s.dec ? 'checked' : ''}> dekorativ (Screenreader überspringt das Bild)</label>
-          ${img.caption ? `<button class="secondary" data-cap="${img.index}">Bildunterschrift übernehmen</button>` : ''}
+          <label class="inline"><input type="checkbox" data-dec="${img.index}" ${s.dec ? 'checked' : ''}> ${L('dekorativ (Screenreader überspringt das Bild)', 'decorative (screen readers skip the image)')}</label>
+          ${img.caption ? `<button class="secondary" data-cap="${img.index}">${L('Bildunterschrift übernehmen', 'Use caption')}</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -347,71 +352,77 @@ function renderImages() {
 
 function renderFormulas() {
   const fs = job.analysis.formulas;
-  $('#l-img').textContent = fs.length ? 'Bilder & Formeln' : 'Bilder';
+  $('#l-img').textContent = fs.length ? L('Bilder & Formeln', 'Images & equations') : L('Bilder', 'Images');
   if (!fs.length) { $('#formulas').innerHTML = ''; return; }
-  $('#formulas').innerHTML = `<h2 style="margin-top:24px">Formeln</h2>
-    <p class="muted">Jede Formel braucht im PDF einen Alternativtext, den der Screenreader vorliest. Mimi verwendet ohne Eingabe die <strong>Linearform</strong> (wie in Word unter „Linear“). Besser verständlich ist oft ein gesprochener Text, z.&nbsp;B. „E gleich m mal c Quadrat“. Der Text wird in der Word-Datei gespeichert.</p>` +
+  $('#formulas').innerHTML = `<h2 style="margin-top:24px">${L('Formeln', 'Equations')}</h2>
+    <p class="muted">${L('Jede Formel braucht im PDF einen Alternativtext, den der Screenreader vorliest. Mimi verwendet ohne Eingabe die <strong>Linearform</strong> (wie in Word unter „Linear“). Besser verständlich ist oft ein gesprochener Text, z.&nbsp;B. „E gleich m mal c Quadrat“. Der Text wird in der Word-Datei gespeichert.',
+      'Every equation needs an alternative text in the PDF that the screen reader reads out. Without input Mimi uses the <strong>linear format</strong> (as in Word under “Linear”). A spoken text is often easier to understand, e.g. “E equals m times c squared”. The text is saved in the Word file.')}</p>` +
     fs.map(f => {
       const v = (edits.formulas[f.key] ?? '').trim();
       const own = f.key in edits.formulas ? (v !== '' && v !== f.linear) : !!f.alt;
       return `<div class="img-card" data-f="${esc(f.key)}">
       <div class="noprev"><code>${esc(f.linear)}</code></div>
       <div>
-        <h3>Formel ${f.index + 1} <span class="badge ${own ? 'b-ok' : 'b-info'}">${own ? 'eigener Text' : 'Linearform'}</span></h3>
-        <p class="muted">${esc(f.place)}: ${esc(f.context || '–')}</p>
-        <label for="falt-${f.index}">Alternativtext</label>
+        <h3>${L('Formel', 'Equation')} ${f.index + 1} <span class="badge ${own ? 'b-ok' : 'b-info'}">${own ? L('eigener Text', 'own text') : L('Linearform', 'linear format')}</span></h3>
+        <p class="muted">${esc(placeName(f.place))}: ${esc(L(f.context, (f.context || '').replaceAll('[Formel]', '[equation]')) || '–')}</p>
+        <label for="falt-${f.index}">${L('Alternativtext', 'Alternative text')}</label>
         <textarea id="falt-${f.index}" data-fkey="${esc(f.key)}">${esc(formulaAlt(f))}</textarea>
-        <div class="row" style="margin-top:6px"><button class="secondary" data-flin="${esc(f.key)}">Linearform übernehmen</button></div>
+        <div class="row" style="margin-top:6px"><button class="secondary" data-flin="${esc(f.key)}">${L('Linearform übernehmen', 'Use linear format')}</button></div>
       </div>
     </div>`;
     }).join('');
 }
+
+// Teil der Word-Datei, in dem die Formel steht (vom Server: "Text", "Fußnote", "Endnote")
+function placeName(p) { return L(p, {Text: 'Text', 'Fußnote': 'Footnote', Endnote: 'Endnote'}[p] || p); }
 
 function renderTables() {
   const a = job.analysis;
   $('#tables').innerHTML = a.tables.length ? a.tables.map(t => {
     const h = tblHeader(t);
     return `<tr>
-      <td>${t.index + 1}${t.nested ? ' <span class="badge b-info">verschachtelt</span>' : ''}</td>
-      <td>${esc(t.first_row) || '<span class="muted">(leer)</span>'}<div class="muted">${esc(t.section)}</div></td>
+      <td>${t.index + 1}${t.nested ? ` <span class="badge b-info">${L('verschachtelt', 'nested')}</span>` : ''}</td>
+      <td>${esc(t.first_row) || `<span class="muted">${L('(leer)', '(empty)')}</span>`}<div class="muted">${esc(t.section)}</div></td>
       <td>${t.rows}</td>
-      <td><label class="inline"><input type="checkbox" data-tbl="${t.index}" ${h ? 'checked' : ''}> erste Zeile ist Kopfzeile</label>
-        ${h ? '' : (t.rows > 1 ? ' <span class="badge b-err">fehlt</span>' : ' <span class="badge b-info">1 Zeile</span>')}</td>
+      <td><label class="inline"><input type="checkbox" data-tbl="${t.index}" ${h ? 'checked' : ''}> ${L('erste Zeile ist Kopfzeile', 'first row is header row')}</label>
+        ${h ? '' : (t.rows > 1 ? ` <span class="badge b-err">${L('fehlt', 'missing')}</span>` : ` <span class="badge b-info">${L('1 Zeile', '1 row')}</span>`)}</td>
     </tr>`;
-  }).join('') : '<tr><td colspan="4">Keine Tabellen im Dokument.</td></tr>';
+  }).join('') : `<tr><td colspan="4">${L('Keine Tabellen im Dokument.', 'No tables in the document.')}</td></tr>`;
 }
 
 function renderStructure() {
   const a = job.analysis;
-  const sev = {fehler: ['b-err','Fehler'], warnung: ['b-warn','Warnung'], hinweis: ['b-info','Hinweis']};
-  $('#hfix').innerHTML = a.heading_fixes.length ? `<h2>Übersprungene Überschriftenebenen</h2>
-    <p class="muted">PAC und veraPDF verlangen, dass keine Ebene ausgelassen wird (z.&nbsp;B. Ebene 4 direkt nach Ebene 2). Das Tool kann diese Überschriften auf die richtige Ebene setzen – dabei ändert sich ggf. die Nummerierung.</p>
-    <p><button class="secondary" id="hfix-all">Alle korrigieren</button></p>
-    <ul class="hints">` + a.heading_fixes.map(f => `<li><span class="badge b-err">H${f.from}→H${f.to}</span><div><label class="inline"><input type="checkbox" data-head="${f.para}" data-style="${esc(f.style)}" ${edits.headings[f.para] ? 'checked' : ''}> „${esc(f.text)}“ auf Ebene ${f.to} setzen (Vorlage „${esc(f.style_name)}“)</label><div class="muted">Abschnitt: ${esc(f.section)}</div></div></li>`).join('') + '</ul>' : '';
-  const fixable = t => a.heading_fixes.some(f => { const m = /„(.*?)…?“/.exec(t); return m && f.text.startsWith(m[1].replace(/…$/, '')); });
-  const hints = a.hints.filter(h => !['titel','sprache'].includes(h.kind) && !(h.kind === 'ebene' && h.text.startsWith('Überschrift Ebene') && fixable(h.text)));
-  $('#hints').innerHTML = hints.length ? hints.map(h => `<li><span class="badge ${sev[h.severity][0]}">${sev[h.severity][1]}</span><div>${esc(h.text)}${h.section ? `<div class="muted">Abschnitt: ${esc(h.section)}</div>` : ''}</div></li>`).join('')
-    : '<li><span class="badge b-ok">OK</span> Keine Hinweise.</li>';
-  $('#outline').innerHTML = a.headings.map(h => `<li style="padding-left:${(h.level - 1) * 18}px"><span class="badge b-info">H${h.level}</span> ${esc(h.text)}</li>`).join('') || '<li>Keine Überschriften gefunden.</li>';
+  const sev = {fehler: ['b-err', L('Fehler', 'Error')], warnung: ['b-warn', L('Warnung', 'Warning')], hinweis: ['b-info', L('Hinweis', 'Hint')]};
+  const q = (s) => L(`„${s}“`, `“${s}”`);
+  $('#hfix').innerHTML = a.heading_fixes.length ? `<h2>${L('Übersprungene Überschriftenebenen', 'Skipped heading levels')}</h2>
+    <p class="muted">${L('PAC und veraPDF verlangen, dass keine Ebene ausgelassen wird (z.&nbsp;B. Ebene 4 direkt nach Ebene 2). Das Tool kann diese Überschriften auf die richtige Ebene setzen – dabei ändert sich ggf. die Nummerierung.',
+      'PAC and veraPDF require that no level is skipped (e.g. level 4 directly after level 2). The tool can set these headings to the right level – this may change the numbering.')}</p>
+    <p><button class="secondary" id="hfix-all">${L('Alle korrigieren', 'Correct all')}</button></p>
+    <ul class="hints">` + a.heading_fixes.map(f => `<li><span class="badge b-err">H${f.from}→H${f.to}</span><div><label class="inline"><input type="checkbox" data-head="${f.para}" data-style="${esc(f.style)}" ${edits.headings[f.para] ? 'checked' : ''}> ${L(`${q(esc(f.text))} auf Ebene ${f.to} setzen (Vorlage ${q(esc(f.style_name))})`, `Set ${q(esc(f.text))} to level ${f.to} (style ${q(esc(f.style_name))})`)}</label><div class="muted">${L('Abschnitt', 'Section')}: ${esc(f.section)}</div></div></li>`).join('') + '</ul>' : '';
+  // übersprungene Ebenen, die oben korrigierbar sind, nicht noch einmal als Hinweis zeigen
+  const hints = a.hints.filter(h => !['titel','sprache'].includes(h.kind) && !(h.para != null && a.heading_fixes.some(f => f.para === h.para)));
+  $('#hints').innerHTML = hints.length ? hints.map(h => `<li><span class="badge ${sev[h.severity][0]}">${sev[h.severity][1]}</span><div>${esc(h.text)}${h.section ? `<div class="muted">${L('Abschnitt', 'Section')}: ${esc(h.section)}</div>` : ''}</div></li>`).join('')
+    : `<li><span class="badge b-ok">OK</span> ${L('Keine Hinweise.', 'No hints.')}</li>`;
+  $('#outline').innerHTML = a.headings.map(h => `<li style="padding-left:${(h.level - 1) * 18}px"><span class="badge b-info">H${h.level}</span> ${esc(h.text)}</li>`).join('') || `<li>${L('Keine Überschriften gefunden.', 'No headings found.')}</li>`;
 }
 
 function renderPrep() {
   const p = job.analysis.pdf_prep || [];
-  $('#prep').innerHTML = p.length ? '<h3>Wird beim PDF-Export automatisch angepasst</h3><ul class="hints">' + p.map(t => `<li><span class="badge b-info">auto</span><div>${esc(t)}</div></li>`).join('') + '</ul><p class="muted">Die herunterladbare Word-Datei bleibt dabei unverändert.</p>' : '';
+  $('#prep').innerHTML = p.length ? `<h3>${L('Wird beim PDF-Export automatisch angepasst', 'Adjusted automatically for the PDF export')}</h3><ul class="hints">` + p.map(t => `<li><span class="badge b-info">auto</span><div>${esc(t)}</div></li>`).join('') + `</ul><p class="muted">${L('Die herunterladbare Word-Datei bleibt dabei unverändert.', 'The downloadable Word file stays unchanged.')}</p>` : '';
 }
 let ttlDays = 0;
-function fmtDate(iso) { const [y, m, d] = iso.split('-'); return `${+d}.${+m}.${y}`; }
+function fmtDate(iso) { const [y, m, d] = iso.split('-'); return LANG === 'en' ? new Date(+y, m - 1, +d).toLocaleDateString(LOCALE, {day: 'numeric', month: 'long', year: 'numeric'}) : `${+d}.${+m}.${y}`; }
 function renderDelete() {
   const d = job.delete_after;
-  const txt = d ? `Wird am ${fmtDate(d)} automatisch gelöscht, wenn Sie den Bericht bis dahin nicht mehr öffnen.` : '';
+  const txt = d ? L(`Wird am ${fmtDate(d)} automatisch gelöscht, wenn Sie den Bericht bis dahin nicht mehr öffnen.`, `Will be deleted automatically on ${fmtDate(d)} unless you open the report again before then.`) : '';
   $('#delinfo').textContent = txt;
   $('#delinfo').classList.toggle('hidden', !d);
-  $('#delinfo2').textContent = d ? ' Sonst geschieht das automatisch am ' + fmtDate(d) + '.' : '';
+  $('#delinfo2').textContent = d ? L(' Sonst geschieht das automatisch am ' + fmtDate(d) + '.', ' Otherwise this happens automatically on ' + fmtDate(d) + '.') : '';
   // ODT-Berichte: Hinweis, und die ODT ist die Hauptdatei zum Weiterarbeiten
   const odt = job.source === 'odt';
   $('#odtinfo').classList.toggle('hidden', !odt);
-  $('#dl-odt').textContent = odt ? 'Korrigierte OpenDocument-Datei (.odt)' : 'OpenDocument (.odt)';
-  $('#dl-docx').textContent = odt ? 'Word-Datei (.docx)' : 'Korrigierte Word-Datei (.docx)';
+  $('#dl-odt').textContent = odt ? L('Korrigierte OpenDocument-Datei (.odt)', 'Corrected OpenDocument file (.odt)') : 'OpenDocument (.odt)';
+  $('#dl-docx').textContent = odt ? L('Word-Datei (.docx)', 'Word file (.docx)') : L('Korrigierte Word-Datei (.docx)', 'Corrected Word file (.docx)');
   const dl = $('#downloads');
   if (odt) dl.insertBefore($('#dl-odt'), $('#dl-docx')); else dl.insertBefore($('#dl-docx'), $('#dl-odt'));
 }
@@ -433,7 +444,8 @@ async function upload(file) {
   showError('');
   if (!file) return;
   const fd = new FormData(); fd.append('file', file);
-  $('#drop').innerHTML = `<p><span class="spinner"></span> „${esc(file.name)}“ wird hochgeladen${/\.odt$/i.test(file.name) ? ', umgewandelt' : ''} und analysiert …</p>`;
+  const odt = /\.odt$/i.test(file.name);
+  $('#drop').innerHTML = `<p><span class="spinner"></span> ${L(`„${esc(file.name)}“ wird hochgeladen${odt ? ', umgewandelt' : ''} und analysiert …`, `Uploading${odt ? ', converting' : ''} and analysing “${esc(file.name)}” …`)}</p>`;
   try { loadJob(await api('/api/upload', {method: 'POST', body: fd})); }
   catch (e) { showError(e.message); setTimeout(() => location.reload(), 4000); }
 }
@@ -451,10 +463,10 @@ async function save() {
   body.colors = a.colors.filter(c => edits.colors[c.color]).map(c => ({from: c.color, to: c.suggestion}));
   // leer oder gleich der Linearform = eigenen Text entfernen
   body.formulas = a.formulas.filter(formulaChanged).map(f => ({key: f.key, alt: edits.formulas[f.key].trim() === f.linear ? '' : edits.formulas[f.key].trim()}));
-  status('<span class="spinner"></span> Speichere …');
+  status(`<span class="spinner"></span> ${L('Speichere …', 'Saving …')}`);
   try {
     const j = await api(`/api/job/${job.id}/apply`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
-    job = j; edits = newEdits(); renderAll(); status('Gespeichert ✓'); return true;
+    job = j; edits = newEdits(); renderAll(); status(L('Gespeichert ✓', 'Saved ✓')); return true;
   } catch (e) { showError(e.message); status(''); return false; }
 }
 
@@ -464,27 +476,27 @@ async function exportPdf() {
   selectTab('t-exp');
   ['#export', '#export2'].forEach(s => $(s).disabled = true);
   $('#downloads').classList.add('hidden');
-  $('#report').innerHTML = '<p><span class="spinner"></span> LibreOffice erzeugt das PDF und prüft es – das kann bei großen Berichten 1–2 Minuten dauern …</p>';
-  status('<span class="spinner"></span> PDF wird erzeugt …');
+  $('#report').innerHTML = `<p><span class="spinner"></span> ${L('LibreOffice erzeugt das PDF und prüft es – das kann bei großen Berichten 1–2 Minuten dauern …', 'LibreOffice is creating and checking the PDF – for large reports this can take 1–2 minutes …')}</p>`;
+  status(`<span class="spinner"></span> ${L('PDF wird erzeugt …', 'PDF is being created …')}`);
   try {
     const r = await api(`/api/job/${job.id}/export${$('#lossless').checked ? '?lossless=1' : ''}`, {method: 'POST'});
     const fails = r.checks.filter(c => !c.ok);
-    let html = `<h3>Basisprüfung (${r.pages} Seiten) ${fails.length ? `<span class="badge b-err">${fails.length} Problem(e)</span>` : '<span class="badge b-ok">bestanden</span>'}</h3><ul class="hints">`;
+    let html = `<h3>${L(`Basisprüfung (${r.pages} Seiten)`, `Basic check (${r.pages} pages)`)} ${fails.length ? `<span class="badge b-err">${L(`${fails.length} Problem(e)`, `${fails.length} problem(s)`)}</span>` : `<span class="badge b-ok">${L('bestanden', 'passed')}</span>`}</h3><ul class="hints">`;
     html += r.checks.map(c => `<li><span class="badge ${c.ok ? 'b-ok' : (c.severity === 'fehler' ? 'b-err' : 'b-warn')}">${c.ok ? '✓' : '✗'}</span><div><strong>${esc(c.title)}</strong><div class="muted">${esc(c.detail)}</div></div></li>`).join('');
     html += '</ul>';
     const v = r.verapdf;
-    html += '<h3 style="margin-top:16px">veraPDF (PDF/UA-1, Grundlage wie PAC)</h3>';
+    html += `<h3 style="margin-top:16px">${L('veraPDF (PDF/UA-1, Grundlage wie PAC)', 'veraPDF (PDF/UA-1, same basis as PAC)')}</h3>`;
     if (!v.available || v.compliant === null) html += `<p class="muted">${esc(v.message)}</p>`;
-    else if (v.compliant) html += '<p><span class="badge b-ok">konform</span> veraPDF findet keine Verstöße.</p>';
-    else html += `<p><span class="badge b-err">${v.failed_rules.length} Regel(n) verletzt</span></p><ul class="hints">` +
+    else if (v.compliant) html += `<p><span class="badge b-ok">${L('konform', 'compliant')}</span> ${L('veraPDF findet keine Verstöße.', 'veraPDF finds no violations.')}</p>`;
+    else html += `<p><span class="badge b-err">${L(`${v.failed_rules.length} Regel(n) verletzt`, `${v.failed_rules.length} rule(s) violated`)}</span></p><ul class="hints">` +
       v.failed_rules.map(f => `<li><span class="badge b-err">${esc(f.clause)}-${esc(f.test)}</span><div>${esc(f.description)} <span class="muted">(${esc(f.failed_checks)}×)</span></div></li>`).join('') + '</ul>';
-    html += '<p class="muted" style="margin-top:12px">Abschließend das PDF mit PAC öffnen und das Prüfergebnis gemeinsam mit dem Bericht übermitteln.</p>';
+    html += `<p class="muted" style="margin-top:12px">${L('Abschließend das PDF mit PAC öffnen und das Prüfergebnis gemeinsam mit dem Bericht übermitteln.', 'Finally, open the PDF in PAC and submit the check result together with the report.')}</p>`;
     $('#report').innerHTML = html;
     $('#dl-pdf').href = `/api/job/${job.id}/download/pdf`;
     $('#dl-docx').href = `/api/job/${job.id}/download/docx`;
     $('#dl-odt').href = `/api/job/${job.id}/download/odt`;
     $('#downloads').classList.remove('hidden');
-    status(fails.length ? 'PDF erzeugt – mit Problemen' : 'PDF erzeugt ✓');
+    status(fails.length ? L('PDF erzeugt – mit Problemen', 'PDF created – with problems') : L('PDF erzeugt ✓', 'PDF created ✓'));
   } catch (e) { $('#report').innerHTML = ''; showError(e.message); status(''); }
   finally { ['#export', '#export2'].forEach(s => $(s).disabled = false); }
 }
@@ -545,7 +557,7 @@ $('#fillcaps').addEventListener('click', () => {
     if (!s.dec && !s.alt.trim() && img.caption) { edits.images[img.index] = {...(edits.images[img.index] || {}), alt: captionText(img.caption)}; n++; }
   }
   $('#onlyopen').checked = false; renderImages(); renderSummary();
-  status(`${n} Alternativtext(e) aus Bildunterschriften übernommen – bitte kurz kontrollieren und speichern.`);
+  status(L(`${n} Alternativtext(e) aus Bildunterschriften übernommen – bitte kurz kontrollieren und speichern.`, `${n} alternative text(s) taken from captions – please check briefly and save.`));
 });
 $('#formulas').addEventListener('input', e => {
   const k = e.target.dataset.fkey; if (k === undefined) return;
@@ -579,7 +591,7 @@ $('#colors').addEventListener('change', e => {
   renderSummary();
 });
 $('#deljob').addEventListener('click', async () => {
-  if (!confirm(`„${job.name}“ jetzt endgültig vom Server löschen? Das lässt sich nicht rückgängig machen.`)) return;
+  if (!confirm(L(`„${job.name}“ jetzt endgültig vom Server löschen? Das lässt sich nicht rückgängig machen.`, `Delete “${job.name}” from the server for good now? This cannot be undone.`))) return;
   showError('');
   try {
     await api(`/api/job/${job.id}`, {method: 'DELETE'});
@@ -591,7 +603,7 @@ $('#deljob').addEventListener('click', async () => {
 $('#save').addEventListener('click', save);
 $('#export').addEventListener('click', exportPdf);
 $('#export2').addEventListener('click', exportPdf);
-$('#new').addEventListener('click', () => { if (!dirty() || confirm('Ungespeicherte Änderungen verwerfen?')) { try { localStorage.removeItem('bf-job'); } catch (e) {} location.reload(); } });
+$('#new').addEventListener('click', () => { if (!dirty() || confirm(L('Ungespeicherte Änderungen verwerfen?', 'Discard unsaved changes?'))) { try { localStorage.removeItem('bf-job'); } catch (e) {} location.reload(); } });
 window.addEventListener('beforeunload', e => { if (job && dirty()) { e.preventDefault(); e.returnValue = ''; } });
 
 // --- Anmeldung ---
@@ -608,7 +620,8 @@ async function afterLogin() {
   leoMenu.show(info, 'bericht');
   mfaOn = !!info.mfa;
   ttlDays = info.ttl_days || 0;
-  $('#ttlinfo').textContent = ttlDays ? ` Hochgeladene Berichte werden ${ttlDays} Tage nach der letzten Nutzung automatisch gelöscht, ältere Berichte nach einem Tag, sobald Sie einen neuen hochladen.` : '';
+  $('#ttlinfo').textContent = ttlDays ? L(` Hochgeladene Berichte werden ${ttlDays} Tage nach der letzten Nutzung automatisch gelöscht, ältere Berichte nach einem Tag, sobald Sie einen neuen hochladen.`,
+    ` Uploaded reports are deleted automatically ${ttlDays} days after their last use, older reports one day after you upload a new one.`) : '';
   $('#login').classList.add('hidden');
   if (new URLSearchParams(location.search).has('zwei-faktor')) { history.replaceState(null, '', '/'); mfaOpen(true); }
   $('#upload').classList.remove('hidden');
@@ -653,11 +666,12 @@ function mfaOpen(open) {
 }
 function renderMfa() {
   $('#mfabody').innerHTML = mfaOn
-    ? `<p><span class="badge b-ok">eingeschaltet</span> Beim Anmelden fragt Mimi nach Ihrem Passwort einen Code aus Ihrer Authenticator-App ab.</p>
-       <p class="muted">Handy verloren oder gewechselt? Die Administration kann die Zwei-Faktor-Anmeldung zurücksetzen.</p>
-       <form id="mfaoff" class="row"><div><label for="mfa-off-code">Aktueller Code zum Ausschalten</label><input id="mfa-off-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div><div><button type="submit" class="secondary">Ausschalten</button></div></form>`
-    : `<p>Mit der Zwei-Faktor-Anmeldung braucht man zum Anmelden außer dem Passwort einen Code, den eine App auf Ihrem Handy alle 30 Sekunden neu erzeugt (z.&nbsp;B. Microsoft Authenticator, Google Authenticator, FreeOTP). Ein gestohlenes Passwort allein reicht dann nicht mehr. Freiwillig.</p>
-       <p><button id="mfastart">Einrichten</button></p>`;
+    ? `<p><span class="badge b-ok">${L('eingeschaltet', 'on')}</span> ${L('Beim Anmelden fragt Mimi nach Ihrem Passwort einen Code aus Ihrer Authenticator-App ab.', 'When you log in, Mimi asks for a code from your authenticator app after your password.')}</p>
+       <p class="muted">${L('Handy verloren oder gewechselt? Die Administration kann die Zwei-Faktor-Anmeldung zurücksetzen.', 'Lost or changed your phone? An admin can reset two-factor login.')}</p>
+       <form id="mfaoff" class="row"><div><label for="mfa-off-code">${L('Aktueller Code zum Ausschalten', 'Current code to turn it off')}</label><input id="mfa-off-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div><div><button type="submit" class="secondary">${L('Ausschalten', 'Turn off')}</button></div></form>`
+    : `<p>${L('Mit der Zwei-Faktor-Anmeldung braucht man zum Anmelden außer dem Passwort einen Code, den eine App auf Ihrem Handy alle 30 Sekunden neu erzeugt (z.&nbsp;B. Microsoft Authenticator, Google Authenticator, FreeOTP). Ein gestohlenes Passwort allein reicht dann nicht mehr. Freiwillig.',
+        'With two-factor login you need, in addition to your password, a code that an app on your phone creates every 30 seconds (e.g. Microsoft Authenticator, Google Authenticator, FreeOTP). A stolen password alone is then no longer enough. Optional.')}</p>
+       <p><button id="mfastart">${L('Einrichten', 'Set up')}</button></p>`;
 }
 // Benutzermenü → „Zwei-Faktor-Anmeldung“: hier auf der Seite öffnen
 document.addEventListener('leo-mfa', e => { e.preventDefault(); mfaOpen(true); });
@@ -669,14 +683,14 @@ $('#mfabody').addEventListener('click', async e => {
     const r = await api('/api/mfa/setup', {method: 'POST'});
     $('#mfabody').innerHTML = `
       <ol>
-        <li>Öffnen Sie Ihre Authenticator-App und fügen Sie ein Konto hinzu („QR-Code scannen“).</li>
-        <li>Scannen Sie diesen QR-Code:
-          <div class="qr" role="img" aria-label="QR-Code für die Authenticator-App">${r.qr}</div>
-          Oder tippen Sie den Schlüssel ein: <span class="secret">${esc(r.secret)}</span> <span class="muted">(Konto: ${esc(r.issuer)}, zeitbasiert)</span></li>
-        <li>Geben Sie zur Bestätigung den Code ein, den die App jetzt anzeigt:</li>
+        <li>${L('Öffnen Sie Ihre Authenticator-App und fügen Sie ein Konto hinzu („QR-Code scannen“).', 'Open your authenticator app and add an account (“Scan QR code”).')}</li>
+        <li>${L('Scannen Sie diesen QR-Code:', 'Scan this QR code:')}
+          <div class="qr" role="img" aria-label="${L('QR-Code für die Authenticator-App', 'QR code for the authenticator app')}">${r.qr}</div>
+          ${L('Oder tippen Sie den Schlüssel ein:', 'Or type in the key:')} <span class="secret">${esc(r.secret)}</span> <span class="muted">(${L('Konto', 'account')}: ${esc(r.issuer)}, ${L('zeitbasiert', 'time-based')})</span></li>
+        <li>${L('Geben Sie zur Bestätigung den Code ein, den die App jetzt anzeigt:', 'To confirm, enter the code the app shows now:')}</li>
       </ol>
-      <form id="mfaon" class="row"><div><label for="mfa-on-code">Code aus der App</label><input id="mfa-on-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div><div><button type="submit">Aktivieren</button></div></form>
-      <p class="muted">Das Einrichten gilt 10 Minuten.</p>`;
+      <form id="mfaon" class="row"><div><label for="mfa-on-code">${L('Code aus der App', 'Code from the app')}</label><input id="mfa-on-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div><div><button type="submit">${L('Aktivieren', 'Activate')}</button></div></form>
+      <p class="muted">${L('Das Einrichten gilt 10 Minuten.', 'The setup is valid for 10 minutes.')}</p>`;
     $('#mfa-on-code').focus();
   } catch (err) { showError(err.message); }
 });
@@ -687,13 +701,13 @@ $('#mfabody').addEventListener('submit', async e => {
   try {
     const r = await api(on ? '/api/mfa/enable' : '/api/mfa/disable', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({code})});
     mfaOn = r.mfa; renderMfa(); leoMenu.setMfa(mfaOn);
-    $('#mfamsg').innerHTML = mfaOn ? '<span class="badge b-ok">✓</span> Zwei-Faktor-Anmeldung eingeschaltet.' : 'Zwei-Faktor-Anmeldung ausgeschaltet.';
+    $('#mfamsg').innerHTML = mfaOn ? `<span class="badge b-ok">✓</span> ${L('Zwei-Faktor-Anmeldung eingeschaltet.', 'Two-factor login turned on.')}` : L('Zwei-Faktor-Anmeldung ausgeschaltet.', 'Two-factor login turned off.');
     $('#h-mfa').focus();
   } catch (err) { showError(err.message); }
 });
 // Benutzermenü → „Abmelden“: bei ungespeicherten Änderungen nachfragen
 document.addEventListener('leo-logout', e => {
-  if (job && dirty() && !confirm('Ungespeicherte Änderungen verwerfen?')) { e.preventDefault(); return; }
+  if (job && dirty() && !confirm(L('Ungespeicherte Änderungen verwerfen?', 'Discard unsaved changes?'))) { e.preventDefault(); return; }
   job = null;
 });
 (async () => {

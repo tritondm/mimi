@@ -140,7 +140,7 @@ pub fn fix_document(doc: &mut Document) -> Result<usize> {
         }
         moved += moving.len();
     }
-    anyhow::bail!("Strukturbaum ließ sich nicht korrigieren (zu viele Verschachtelungen)")
+    anyhow::bail!(crate::i18n::t("Strukturbaum ließ sich nicht korrigieren (zu viele Verschachtelungen)", "The structure tree could not be corrected (too deeply nested)"))
 }
 
 /// Sucht im Inhaltsstrom `/Tag <</MCID n>> BDC` und liefert (Start, Ende, MCID).
@@ -408,14 +408,14 @@ pub struct FixResult {
 /// Korrigiert das PDF an Ort und Stelle. Wird nichts gefunden, bleibt die Datei unberührt.
 /// `formula_alts`: Alternativtexte der Formeln in der Reihenfolge der Word-Datei.
 pub fn fix_structure(path: &Path, formula_alts: &[String]) -> Result<FixResult> {
-    let mut doc = Document::load(path).context("PDF konnte nicht gelesen werden")?;
+    let mut doc = Document::load(path).context(crate::i18n::t("PDF konnte nicht gelesen werden", "The PDF could not be read"))?;
     let artifacts = artifact_decorative(&mut doc)?;
     let moved = fix_document(&mut doc)?;
     let (formulas, in_pdf) = set_formula_alts(&mut doc, formula_alts);
     let formula_mismatch = (in_pdf != formula_alts.len()).then_some(in_pdf);
     if moved > 0 || artifacts > 0 || formulas > 0 {
         let tmp = path.with_extension("pdf.tmp");
-        doc.save(&tmp).context("Korrigiertes PDF konnte nicht geschrieben werden")?;
+        doc.save(&tmp).context(crate::i18n::t("Korrigiertes PDF konnte nicht geschrieben werden", "The corrected PDF could not be written"))?;
         std::fs::rename(&tmp, path)?;
     }
     Ok(FixResult { moved, artifacts, formulas, formula_mismatch })

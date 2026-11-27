@@ -4,7 +4,7 @@
 
 [Deutsch](INSTALL.md) · **English**
 
-How Mimi works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings: [README.en.md](README.en.md)
+How Mimi works internally: [FUNCTION.en.md](FUNCTION.en.md) · Usage and settings: [README.md](README.md)
 
 > **Technical names:** program and command `mimi`, container `mimi`, service `mimi.service`,
 > system user and paths `/opt/mimi`, `/var/lib/mimi`.

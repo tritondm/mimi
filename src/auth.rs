@@ -11,6 +11,7 @@
 //! `benutzer-anlegen`, `passwort-ändern`, `benutzer-entfernen`, `benutzer-liste`,
 //! `zwei-faktor-aus`.
 
+use crate::{i18n, tr};
 use anyhow::{bail, Context, Result};
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use argon2::Argon2;
@@ -113,7 +114,7 @@ pub fn valid_name(n: &str) -> bool {
 
 pub fn check_password(pw: &str) -> Result<()> {
     if pw.chars().count() < MIN_PASSWORD {
-        bail!("Das Passwort muss mindestens {MIN_PASSWORD} Zeichen lang sein.");
+        bail!(tr!("Das Passwort muss mindestens {MIN_PASSWORD} Zeichen lang sein.", "The password must be at least {MIN_PASSWORD} characters long."));
     }
     Ok(())
 }
@@ -391,7 +392,7 @@ impl Auth {
     /// Benutzer anlegen oder ändern. `password = None` lässt das Passwort unverändert.
     pub async fn upsert(&self, actor: &User, actor_token: &str, name: &str, password: Option<&str>, admin: bool) -> Result<()> {
         if !valid_name(name) {
-            bail!("Ungültiger Benutzername (erlaubt: Buchstaben, Ziffern, . _ - @; höchstens 64 Zeichen).");
+            bail!(i18n::t("Ungültiger Benutzername (erlaubt: Buchstaben, Ziffern, . _ - @; höchstens 64 Zeichen).", "Invalid user name (allowed: letters, digits, . _ - @; at most 64 characters)."));
         }
         if let Some(pw) = password {
             check_password(pw)?;
@@ -404,10 +405,10 @@ impl Auth {
                 tokio::task::spawn_blocking(move || hash_password(&pw)).await??
             }
             (None, Some(existing)) => existing.hash.clone(),
-            (None, None) => bail!("Für neue Benutzer ist ein Passwort nötig."),
+            (None, None) => bail!(i18n::t("Für neue Benutzer ist ein Passwort nötig.", "New users need a password.")),
         };
         if name == actor.name && !admin {
-            bail!("Sie können sich nicht selbst die Admin-Rechte entziehen.");
+            bail!(i18n::t("Sie können sich nicht selbst die Admin-Rechte entziehen.", "You cannot remove your own admin rights."));
         }
         // eine eingerichtete Zwei-Faktor-Anmeldung bleibt erhalten
         let totp = users.get(name).and_then(|u| u.totp.clone());
@@ -423,12 +424,12 @@ impl Auth {
 
     pub async fn remove(&self, actor: &User, name: &str) -> Result<()> {
         if name == actor.name {
-            bail!("Sie können sich nicht selbst löschen.");
+            bail!(i18n::t("Sie können sich nicht selbst löschen.", "You cannot delete yourself."));
         }
         let _g = self.file_lock.lock().await;
         let mut users = read_users(&self.users_file)?;
         if users.remove(name).is_none() {
-            bail!("Benutzer „{name}“ gibt es nicht.");
+            bail!(tr!("Benutzer „{name}“ gibt es nicht.", "User “{name}” does not exist."));
         }
         write_users(&self.users_file, &users)?;
         drop(_g);
@@ -445,7 +446,7 @@ impl Auth {
     /// Einrichten beginnen: neues Geheimnis, gilt 10 Minuten bis zur Bestätigung mit einem Code.
     pub async fn mfa_begin(&self, name: &str) -> Result<String> {
         if self.has_mfa(name) {
-            bail!("Die Zwei-Faktor-Anmeldung ist schon eingerichtet.");
+            bail!(i18n::t("Die Zwei-Faktor-Anmeldung ist schon eingerichtet.", "Two-factor login is already set up."));
         }
         let secret = totp::new_secret();
         let mut p = self.totp_pending.lock().await;
@@ -460,10 +461,10 @@ impl Auth {
             let p = self.totp_pending.lock().await;
             match p.get(name) {
                 Some((s, t)) if t.elapsed() < MFA_SETUP_TTL => s.clone(),
-                _ => bail!("Das Einrichten ist abgelaufen – bitte neu beginnen."),
+                _ => bail!(i18n::t("Das Einrichten ist abgelaufen – bitte neu beginnen.", "The setup has expired – please start again.")),
             }
         };
-        let step = totp::verify(&secret, code).context("Der Code stimmt nicht. Bitte den aktuellen Code aus der App eingeben.")?;
+        let step = totp::verify(&secret, code).context(i18n::t("Der Code stimmt nicht. Bitte den aktuellen Code aus der App eingeben.", "The code is wrong. Please enter the current code from the app."))?;
         self.set_totp(name, Some(secret)).await?;
         self.totp_pending.lock().await.remove(name);
         self.totp_used.lock().await.insert(name.to_string(), step);
@@ -472,15 +473,15 @@ impl Auth {
 
     /// Selbst ausschalten – nur mit gültigem Code.
     pub async fn mfa_disable(&self, name: &str, code: &str) -> Result<()> {
-        let secret = self.users().get(name).and_then(|u| u.totp.clone()).context("Die Zwei-Faktor-Anmeldung ist nicht eingerichtet.")?;
-        totp::verify(&secret, code).context("Der Code stimmt nicht.")?;
+        let secret = self.users().get(name).and_then(|u| u.totp.clone()).context(i18n::t("Die Zwei-Faktor-Anmeldung ist nicht eingerichtet.", "Two-factor login is not set up."))?;
+        totp::verify(&secret, code).context(i18n::t("Der Code stimmt nicht.", "The code is wrong."))?;
         self.set_totp(name, None).await
     }
 
     /// Admin setzt zurück (z. B. Handy verloren).
     pub async fn mfa_reset(&self, name: &str) -> Result<()> {
         if !self.has_mfa(name) {
-            bail!("„{name}“ hat keine Zwei-Faktor-Anmeldung eingerichtet.");
+            bail!(tr!("„{name}“ hat keine Zwei-Faktor-Anmeldung eingerichtet.", "“{name}” has no two-factor login set up."));
         }
         self.set_totp(name, None).await
     }
@@ -488,7 +489,7 @@ impl Auth {
     async fn set_totp(&self, name: &str, secret: Option<String>) -> Result<()> {
         let _g = self.file_lock.lock().await;
         let mut users = read_users(&self.users_file)?;
-        let rec = users.get_mut(name).with_context(|| format!("Benutzer „{name}“ gibt es nicht."))?;
+        let rec = users.get_mut(name).with_context(|| tr!("Benutzer „{name}“ gibt es nicht.", "User “{name}” does not exist."))?;
         rec.totp = secret;
         write_users(&self.users_file, &users)
     }

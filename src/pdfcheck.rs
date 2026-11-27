@@ -8,6 +8,7 @@
 //! 2. veraPDF (falls installiert): vollständige Prüfung nach PDF/UA-1
 //!    (Matterhorn-Protokoll), dieselbe Grundlage wie PAC.
 
+use crate::{i18n, tr};
 use anyhow::{Context, Result};
 use lopdf::{Dictionary, Document, Object};
 use quick_xml::events::Event;
@@ -193,10 +194,10 @@ fn walk(doc: &Document, o: &Object, role_map: Option<&Dictionary>, stats: &mut S
 }
 
 pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
-    let doc = Document::load(path).context("PDF konnte nicht gelesen werden")?;
+    let doc = Document::load(path).context(i18n::t("PDF konnte nicht gelesen werden", "The PDF could not be read"))?;
     let pages = doc.get_pages().len();
     let mut checks = Vec::new();
-    let catalog = doc.catalog().context("PDF ohne Katalog")?;
+    let catalog = doc.catalog().context(i18n::t("PDF ohne Katalog", "PDF without catalog"))?;
 
     // getaggt?
     let marked = get(&doc, catalog, b"MarkInfo")
@@ -205,15 +206,15 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         .unwrap_or(false);
     let tree = get(&doc, catalog, b"StructTreeRoot").and_then(|o| if let Object::Dictionary(d) = o { Some(d) } else { None });
     if marked && tree.is_some() {
-        checks.push(ok("PDF ist getaggt", "Strukturbaum vorhanden"));
+        checks.push(ok(i18n::t("PDF ist getaggt", "PDF is tagged"), i18n::t("Strukturbaum vorhanden", "structure tree present")));
     } else {
-        checks.push(bad("fehler", "PDF ist nicht getaggt", "Beim Export „PDF/UA“ bzw. „Getaggtes PDF“ aktivieren."));
+        checks.push(bad("fehler", i18n::t("PDF ist nicht getaggt", "PDF is not tagged"), i18n::t("Beim Export „PDF/UA“ bzw. „Getaggtes PDF“ aktivieren.", "Enable “PDF/UA” or “Tagged PDF” when exporting.")));
     }
 
     // Sprache
     match get(&doc, catalog, b"Lang").map(text_string) {
-        Some(l) if !l.trim().is_empty() => checks.push(ok("Dokumentsprache", l)),
-        _ => checks.push(bad("fehler", "Dokumentsprache fehlt", "Im Word-Dokument eine Standardsprache festlegen.")),
+        Some(l) if !l.trim().is_empty() => checks.push(ok(i18n::t("Dokumentsprache", "Document language"), l)),
+        _ => checks.push(bad("fehler", i18n::t("Dokumentsprache fehlt", "Document language missing"), i18n::t("Im Word-Dokument eine Standardsprache festlegen.", "Set a default language in the Word document."))),
     }
 
     // Titel anzeigen
@@ -253,19 +254,19 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         }
     }
     if title.trim().is_empty() {
-        checks.push(bad("fehler", "Dokumenttitel fehlt", "Titel im Word-Dokument unter Eigenschaften setzen."));
+        checks.push(bad("fehler", i18n::t("Dokumenttitel fehlt", "Document title missing"), i18n::t("Titel im Word-Dokument unter Eigenschaften setzen.", "Set the title in the Word document under Properties.")));
     } else {
-        checks.push(ok("Dokumenttitel", title.trim().to_string()));
+        checks.push(ok(i18n::t("Dokumenttitel", "Document title"), title.trim().to_string()));
     }
     if display_title {
-        checks.push(ok("Fenster zeigt den Titel", "DisplayDocTitle ist gesetzt"));
+        checks.push(ok(i18n::t("Fenster zeigt den Titel", "Window shows the title"), i18n::t("DisplayDocTitle ist gesetzt", "DisplayDocTitle is set")));
     } else {
-        checks.push(bad("fehler", "Fenster zeigt Dateinamen statt Titel", "DisplayDocTitle fehlt – beim LibreOffice-Export mit PDF/UA wird das automatisch gesetzt."));
+        checks.push(bad("fehler", i18n::t("Fenster zeigt Dateinamen statt Titel", "Window shows the file name instead of the title"), i18n::t("DisplayDocTitle fehlt – beim LibreOffice-Export mit PDF/UA wird das automatisch gesetzt.", "DisplayDocTitle is missing – LibreOffice sets it automatically when exporting with PDF/UA.")));
     }
     match &xmp {
-        Some(x) if x.contains("pdfuaid") => checks.push(ok("PDF/UA-Kennung", "in den Metadaten vorhanden")),
-        Some(_) => checks.push(bad("fehler", "PDF/UA-Kennung fehlt", "Metadaten enthalten keine pdfuaid-Angabe.")),
-        None => checks.push(bad("fehler", "XMP-Metadaten fehlen", "Ohne Metadaten keine PDF/UA-Kennung.")),
+        Some(x) if x.contains("pdfuaid") => checks.push(ok(i18n::t("PDF/UA-Kennung", "PDF/UA identifier"), i18n::t("in den Metadaten vorhanden", "present in the metadata"))),
+        Some(_) => checks.push(bad("fehler", i18n::t("PDF/UA-Kennung fehlt", "PDF/UA identifier missing"), i18n::t("Metadaten enthalten keine pdfuaid-Angabe.", "The metadata contain no pdfuaid entry."))),
+        None => checks.push(bad("fehler", i18n::t("XMP-Metadaten fehlen", "XMP metadata missing"), i18n::t("Ohne Metadaten keine PDF/UA-Kennung.", "Without metadata there is no PDF/UA identifier."))),
     }
 
     // Strukturbaum
@@ -275,9 +276,9 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
             .map(|rm| rm.iter().filter(|(k, _)| STD_TYPES.contains(&k.as_slice())).map(|(k, _)| String::from_utf8_lossy(k).into_owned()).collect())
             .unwrap_or_default();
         if remapped.is_empty() {
-            checks.push(ok("Standard-Tags", "keine Standard-Tags umgeleitet"));
+            checks.push(ok(i18n::t("Standard-Tags", "Standard tags"), i18n::t("keine Standard-Tags umgeleitet", "no standard tags remapped")));
         } else {
-            checks.push(bad("fehler", "Standard-Tags umgeleitet", format!("Formatvorlage(n) mit reserviertem Namen: {} – Mimi benennt diese beim Export automatisch um; tritt der Fehler trotzdem auf, Vorlage in Word umbenennen.", remapped.join(", "))));
+            checks.push(bad("fehler", i18n::t("Standard-Tags umgeleitet", "Standard tags remapped"), tr!("Formatvorlage(n) mit reserviertem Namen: {} – Mimi benennt diese beim Export automatisch um; tritt der Fehler trotzdem auf, Vorlage in Word umbenennen.", "Style(s) with a reserved name: {} – Mimi renames them automatically when exporting; if the error still occurs, rename the style in Word.", remapped.join(", "))));
         }
         let mut stats = StructStats::default();
         let mut seen = HashSet::new();
@@ -285,34 +286,34 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
             walk(&doc, k, role_map, &mut stats, &mut seen, &mut None, false, 0);
         }
         if stats.figures_no_alt == 0 {
-            checks.push(ok("Alternativtexte", format!("alle {} Abbildungen haben einen Alternativtext", stats.figures)));
+            checks.push(ok(i18n::t("Alternativtexte", "Alternative texts"), tr!("alle {} Abbildungen haben einen Alternativtext", "all {} figures have an alternative text", stats.figures)));
         } else {
-            checks.push(bad("fehler", "Abbildungen ohne Alternativtext", format!("{} von {} Abbildungen", stats.figures_no_alt, stats.figures)));
+            checks.push(bad("fehler", i18n::t("Abbildungen ohne Alternativtext", "Figures without alternative text"), tr!("{} von {} Abbildungen", "{} of {} figures", stats.figures_no_alt, stats.figures)));
         }
         if stats.formulas > 0 {
             if stats.formulas_no_alt == 0 {
-                checks.push(ok("Formeln", format!("alle {} Formeln haben einen Alternativtext", stats.formulas)));
+                checks.push(ok(i18n::t("Formeln", "Equations"), tr!("alle {} Formeln haben einen Alternativtext", "all {} equations have an alternative text", stats.formulas)));
             } else {
-                checks.push(bad("fehler", "Formeln ohne Alternativtext", format!("{} von {} Formeln (veraPDF 7.7-1)", stats.formulas_no_alt, stats.formulas)));
+                checks.push(bad("fehler", i18n::t("Formeln ohne Alternativtext", "Equations without alternative text"), tr!("{} von {} Formeln (veraPDF 7.7-1)", "{} of {} equations (veraPDF 7.7-1)", stats.formulas_no_alt, stats.formulas)));
             }
         }
         if stats.headings > 0 {
-            checks.push(ok("Überschriften", format!("{} Überschriften im Strukturbaum", stats.headings)));
+            checks.push(ok(i18n::t("Überschriften", "Headings"), tr!("{} Überschriften im Strukturbaum", "{} headings in the structure tree", stats.headings)));
         } else {
-            checks.push(bad("warnung", "Keine Überschriften", "Das PDF hat keine Überschriften-Tags."));
+            checks.push(bad("warnung", i18n::t("Keine Überschriften", "No headings"), i18n::t("Das PDF hat keine Überschriften-Tags.", "The PDF has no heading tags.")));
         }
         if stats.heading_jumps > 0 {
-            checks.push(bad("fehler", "Überschriftenebene übersprungen", format!("{} Mal folgt z. B. H4 direkt auf H2 – im Reiter „Struktur & Hinweise“ korrigierbar.", stats.heading_jumps)));
+            checks.push(bad("fehler", i18n::t("Überschriftenebene übersprungen", "Heading level skipped"), tr!("{} Mal folgt z. B. H4 direkt auf H2 – im Reiter „Struktur & Hinweise“ korrigierbar.", "{} time(s) e.g. H4 directly follows H2 – can be fixed in the “Structure & hints” tab.", stats.heading_jumps)));
         }
         if stats.nested_blocks == 0 {
-            checks.push(ok("Verschachtelung", "keine Bereiche, Absätze oder Überschriften innerhalb von Absätzen"));
+            checks.push(ok(i18n::t("Verschachtelung", "Nesting"), i18n::t("keine Bereiche, Absätze oder Überschriften innerhalb von Absätzen", "no areas, paragraphs or headings inside paragraphs")));
         } else {
-            checks.push(bad("fehler", "Falsch verschachtelte Struktur", format!("{} Bereich(e), Absätze oder Überschriften stecken in einem Absatz (meist Rahmen oder Textfelder). PAC und PDF/UA-2 bemängeln das.", stats.nested_blocks)));
+            checks.push(bad("fehler", i18n::t("Falsch verschachtelte Struktur", "Wrongly nested structure"), tr!("{} Bereich(e), Absätze oder Überschriften stecken in einem Absatz (meist Rahmen oder Textfelder). PAC und PDF/UA-2 bemängeln das.", "{} area(s), paragraphs or headings are inside a paragraph (usually frames or text boxes). PAC and PDF/UA-2 report this.", stats.nested_blocks)));
         }
         if stats.tables_no_th == 0 {
-            checks.push(ok("Tabellenköpfe", format!("alle {} Tabellen haben Kopfzellen", stats.tables)));
+            checks.push(ok(i18n::t("Tabellenköpfe", "Table headers"), tr!("alle {} Tabellen haben Kopfzellen", "all {} tables have header cells", stats.tables)));
         } else {
-            checks.push(bad("fehler", "Tabellen ohne Kopfzellen", format!("{} von {} Tabellen", stats.tables_no_th, stats.tables)));
+            checks.push(bad("fehler", i18n::t("Tabellen ohne Kopfzellen", "Tables without header cells"), tr!("{} von {} Tabellen", "{} of {} tables", stats.tables_no_th, stats.tables)));
         }
     }
 
@@ -352,20 +353,20 @@ pub fn basic_checks(path: &Path) -> Result<(usize, Vec<Check>)> {
         }
     }
     if not_embedded.is_empty() {
-        checks.push(ok("Schriften eingebettet", "alle Schriften sind eingebettet"));
+        checks.push(ok(i18n::t("Schriften eingebettet", "Fonts embedded"), i18n::t("alle Schriften sind eingebettet", "all fonts are embedded")));
     } else {
         let mut v: Vec<_> = not_embedded.into_iter().collect();
         v.sort();
-        checks.push(bad("fehler", "Nicht eingebettete Schriften", v.join(", ")));
+        checks.push(bad("fehler", i18n::t("Nicht eingebettete Schriften", "Fonts not embedded"), v.join(", ")));
     }
     if links_no_contents == 0 {
-        checks.push(ok("Links beschrieben", format!("{} Links", links_total)));
+        checks.push(ok(i18n::t("Links beschrieben", "Links described"), tr!("{} Links", "{} links", links_total)));
     } else {
-        checks.push(bad("warnung", "Links ohne Beschreibung", format!("{} von {} Links", links_no_contents, links_total)));
+        checks.push(bad("warnung", i18n::t("Links ohne Beschreibung", "Links without description"), tr!("{} von {} Links", "{} of {} links", links_no_contents, links_total)));
     }
 
     if links_untagged > 0 {
-        checks.push(bad("fehler", "Links ohne Tag", format!("{} Links sind nicht im Strukturbaum (meist Felder/Links in Kopf- oder Fußzeile).", links_untagged)));
+        checks.push(bad("fehler", i18n::t("Links ohne Tag", "Links without tag"), tr!("{} Links sind nicht im Strukturbaum (meist Felder/Links in Kopf- oder Fußzeile).", "{} links are not in the structure tree (usually fields/links in a header or footer).", links_untagged)));
     }
 
     Ok((pages, checks))
@@ -395,7 +396,7 @@ pub async fn run_verapdf(bin: Option<PathBuf>, pdf: &Path) -> VeraResult {
     let Some(bin) = bin else {
         return VeraResult {
             available: false,
-            message: "veraPDF ist nicht installiert – es wurde nur die Basisprüfung durchgeführt. Siehe README.".into(),
+            message: i18n::t("veraPDF ist nicht installiert – es wurde nur die Basisprüfung durchgeführt. Siehe README.", "veraPDF is not installed – only the basic check was run. See README.").into(),
             ..Default::default()
         };
     };
@@ -406,18 +407,18 @@ pub async fn run_verapdf(bin: Option<PathBuf>, pdf: &Path) -> VeraResult {
     .await;
     let out = match out {
         Ok(Ok(o)) => o,
-        Ok(Err(e)) => return VeraResult { available: true, message: format!("veraPDF konnte nicht gestartet werden: {e}"), ..Default::default() },
-        Err(_) => return VeraResult { available: true, message: "veraPDF hat zu lange gebraucht (Zeitüberschreitung).".into(), ..Default::default() },
+        Ok(Err(e)) => return VeraResult { available: true, message: tr!("veraPDF konnte nicht gestartet werden: {e}", "veraPDF could not be started: {e}"), ..Default::default() },
+        Err(_) => return VeraResult { available: true, message: i18n::t("veraPDF hat zu lange gebraucht (Zeitüberschreitung).", "veraPDF took too long (timeout).").into(), ..Default::default() },
     };
     match parse_mrr(&out.stdout) {
         Ok(mut r) => {
             r.available = true;
             if r.compliant.is_none() {
-                r.message = format!("veraPDF-Ausgabe konnte nicht ausgewertet werden: {}", String::from_utf8_lossy(&out.stderr).chars().take(500).collect::<String>());
+                r.message = tr!("veraPDF-Ausgabe konnte nicht ausgewertet werden: {}", "veraPDF output could not be evaluated: {}", String::from_utf8_lossy(&out.stderr).chars().take(500).collect::<String>());
             }
             r
         }
-        Err(e) => VeraResult { available: true, message: format!("veraPDF-Ausgabe unlesbar: {e}"), ..Default::default() },
+        Err(e) => VeraResult { available: true, message: tr!("veraPDF-Ausgabe unlesbar: {e}", "veraPDF output unreadable: {e}"), ..Default::default() },
     }
 }
 

@@ -9,6 +9,7 @@ mod auth;
 mod cleanup;
 mod docx;
 mod formula;
+mod i18n;
 mod pdfcheck;
 mod pdffix;
 mod sanitize;
@@ -33,6 +34,8 @@ const ADMIN: &str = include_str!("../static/admin.html");
 const AUDIT_PAGE: &str = include_str!("../static/audit.html");
 const MENU_CSS: &str = include_str!("../static/menu.css");
 const MENU_JS: &str = include_str!("../static/menu.js");
+/// Sprachumschaltung der Seiten; `__MIMI_DEFAULT_LANG__` wird durch `DEFAULT_LANG` ersetzt
+const I18N_JS: &str = include_str!("../static/i18n.js");
 const FAVICON_SVG: &str = include_str!("../static/favicon.svg");
 const FAVICON_ICO: &[u8] = include_bytes!("../static/favicon.ico");
 const TOUCH_ICON: &[u8] = include_bytes!("../static/apple-touch-icon.png");
@@ -67,9 +70,16 @@ impl AppState {
     /// Bericht für Export, Ändern oder Löschen belegen. Läuft schon etwas, gibt es 409:
     /// Zwei Aufrufe würden sonst in denselben Dateien arbeiten.
     fn claim(&self, id: &str) -> Result<BusyGuard<'_>, AppError> {
-        let mut b = self.busy.lock().map_err(|_| anyhow::anyhow!("interner Fehler (Sperre)"))?;
+        let mut b = self.busy.lock().map_err(|_| anyhow::anyhow!(i18n::t("interner Fehler (Sperre)", "internal error (lock)")))?;
         if !b.insert(id.to_string()) {
-            return Err(AppError(StatusCode::CONFLICT, "Der Bericht wird gerade bearbeitet (PDF wird erzeugt oder Änderungen werden gespeichert). Bitte kurz warten und noch einmal versuchen.".into()));
+            return Err(AppError(
+                StatusCode::CONFLICT,
+                i18n::t(
+                    "Der Bericht wird gerade bearbeitet (PDF wird erzeugt oder Änderungen werden gespeichert). Bitte kurz warten und noch einmal versuchen.",
+                    "The report is busy (a PDF is being created or changes are being saved). Please wait a moment and try again.",
+                )
+                .into(),
+            ));
         }
         Ok(BusyGuard(self, id.to_string()))
     }
@@ -116,9 +126,15 @@ fn bad_request(msg: &str) -> AppError {
     AppError(StatusCode::BAD_REQUEST, msg.into())
 }
 
+/// `spawn_blocking` in der Sprache der laufenden Anfrage.
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> Result<T, AppError> {
+    let lang = i18n::current();
+    Ok(tokio::task::spawn_blocking(move || i18n::with(lang, f)).await.map_err(|e| anyhow::anyhow!(e))?)
+}
+
 fn job_dir(st: &AppState, id: &str, user: &auth::User) -> Result<PathBuf, AppError> {
-    let not_found = || AppError(StatusCode::NOT_FOUND, "Job nicht gefunden – bitte Datei neu hochladen.".into());
-    let id = uuid::Uuid::parse_str(id).map_err(|_| bad_request("Ungültige Job-ID"))?;
+    let not_found = || AppError(StatusCode::NOT_FOUND, i18n::t("Bericht nicht gefunden – bitte Datei neu hochladen.", "Report not found – please upload the file again.").into());
+    let id = uuid::Uuid::parse_str(id).map_err(|_| bad_request(i18n::t("Ungültige Bericht-ID", "Invalid report ID")))?;
     let dir = st.jobs.join(id.to_string());
     if !dir.is_dir() {
         return Err(not_found());
@@ -140,7 +156,7 @@ fn job_json(st: &AppState, dir: &Path, id: &str, name: &str, analysis: docx::Ana
 }
 
 fn original_name(dir: &Path) -> String {
-    std::fs::read_to_string(dir.join("name.txt")).unwrap_or_else(|_| "Bericht".into())
+    std::fs::read_to_string(dir.join("name.txt")).unwrap_or_else(|_| i18n::t("Bericht", "Report").into())
 }
 
 #[tokio::main]
@@ -162,6 +178,7 @@ async fn main() -> anyhow::Result<()> {
         );
         std::process::exit(1);
     }
+    let i18n_js = I18N_JS.replace("__MIMI_DEFAULT_LANG__", i18n::default_lang().code());
     let secure_cookie = matches!(std::env::var("COOKIE_SECURE").as_deref(), Ok("1") | Ok("true"));
     let jobs = data_dir.join("jobs");
     std::fs::create_dir_all(&jobs)?;
@@ -234,12 +251,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/favicon.ico", get(|| async { ([(header::CONTENT_TYPE, "image/x-icon"), (header::CACHE_CONTROL, "public, max-age=86400")], FAVICON_ICO) }))
         .route("/apple-touch-icon.png", get(|| async { ([(header::CONTENT_TYPE, "image/png"), (header::CACHE_CONTROL, "public, max-age=86400")], TOUCH_ICON) }))
         .route("/menu.js", get(|| async { ([(header::CONTENT_TYPE, "text/javascript; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], MENU_JS) }))
+        .route("/i18n.js", get(move || async move { ([(header::CONTENT_TYPE, "text/javascript; charset=utf-8"), (header::CACHE_CONTROL, "no-cache")], i18n_js) }))
         .route("/api/login", post(login))
         .route("/api/logout", post(logout))
         .route("/api/me", get(me))
         .merge(protected)
         .layer(middleware::from_fn(same_origin))
         .layer(middleware::from_fn(security_headers))
+        .layer(middleware::from_fn(language))
         .layer(DefaultBodyLimit::max(4 << 20))
         .with_state(state.clone());
 
@@ -247,6 +266,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     println!("Mimi läuft auf http://{addr}  (Benutzerverwaltung: http://{addr}/admin)");
     println!("Audit-Log: {} (Einträge {} Tage)", audit_path_hint(&data_dir), state.audit.days());
+    println!("Standardsprache der Oberfläche: {} (DEFAULT_LANG, umschaltbar in der Kopfzeile)", i18n::default_lang().code());
     match policy.ttl_days() {
         0 => println!("Automatisches Löschen: aus (JOB_TTL_DAYS=0)."),
         d => println!("Automatisches Löschen: {d} Tage nach der letzten Nutzung, ersetzte Berichte nach 1 Tag."),
@@ -278,8 +298,14 @@ async fn require_auth(State(st): St, mut req: Request, next: Next) -> Response {
             req.extensions_mut().insert(u);
             next.run(req).await
         }
-        None => AppError(StatusCode::UNAUTHORIZED, "Bitte anmelden.".into()).into_response(),
+        None => AppError(StatusCode::UNAUTHORIZED, i18n::t("Bitte anmelden.", "Please log in.").into()).into_response(),
     }
+}
+
+/// Sprache der Anfrage (Cookie `mimi-lang`) für alle Meldungen festlegen.
+async fn language(req: Request, next: Next) -> Response {
+    let lang = i18n::from_headers(req.headers());
+    i18n::scope(lang, next.run(req)).await
 }
 
 /// Schreibende Anfragen nur von der eigenen Seite (Schutz gegen fremde Webseiten, CSRF).
@@ -293,7 +319,7 @@ async fn same_origin(req: Request, next: Next) -> Response {
             None => true,
         };
         if !ok {
-            return AppError(StatusCode::FORBIDDEN, "Anfrage von fremder Seite abgelehnt.".into()).into_response();
+            return AppError(StatusCode::FORBIDDEN, i18n::t("Anfrage von fremder Seite abgelehnt.", "Request from another site rejected.").into()).into_response();
         }
     }
     next.run(req).await
@@ -341,18 +367,18 @@ async fn login(State(st): St, headers: HeaderMap, Json(req): Json<LoginReq>) -> 
             let cookie = session_cookie(&st, &token, auth::SESSION_TTL.as_secs());
             Ok(([(header::SET_COOKIE, cookie)], Json(json!({ "user": name }))).into_response())
         }
-        Err(auth::LoginError::CodeRequired) => Ok(mfa("Bitte den Code aus Ihrer Authenticator-App eingeben.")),
+        Err(auth::LoginError::CodeRequired) => Ok(mfa(i18n::t("Bitte den Code aus Ihrer Authenticator-App eingeben.", "Please enter the code from your authenticator app."))),
         Err(auth::LoginError::BadCode) => {
             st.audit.log(name, "Anmeldung fehlgeschlagen", "", false, "Code falsch oder schon verwendet", &ip);
-            Ok(mfa("Der Code stimmt nicht oder wurde schon verwendet. Bitte den aktuellen Code eingeben."))
+            Ok(mfa(i18n::t("Der Code stimmt nicht oder wurde schon verwendet. Bitte den aktuellen Code eingeben.", "The code is wrong or has already been used. Please enter the current code.")))
         }
         Err(auth::LoginError::Invalid) => {
             st.audit.log(name, "Anmeldung fehlgeschlagen", "", false, "Benutzername oder Passwort falsch", &ip);
-            Err(AppError(StatusCode::UNAUTHORIZED, "Benutzername oder Passwort falsch.".into()))
+            Err(AppError(StatusCode::UNAUTHORIZED, i18n::t("Benutzername oder Passwort falsch.", "Wrong user name or password.").into()))
         }
         Err(auth::LoginError::Locked(min)) => {
             st.audit.log(name, "Anmeldung gesperrt", "", false, &format!("noch {min} Minute(n)"), &ip);
-            Err(AppError(StatusCode::TOO_MANY_REQUESTS, format!("Zu viele Fehlversuche – bitte in {min} Minute(n) erneut versuchen.")))
+            Err(AppError(StatusCode::TOO_MANY_REQUESTS, tr!("Zu viele Fehlversuche – bitte in {min} Minute(n) erneut versuchen.", "Too many failed attempts – please try again in {min} minute(s).")))
         }
     }
 }
@@ -368,8 +394,9 @@ async fn logout(State(st): St, headers: HeaderMap) -> Response {
 }
 
 async fn me(State(st): St, headers: HeaderMap) -> Result<Json<serde_json::Value>, AppError> {
-    let t = auth::token_from_headers(&headers).ok_or_else(|| AppError(StatusCode::UNAUTHORIZED, "Bitte anmelden.".into()))?;
-    let u = st.auth.user_for(&t).await.ok_or_else(|| AppError(StatusCode::UNAUTHORIZED, "Bitte anmelden.".into()))?;
+    let unauth = || AppError(StatusCode::UNAUTHORIZED, i18n::t("Bitte anmelden.", "Please log in.").into());
+    let t = auth::token_from_headers(&headers).ok_or_else(unauth)?;
+    let u = st.auth.user_for(&t).await.ok_or_else(unauth)?;
     Ok(Json(json!({ "user": u.name, "admin": u.admin, "ttl_days": st.policy.ttl_days(), "mfa": st.auth.has_mfa(&u.name) })))
 }
 
@@ -381,7 +408,7 @@ fn require_admin(user: &auth::User) -> Result<(), AppError> {
     if user.admin {
         Ok(())
     } else {
-        Err(AppError(StatusCode::FORBIDDEN, "Nur für Admins.".into()))
+        Err(AppError(StatusCode::FORBIDDEN, i18n::t("Nur für Admins.", "Admins only.").into()))
     }
 }
 
@@ -444,7 +471,7 @@ async fn admin_audit(State(st): St, Extension(user): Extension<auth::User>, Quer
     require_admin(&user)?;
     let limit = q.get("limit").and_then(|v| v.parse().ok()).unwrap_or(2000usize).min(20_000);
     let days = st.audit.days();
-    let entries = tokio::task::spawn_blocking(move || st.audit.read(limit)).await.map_err(|e| anyhow::anyhow!(e))?;
+    let entries = blocking(move || st.audit.read(limit)).await?;
     Ok(Json(json!({ "entries": entries, "days": days })))
 }
 
@@ -502,12 +529,12 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, headers: 
         let lower = name.to_lowercase();
         let is_odt = lower.ends_with(".odt");
         if !lower.ends_with(".docx") && !is_odt {
-            return Err(bad_request("Bitte eine Word- oder OpenDocument-Datei (.docx oder .odt) hochladen."));
+            return Err(bad_request(i18n::t("Bitte eine Word- oder OpenDocument-Datei (.docx oder .odt) hochladen.", "Please upload a Word or OpenDocument file (.docx or .odt).")));
         }
         let raw = field.bytes().await.map_err(|e| bad_request(&e.to_string()))?;
         // Entpackgrenzen (ZIP-Bombe), bevor irgendetwas die Datei entpackt
         let raw2 = raw.clone();
-        tokio::task::spawn_blocking(move || sanitize::check_zip(&raw2)).await.map_err(|e| anyhow::anyhow!(e))?.map_err(|e| bad_request(&format!("{e:#}")))?;
+        blocking(move || sanitize::check_zip(&raw2)).await?.map_err(|e| bad_request(&format!("{e:#}")))?;
         let id = uuid::Uuid::new_v4().to_string();
         let dir = st.jobs.join(&id);
         tokio::fs::create_dir_all(&dir).await?;
@@ -524,11 +551,11 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, headers: 
             raw.to_vec()
         };
         let data2 = data.clone();
-        let analysis = match tokio::task::spawn_blocking(move || docx::analyze(&data2)).await.map_err(|e| anyhow::anyhow!(e))? {
+        let analysis = match blocking(move || docx::analyze(&data2)).await? {
             Ok(a) => a,
             Err(e) => {
                 let _ = tokio::fs::remove_dir_all(&dir).await;
-                return Err(bad_request(&format!("Datei konnte nicht gelesen werden: {e:#}")));
+                return Err(bad_request(&tr!("Datei konnte nicht gelesen werden: {e:#}", "The file could not be read: {e:#}")));
             }
         };
         tokio::fs::write(dir.join("original.docx"), &data).await?;
@@ -541,7 +568,7 @@ async fn upload(State(st): St, Extension(user): Extension<auth::User>, headers: 
         st.log(&user, &headers, "Bericht hochgeladen", &id, true, &format!("{}, {size}", if is_odt { "ODT" } else { "DOCX" }));
         return Ok(job_json(&st, &dir, &id, &stem, analysis));
     }
-    Err(bad_request("Keine Datei übermittelt."))
+    Err(bad_request(i18n::t("Keine Datei übermittelt.", "No file received.")))
 }
 
 const ODT_MIME: &[u8] = b"application/vnd.oasis.opendocument.text";
@@ -551,19 +578,19 @@ async fn odt_to_docx(st: &AppState, dir: &Path, odt: &[u8]) -> Result<Vec<u8>, A
     // Nur echte OpenDocument-Textdokumente an LibreOffice geben
     let mime = docx::read_entry(odt, "mimetype").ok().flatten();
     if mime.as_deref().map(|m| m.trim_ascii()) != Some(ODT_MIME) {
-        return Err(bad_request("Die Datei ist kein OpenDocument-Textdokument (.odt)."));
+        return Err(bad_request(i18n::t("Die Datei ist kein OpenDocument-Textdokument (.odt).", "The file is not an OpenDocument text document (.odt).")));
     }
     let conv = dir.join("conv");
     tokio::fs::create_dir_all(&conv).await?;
     tokio::fs::write(dir.join("original.odt"), odt).await?;
     // LibreOffice bekommt eine Kopie ohne externe Verweise (Bilder, Abschnitte, Vorlagen)
-    let clean = sanitize::odt_without_external(odt).map_err(|e| bad_request(&format!("Die ODT-Datei konnte nicht gelesen werden: {e:#}")))?.0;
+    let clean = sanitize::odt_without_external(odt).map_err(|e| bad_request(&tr!("Die ODT-Datei konnte nicht gelesen werden: {e:#}", "The ODT file could not be read: {e:#}")))?.0;
     tokio::fs::write(conv.join("original.odt"), &clean).await?;
     drop(clean);
     let out = conv.join("out");
     tokio::fs::create_dir_all(&out).await?;
     soffice_convert(st, &conv.join("original.odt"), &out, "docx:MS Word 2007 XML").await?;
-    let docx = tokio::fs::read(out.join("original.docx")).await.map_err(|_| bad_request("LibreOffice konnte die ODT-Datei nicht umwandeln."))?;
+    let docx = tokio::fs::read(out.join("original.docx")).await.map_err(|_| bad_request(i18n::t("LibreOffice konnte die ODT-Datei nicht umwandeln.", "LibreOffice could not convert the ODT file.")))?;
     let _ = tokio::fs::remove_dir_all(&conv).await;
     sanitize::check_zip(&docx).map_err(|e| bad_request(&format!("{e:#}")))?;
     tokio::fs::write(dir.join("source.txt"), "odt").await?;
@@ -581,7 +608,7 @@ async fn media(State(st): St, Extension(user): Extension<auth::User>, AxPath((id
     let dir = job_dir(&st, &id, &user)?;
     let data = tokio::fs::read(dir.join("current.docx")).await?;
     let entry = format!("word/{}", path.trim_start_matches('/'));
-    let bytes = docx::read_entry(&data, &entry)?.ok_or_else(|| AppError(StatusCode::NOT_FOUND, "Bild nicht gefunden".into()))?;
+    let bytes = docx::read_entry(&data, &entry)?.ok_or_else(|| AppError(StatusCode::NOT_FOUND, i18n::t("Bild nicht gefunden", "Image not found").into()))?;
     let lower = path.to_lowercase();
     let ct = if lower.ends_with(".png") {
         "image/png"
@@ -614,10 +641,12 @@ async fn apply(State(st): St, Extension(user): Extension<auth::User>, headers: H
     let dir = job_dir(&st, &id, &user)?;
     let _busy = st.claim(&id)?;
     let data = tokio::fs::read(dir.join("current.docx")).await?;
-    let new = tokio::task::spawn_blocking(move || docx::apply(&data, &changes)).await.map_err(|e| anyhow::anyhow!(e))??;
+    let new = blocking(move || docx::apply(&data, &changes)).await??;
     // Plausibilitätsprüfung: muss wieder lesbar sein, sonst nicht speichern
     let new2 = new.clone();
-    let analysis = tokio::task::spawn_blocking(move || docx::analyze(&new2)).await.map_err(|e| anyhow::anyhow!(e))?.map_err(|e| anyhow::anyhow!("Korrigierte Datei ist fehlerhaft, Änderungen nicht gespeichert: {e:#}"))?;
+    let analysis = blocking(move || docx::analyze(&new2))
+        .await?
+        .map_err(|e| anyhow::anyhow!(tr!("Korrigierte Datei ist fehlerhaft, Änderungen nicht gespeichert: {e:#}", "The corrected file is broken, changes were not saved: {e:#}")))?;
     tokio::fs::write(dir.join("current.docx"), &new).await?;
     let _ = tokio::fs::remove_dir_all(dir.join("out")).await;
     st.log(&user, &headers, "Änderungen gespeichert", &id, true, "");
@@ -656,17 +685,17 @@ async fn soffice_convert(st: &AppState, input: &Path, outdir: &Path, target: &st
         .process_group(0)
         .kill_on_drop(true)
         .spawn()
-        .map_err(|e| anyhow::anyhow!("LibreOffice konnte nicht gestartet werden ({}): {e}", st.soffice))?;
+        .map_err(|e| anyhow::anyhow!(tr!("LibreOffice konnte nicht gestartet werden ({}): {e}", "LibreOffice could not be started ({}): {e}", st.soffice)))?;
     // Bei Zeitüberschreitung oder wenn der Browser bzw. nginx aufgibt (dann wird dieser Aufruf
     // abgebrochen), LibreOffice beenden. Sonst liefe es weiter, während die Sperre schon frei ist.
     let mut group = KillGroup(child.id());
     let out = tokio::time::timeout(LO_TIMEOUT, child.wait_with_output())
         .await
-        .map_err(|_| anyhow::anyhow!("LibreOffice hat zu lange gebraucht (mehr als {} Minuten)", LO_TIMEOUT.as_secs() / 60))?
-        .map_err(|e| anyhow::anyhow!("LibreOffice ist mit einem Fehler abgebrochen: {e}"))?;
+        .map_err(|_| anyhow::anyhow!(tr!("LibreOffice hat zu lange gebraucht (mehr als {} Minuten)", "LibreOffice took too long (more than {} minutes)", LO_TIMEOUT.as_secs() / 60)))?
+        .map_err(|e| anyhow::anyhow!(tr!("LibreOffice ist mit einem Fehler abgebrochen: {e}", "LibreOffice stopped with an error: {e}")))?;
     group.0 = None;
     if !out.status.success() {
-        return Err(anyhow::anyhow!("LibreOffice-Fehler: {}", String::from_utf8_lossy(&out.stderr)).into());
+        return Err(anyhow::anyhow!(tr!("LibreOffice-Fehler: {}", "LibreOffice error: {}", String::from_utf8_lossy(&out.stderr))).into());
     }
     Ok(())
 }
@@ -684,14 +713,13 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
     let _ = tokio::fs::remove_dir_all(&prep_dir).await;
     tokio::fs::create_dir_all(&prep_dir).await?;
     let src = tokio::fs::read(dir.join("current.docx")).await?;
-    let (prepared, for_odt, formula_alts) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+    let (prepared, for_odt, formula_alts) = blocking(move || -> anyhow::Result<_> {
         // Alternativtexte der Formeln aus der korrigierten Datei (nicht aus der Export-Kopie)
         let alts = formula::pdf_alts(&src)?;
         // beide Kopien ohne externe Inhalte, die LibreOffice sonst nachladen würde
         Ok((docx::prepare_for_pdf(&src)?.0, sanitize::docx_without_external(&src)?, alts))
     })
-    .await
-    .map_err(|e| anyhow::anyhow!(e))??;
+    .await??;
     let input = prep_dir.join("current.docx");
     tokio::fs::write(&input, &prepared).await?;
     drop(prepared);
@@ -716,25 +744,33 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
 
     let pdf = out.join("current.pdf");
     if !pdf.exists() {
-        return Err(anyhow::anyhow!("LibreOffice hat kein PDF erzeugt").into());
+        return Err(anyhow::anyhow!(i18n::t("LibreOffice hat kein PDF erzeugt", "LibreOffice did not create a PDF")).into());
     }
     // Strukturbaum geradeziehen (Rahmen/Textfelder stecken sonst als Div in Absätzen)
     let pdf2 = pdf.clone();
-    let (pages, checks) = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+    let (pages, checks) = blocking(move || -> anyhow::Result<_> {
         let fix = pdffix::fix_structure(&pdf2, &formula_alts)?;
         let (pages, mut checks) = pdfcheck::basic_checks(&pdf2)?;
         let mut done = Vec::new();
         if fix.moved > 0 {
-            done.push(format!("{} Bereich(e) aus Rahmen oder Textfeldern aus dem Absatz gelöst, in dem LibreOffice sie abgelegt hatte.", fix.moved));
+            done.push(tr!(
+                "{} Bereich(e) aus Rahmen oder Textfeldern aus dem Absatz gelöst, in dem LibreOffice sie abgelegt hatte.",
+                "{} area(s) from frames or text boxes moved out of the paragraph LibreOffice had put them in.",
+                fix.moved
+            ));
         }
         if fix.artifacts > 0 {
-            done.push(format!("{} dekorative Form(en) (z. B. Zierbalken in Kopf-/Fußzeilen) als Artefakt ausgeblendet – LibreOffice hätte sie als Abbildung getaggt.", fix.artifacts));
+            done.push(tr!(
+                "{} dekorative Form(en) (z. B. Zierbalken in Kopf-/Fußzeilen) als Artefakt ausgeblendet – LibreOffice hätte sie als Abbildung getaggt.",
+                "{} decorative shape(s) (e.g. ornamental bars in headers/footers) hidden as artifacts – LibreOffice would have tagged them as figures.",
+                fix.artifacts
+            ));
         }
         if fix.formulas > 0 {
-            done.push(format!("{} Formel(n) mit Alternativtext versehen.", fix.formulas));
+            done.push(tr!("{} Formel(n) mit Alternativtext versehen.", "Alternative text added to {} equation(s).", fix.formulas));
         }
         if !done.is_empty() {
-            checks.insert(0, pdfcheck::Check { ok: true, severity: String::new(), title: "Strukturbaum korrigiert".into(), detail: done.join(" ") });
+            checks.insert(0, pdfcheck::Check { ok: true, severity: String::new(), title: i18n::t("Strukturbaum korrigiert", "Structure tree corrected").into(), detail: done.join(" ") });
         }
         if let Some(in_pdf) = fix.formula_mismatch {
             checks.insert(
@@ -742,9 +778,10 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
                 pdfcheck::Check {
                     ok: false,
                     severity: "warnung".into(),
-                    title: "Formeln nicht zugeordnet".into(),
-                    detail: format!(
+                    title: i18n::t("Formeln nicht zugeordnet", "Equations not matched").into(),
+                    detail: tr!(
                         "Im PDF stehen {in_pdf} Formel(n), in der Word-Datei {}. Mimi setzt die Alternativtexte nur, wenn die Zuordnung eindeutig ist. Bitte in Acrobat oder axesPDF nachtragen.",
+                        "The PDF contains {in_pdf} equation(s), the Word file {}. Mimi only sets the alternative texts when they match one to one. Please add them in Acrobat or axesPDF.",
                         formula_alts.len()
                     ),
                 },
@@ -752,8 +789,7 @@ async fn export(State(st): St, Extension(user): Extension<auth::User>, headers: 
         }
         Ok((pages, checks))
     })
-    .await
-    .map_err(|e| anyhow::anyhow!(e))??;
+    .await??;
     let vera = pdfcheck::run_verapdf(pdfcheck::find_verapdf(&st.base), &pdf).await;
     let fails = checks.iter().filter(|c| !c.ok).count();
     let vera_txt = match vera.compliant {
@@ -783,11 +819,13 @@ async fn download(State(st): St, Extension(user): Extension<auth::User>, headers
         "docx" => (dir.join("current.docx"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"),
         "pdf" => (dir.join("out/current.pdf"), "application/pdf", "pdf"),
         "odt" => (dir.join("out/current.odt"), "application/vnd.oasis.opendocument.text", "odt"),
-        _ => return Err(bad_request("Unbekanntes Format")),
+        _ => return Err(bad_request(i18n::t("Unbekanntes Format", "Unknown format"))),
     };
-    let bytes = tokio::fs::read(&file).await.map_err(|_| AppError(StatusCode::NOT_FOUND, "Datei noch nicht erzeugt – zuerst „PDF erzeugen und prüfen“.".into()))?;
+    let bytes = tokio::fs::read(&file)
+        .await
+        .map_err(|_| AppError(StatusCode::NOT_FOUND, i18n::t("Datei noch nicht erzeugt – zuerst „PDF erzeugen und prüfen“.", "File not created yet – first use “Create and check PDF”.").into()))?;
     st.log(&user, &headers, "Heruntergeladen", &id, true, ext);
-    let fname = format!("{stem} - barrierefrei.{ext}");
+    let fname = tr!("{stem} - barrierefrei.{ext}", "{stem} - accessible.{ext}");
     let ascii: String = fname.chars().map(|c| if c.is_ascii_alphanumeric() || " ._-()".contains(c) { c } else { '_' }).collect();
     let encoded: String = fname.bytes().map(|b| if b.is_ascii_alphanumeric() || b"._-".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect();
     let disp = format!("attachment; filename=\"{ascii}\"; filename*=UTF-8''{encoded}");

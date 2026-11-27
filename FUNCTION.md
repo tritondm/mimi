@@ -8,7 +8,7 @@ Mimi macht aus einem Word-Bericht (.docx) oder OpenDocument-Text (.odt) ein barr
 Die Mitarbeitenden laden den Bericht im Browser hoch, ergänzen dort, was nur ein Mensch
 wissen kann (z. B. Alternativtexte), und bekommen ein geprüftes PDF zurück.
 
-Installation und Betrieb: [INSTALL.md](INSTALL.md) · Bedienung und Einstellungen: [README.md](README.md)
+Installation und Betrieb: [INSTALL.md](INSTALL.md) · Bedienung und Einstellungen: [README.de.md](README.de.md)
 
 ## Ablauf
 
@@ -250,4 +250,4 @@ Ohne `MIMI_TEST_IN` wird ein kleines eingebautes Beispieldokument verwendet.
   (siehe oben). Bleiben Abweichungen, liegt das meist an fehlenden Schriften (siehe
   [INSTALL.md](INSTALL.md#schriften)). Feste Zeilenhöhen schneiden mehrzeilige Zellen ab und
   sind deshalb keine Lösung.
-- Weitere Grenzen des Prototyps: siehe [README.md](README.md#bekannte-grenzen-des-prototyps).
+- Weitere Grenzen des Prototyps: siehe [README.de.md](README.de.md#bekannte-grenzen-des-prototyps).

@@ -11,8 +11,8 @@ You upload the report in the browser, add what only a human can know
 
 All you need is a browser and the address of Mimi, which you get from your admin.
 
-> **Note:** Mimi's interface is in German. In this guide, button and field names are
-> given in German as they appear on screen, with an English translation in brackets.
+> **Note:** Mimi's interface is in German by default. Switch it to English with the **English** button in the top
+> bar. In this guide, button and field names are given in German, with the English name in brackets.
 
 ---
 

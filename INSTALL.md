@@ -4,7 +4,7 @@
 
 **Deutsch** · [English](INSTALL.en.md)
 
-Wie Mimi intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellungen: [README.md](README.md)
+Wie Mimi intern arbeitet: [FUNCTION.md](FUNCTION.md) · Bedienung und Einstellungen: [README.de.md](README.de.md)
 
 > **Technische Namen:** Programm und Befehl `mimi`, Container `mimi`, Dienst `mimi.service`,
 > Systembenutzer und Pfade `/opt/mimi`, `/var/lib/mimi`.
